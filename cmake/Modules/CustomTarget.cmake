@@ -35,7 +35,7 @@ function(RunInQEMU target)
 endfunction()
 
 function(GenerateASMFile target args)
-    add_custom_target(${target}.asm
+    add_custom_target(${target}-asm
         COMMAND ${CMAKE_OBJDUMP} ${args} ${target} > ${target}.asm
         DEPENDS ${target}
         COMMENT "Generating '${target}.asm' file"
