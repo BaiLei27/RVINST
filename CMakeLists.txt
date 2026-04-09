@@ -25,12 +25,13 @@ include(CodeCheck)
 
 # check_ipo_supported()
 check_ipo_supported(RESULT _ipo_supported)
+
 if(_ipo_supported)
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-flto=full)
-  else()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-  endif()
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        add_compile_options(-flto=full)
+    else()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
 endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -156,7 +157,6 @@ target_sources(${backend} PRIVATE
 
     inc/Core/Instruction.hh
     src/Core/Instruction.cc
-
 )
 
 # GUI sources belong to the GUI executable target so GUI-specific
@@ -179,7 +179,6 @@ target_sources(${PROJECT_NAME}_gui PRIVATE
     inc/Gui/RISCVInstructionWindow.hh
     src/Gui/RISCVInstructionWindow.cc
 )
-
 SetupCodeChecks(${PROJECT_NAME} ${backend} ${PROJECT_NAME}_gui)
 
 DefineCodeChecksTargets("fmt" "tidy")
@@ -187,5 +186,5 @@ get_filename_component(builddir ${CMAKE_CURRENT_BINARY_DIR} NAME)
 get_filename_component(root ${rootBuilddir} NAME)
 
 if(ClangFormat_FOUND OR ClangTidy_FOUND)
-    message(">> Optional: build the target 'tidy' or 'fmt' ('cmake --build ${root}/${builddir} -t help' to know more) before building 'all' target")
+    message(">> Optional: build the '${PROJECT_NAME}' target 'tidy' or 'fmt' ('cmake --build ${root}/${builddir} -t help' to know more) before building 'all' target")
 endif()
