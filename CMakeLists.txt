@@ -7,12 +7,9 @@ set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTKMM REQUIRED gtkmm-4.0)
-
 project(INST
-    VERSION "0.0.1"
-    HOMEPAGE_URL "https://github.com/Baiyi27/RVOS.git"
+    VERSION "0.0.2"
+    HOMEPAGE_URL "https://github.com/Baiyi27/RVINST.git"
     LANGUAGES CXX
 )
 
@@ -20,17 +17,22 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
+set(backend ${PROJECT_NAME}_backend)
+set(customModulesPath ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules CACHE PATH "custom modules directory")
+list(APPEND CMAKE_MODULE_PATH "${customModulesPath}")
+
 include(CheckIPOSupported)
 include(CodeCheck)
 
 # check_ipo_supported()
 check_ipo_supported(RESULT _ipo_supported)
+
 if(_ipo_supported)
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-flto=full)
-  else()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-  endif()
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        add_compile_options(-flto=full)
+    else()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
 endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -38,10 +40,12 @@ find_package(Threads REQUIRED)
 link_libraries(Threads::Threads)
 
 add_compile_options(
-    -ffunction-sections
     -fdata-sections
+    -ffunction-sections
     -funroll-loops
     -fomit-frame-pointer
+    -fno-semantic-interposition
+    -fno-PIE
     "$<$<CONFIG:Debug>:-ggdb3;-DDEBUG>"
     $<$<CONFIG:Release,MinSizeRel>:-DNDEBUG>
 )
@@ -61,46 +65,8 @@ add_link_options(
 )
 
 add_subdirectory(Logger)
-set(backend ${PROJECT_NAME}_backend)
 add_library(${backend} SHARED)
-add_executable(
-    ${PROJECT_NAME}
-    tests/INST.cc
-)
-
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    SUFFIX ".exe"
-)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${backend}
-)
-
-add_executable(
-    ${PROJECT_NAME}_gui
-    src/Gui/Main.cc
-)
-
-target_link_libraries(${PROJECT_NAME}_gui PRIVATE
-    ${backend}
-    ${GTKMM_LIBRARIES}
-)
-
-set_target_properties(${PROJECT_NAME}_gui PROPERTIES
-    SUFFIX ".exe"
-)
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/resource)
-
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Gui/InstStyle.css
-    ${CMAKE_CURRENT_BINARY_DIR}/resource/InstStyle.css
-    COPYONLY
-)
-
-target_compile_definitions(${PROJECT_NAME}_gui PUBLIC
-    CSS_FILE_PATH="${CMAKE_CURRENT_BINARY_DIR}/resource/InstStyle.css"
-)
+add_executable(${PROJECT_NAME} tests/INST.cc)
 
 set_target_properties(${backend} PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -113,8 +79,6 @@ include_directories(
     inc
     Logger
 )
-
-target_include_directories(${PROJECT_NAME}_gui SYSTEM PRIVATE ${GTKMM_INCLUDE_DIRS})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ${backend}
@@ -156,36 +120,20 @@ target_sources(${backend} PRIVATE
 
     inc/Core/Instruction.hh
     src/Core/Instruction.cc
-
 )
-
-# GUI sources belong to the GUI executable target so GUI-specific
-# compile definitions (like CSS_FILE_PATH) apply to them.
-target_sources(${PROJECT_NAME}_gui PRIVATE
-    inc/Gui/InstCommST.hh
-
-    inc/Gui/AsmMnemonicWidget.hh
-    src/Gui/AsmMnemonicWidget.cc
-
-    inc/Gui/BinaryFieldWidget.hh
-    src/Gui/BinaryFieldWidget.cc
-
-    inc/Gui/InstFormatUI.hh
-    src/Gui/InstFormatUI.cc
-
-    inc/Gui/RISCVApplication.hh
-    src/Gui/RISCVApplication.cc
-
-    inc/Gui/RISCVInstructionWindow.hh
-    src/Gui/RISCVInstructionWindow.cc
-)
+add_subdirectory(src/Gui)
 
 SetupCodeChecks(${PROJECT_NAME} ${backend} ${PROJECT_NAME}_gui)
-
 DefineCodeChecksTargets("fmt" "tidy")
-get_filename_component(builddir ${CMAKE_CURRENT_BINARY_DIR} NAME)
-get_filename_component(root ${rootBuilddir} NAME)
+
+if(NOT rootBuilddir OR NOT IS_DIRECTORY "${rootBuilddir}")
+    get_filename_component(builddir ${CMAKE_CURRENT_BINARY_DIR} NAME)
+else()
+    get_filename_component(root "${rootBuilddir}" NAME)
+    get_filename_component(dir ${CMAKE_CURRENT_BINARY_DIR} NAME)
+    set(builddir "${root}/${dir}")
+endif()
 
 if(ClangFormat_FOUND OR ClangTidy_FOUND)
-    message(">> Optional: build the target 'tidy' or 'fmt' ('cmake --build ${root}/${builddir} -t help' to know more) before building 'all' target")
+    message(">> Optional: build the '${PROJECT_NAME}' target 'tidy' or 'fmt' ('cmake --build ${builddir} -t help' to know more) before building 'all' target")
 endif()
