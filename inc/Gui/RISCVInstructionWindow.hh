@@ -1,8 +1,10 @@
 #pragma once
 
 #include <array>
+#include <deque>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <gtkmm.h>
 
 #include "Core/Instruction.hh"
@@ -18,10 +20,18 @@ public:
     Gtk::TextView *insTextView_ {};
     Gtk::Button *pSettingsBtn_ {};
     Gtk::Popover *pSettingsPopover_ {};
+    Gtk::Popover *pHistoryPopover_ {};
+    Gtk::ScrolledWindow *pHistoryScroll_ {};
+    Gtk::ListBox *pHistoryList_ {};
+    Gtk::Stack *pFormatStack_ {};
     Gtk::Switch *pAbiSwitch_ {};
     Gtk::MenuButton *pIsaMenuBtn_ {};
+
     std::unique_ptr<Instruction> inst_;
     std::array<InstFormatUI *, 6> formatUi_ {};
+    std::deque<std::string> inputHistory_;
+    std::string historyDraft_;
+    int historyBrowseIndex_ { -1 };
 
     bool hasSetABI_ {};
     int selectedIsaIndex_ {};
@@ -37,6 +47,12 @@ private:
     void initInstFormatUI();
     void hideAllTypeUI();
     void setupSettingsPopover();
+    void setupInputHistory();
+    void popupInputHistory();
+    void pushInputHistory(std::string_view text);
+    void rebuildHistoryList();
+    void applyHistoryAt(int index);
+    void browseHistory(int delta);
     void refreshAssemblyForAbiChange();
     [[nodiscard]] InstFormatUI *uiFor(InstFormat fmt) const noexcept;
     static void loadCSSFromFile();
