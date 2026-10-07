@@ -1,7 +1,8 @@
-#include <iostream>
+#include <print>
 
 #include "Core/IType.hh"
 #include "ISA/Regs.hpp"
+#include "Util/InputParse.hpp"
 
 IType::IType(uint32_t inst, InstFormat format, bool hasSetABI)
     : IBaseInstType(inst, format, hasSetABI)
@@ -17,23 +18,26 @@ IType::IType(std::vector<std::string> instAssembly, InstFormat format, bool hasS
 
 void IType::Parse()
 {
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.I.opc));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.I.rd));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.I.fct3));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.I.rs1));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.I.imm0tB));
+    InstBitsField_.push_back(Layout_.I.opc);
+    InstBitsField_.push_back(Layout_.I.rd);
+    InstBitsField_.push_back(Layout_.I.fct3);
+    InstBitsField_.push_back(Layout_.I.rs1);
+    InstBitsField_.push_back(Layout_.I.imm0tB);
 
-    std::cout << "opcode: 0x" << std::hex << Opcode_ << '\n'
-              << "Hexadecimal: 0x" << Layout_.entity_ << '\n'
-              << "funct3: " << Layout_.I.fct3 << '\n'
-              << "rs1: " << Layout_.I.rs1 << '\n'
-              << "rd: " << Layout_.I.rd << '\n'
-              << "imm: " << std::dec << static_cast<int32_t>(static_cast<int16_t>(Layout_.I.imm0tB & 0xFFF)) << '\n';
+#ifdef DEBUG_
+    std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nrs1: {}\nrd: {}\nimm: {}",
+                 Opcode_,
+                 Layout_.entity_,
+                 +Layout_.I.fct3,
+                 +Layout_.I.rs1,
+                 +Layout_.I.rd,
+                 static_cast<int16_t>(Layout_.I.imm0tB));
+#endif
 }
 
 void IType::mnemonicHelper()
 {
-    const uint32_t opc= Layout_.I.opc;
+    uint32_t opc= Layout_.I.opc;
     if(opc == 0x73) {
         if(InstAssembly_.size() > 1) {
             InstAssembly_.resize(1);
@@ -41,18 +45,17 @@ void IType::mnemonicHelper()
         return;
     }
 
-    const int32_t imm= static_cast<int32_t>(static_cast<int16_t>(Layout_.I.imm0tB & 0xFFF));
-    const std::string immStr= std::to_string(imm);
+    std::string immStr= std::to_string(Layout_.I.imm0tB);
 
     if(opc == 0x0F) {
         auto z= isa::LOOKUP_REG_NAME(0, HasSetABI_);
-        appendOperands({" ", z, ",", z, ",", std::string_view(immStr) });
+        appendOperands({ " ", z, ",", z, ",", immStr });
         return;
     }
 
     auto rd = isa::LOOKUP_REG_NAME(Layout_.I.rd, HasSetABI_);
     auto rs1= isa::LOOKUP_REG_NAME(Layout_.I.rs1, HasSetABI_);
-    appendOperands({" ", rd, ",", rs1, ",", std::string_view(immStr) });
+    appendOperands({ " ", rd, ",", rs1, ",", immStr });
 }
 
 const std::vector<std::string> &IType::Disassembly()
@@ -75,22 +78,19 @@ const InstLayout &IType::Assembly()
     const auto &info= LookupIdxAndInfo();
 
     Layout_.I.opc= Opcode_= info.opcode_;
-    const uint16_t key= info.funct_;
+    uint16_t key          = info.funct_;
 
     if(info.opcode_ == 0x13) {
         Layout_.I.fct3  = key & 7;
-        Layout_.I.imm0tB= (static_cast<uint32_t>((key >> 3) & 0x7F) << 5);
+        Layout_.I.imm0tB = (key << 2) & 0xFE0;
     } else if(info.opcode_ == 0x73) {
+        Layout_.I.rd    = 0;
+        Layout_.I.rs1   = 0;
         Layout_.I.fct3  = 0;
-        Layout_.I.imm0tB= static_cast<uint32_t>(key & 0xFFF);
+        Layout_.I.imm0tB= key & 0xFFF;
     } else {
         Layout_.I.fct3  = key & 7;
         Layout_.I.imm0tB= 0;
-    }
-
-    if(info.opcode_ == 0x73) {
-        Layout_.I.rd = 0;
-        Layout_.I.rs1= 0;
     }
 
     if(!InstAssembly_.empty() && InstAssembly_.size() >= 4) {
@@ -100,15 +100,17 @@ const InstLayout &IType::Assembly()
         if(auto rs1Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(2))) {
             Layout_.I.rs1= *rs1Opt;
         }
-        const int32_t imm= std::stoi(InstAssembly_.at(3));
-        if(info.opcode_ == 0x13) {
-            if(Layout_.I.fct3 == 1 || Layout_.I.fct3 == 5) {
-                Layout_.I.imm0tB= (Layout_.I.imm0tB & UINT32_C(0xFE0)) | (static_cast<uint32_t>(imm) & 0x1F);
-            } else {
-                Layout_.I.imm0tB= static_cast<uint32_t>(imm) & 0xFFF;
+        int32_t imm {};
+        if(util::ParseInt(InstAssembly_.at(3), imm)) {
+            if(info.opcode_ == 0x13) {
+                if(Layout_.I.fct3 == 1 || Layout_.I.fct3 == 5) {
+                    Layout_.I.imm0tB= (Layout_.I.imm0tB & 0xFE0U) | (imm & 0x1F);
+                } else {
+                    Layout_.I.imm0tB= imm & 0xFFF;
+                }
+            } else if(info.opcode_ != 0x73) {
+                Layout_.I.imm0tB= imm & 0xFFF;
             }
-        } else if(info.opcode_ != 0x73) {
-            Layout_.I.imm0tB= static_cast<uint32_t>(imm) & 0xFFF;
         }
     }
 
@@ -121,13 +123,13 @@ IBaseInstType::KeyT IType::calculateFunctKey()
 {
     switch(Layout_.I.opc) {
     case 0x13:
-        FunctKey_= static_cast<KeyT>(((Layout_.I.imm0tB >> 5) << 3) | Layout_.I.fct3);
+        FunctKey_= ((Layout_.I.imm0tB >> 5) << 3) | Layout_.I.fct3;
         break;
     case 0x73:
-        FunctKey_= static_cast<KeyT>((0x73u << 8) | (Layout_.I.imm0tB & 0xFFFu));
+        FunctKey_= (0x73U << 8) | (Layout_.I.imm0tB & 0xFFFU);
         break;
     default:
-        FunctKey_= static_cast<KeyT>((static_cast<uint32_t>(Layout_.I.opc) << 8) | Layout_.I.fct3);
+        FunctKey_= (Layout_.I.opc << 8) | Layout_.I.fct3;
         break;
     }
     return FunctKey_;

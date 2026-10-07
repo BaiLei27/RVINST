@@ -6,7 +6,7 @@
 class JType: public IBaseInstType {
 public:
     constexpr static std::array<InstInfo, 1> G_INST_TABLE= {
-        { { .name_="jal", .XLEN_="RV32I", .funct_=0x0000, .opcode_=0x6F } },
+        { { .name_= "jal", .XLEN_= "RV32I", .funct_= 0x0000, .opcode_= 0x6F } },
     };
 
 public:

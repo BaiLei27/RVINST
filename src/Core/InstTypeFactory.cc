@@ -1,4 +1,5 @@
 #include <iostream>
+#include <print>
 
 #include "Core/InstTypeFactory.hh"
 #include "Core/RType.hh"
@@ -27,7 +28,7 @@ std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(uint32_t inst, bool h
         case InstFormat::B:
             return std::make_unique<BType>(inst, it->second, hasSetABI);
         default:
-            std::cout << "Unsupported instruction format\n";
+            std::println(stderr, "Unsupported instruction format");
         }
     }
 
@@ -97,11 +98,11 @@ std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(std::vector<std::stri
         case InstFormat::B:
             return std::make_unique<BType>(std::move(instAssembly), fmt, hasSetABI);
         default:
-            std::cout << "Unsupported instruction format\n";
+            std::println(stderr, "Unsupported instruction format");
             break;
         }
     } else {
-        std::cout << "Unsupported instruction name: " << instAssembly[0] << '\n';
+        std::println(stderr, "Unsupported instruction name: {}", instAssembly[0]);
     }
 
     return nullptr;
@@ -116,11 +117,11 @@ std::unique_ptr<IBaseInstType> InstTypeFactory::createHelper(T key, bool hasSetA
 
             return std::make_unique<RType>(key, it->second, hasSetABI);
         default:
-            std::cout << "Unsupported instruction format\n";
+            std::println(stderr, "Unsupported instruction format");
         }
 
     } else {
-        std::cout << "not found key: " << key << '\n';
+        std::println(stderr, "not found key: {}", key);
     }
     return nullptr;
 }

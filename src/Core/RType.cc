@@ -1,6 +1,4 @@
-
-#include <iostream>
-
+#include <print>
 #include "Core/RType.hh"
 #include "ISA/Regs.hpp"
 
@@ -28,20 +26,22 @@ RType::RType(std::vector<std::string> instAssembly, InstFormat format, bool hasS
 
 void RType::Parse()
 {
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.R.opc));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.R.rd));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.R.fct3));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.R.rs1));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.R.rs2));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.R.fct7));
-
-    std::cout << "opcode: 0x" << std::hex << Opcode_ << '\n'
-              << "Hexadecimal: 0x" << Layout_.entity_ << '\n'
-              << "funct3: " << Layout_.R.fct3 << '\n'
-              << "funct7: " << Layout_.R.fct7 << '\n'
-              << "rs1: " << Layout_.R.rs1 << '\n'
-              << "rs2: " << Layout_.R.rs2 << '\n'
-              << "rd: " << Layout_.R.rd << '\n';
+    InstBitsField_.push_back(Layout_.R.opc);
+    InstBitsField_.push_back(Layout_.R.rd);
+    InstBitsField_.push_back(Layout_.R.fct3);
+    InstBitsField_.push_back(Layout_.R.rs1);
+    InstBitsField_.push_back(Layout_.R.rs2);
+    InstBitsField_.push_back(Layout_.R.fct7);
+#ifdef DEBUG_
+    std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nfunct7: {}\nrs1: {}\nrs2: {}\nrd: {}",
+                 Opcode_,
+                 Layout_.entity_,
+                 +Layout_.R.fct3,
+                 +Layout_.R.fct7,
+                 +Layout_.R.rs1,
+                 +Layout_.R.rs2,
+                 +Layout_.R.rd);
+#endif
 }
 
 void RType::mnemonicHelper()
@@ -50,7 +50,7 @@ void RType::mnemonicHelper()
     auto rs1= isa::LOOKUP_REG_NAME(Layout_.R.rs1, HasSetABI_);
     auto rs2= isa::LOOKUP_REG_NAME(Layout_.R.rs2, HasSetABI_);
 
-    appendOperands({" ", rd, ",", rs1, ",", rs2 });
+    appendOperands({ " ", rd, ",", rs1, ",", rs2 });
 }
 
 const std::vector<std::string> &RType::Disassembly()
@@ -113,11 +113,11 @@ IBaseInstType::pBiTable_u RType::buildTable()
 
             auto manualURL= baseURL + std::string(entry.name_); // temp string
 
-            // std::cout << "opcode: 0x" << std::hex << entry.opcode_ << '\n'
-            //           << "functKey: 0x" << entry.funct_ << '\n'
-            //           << "name: " << entry.name_ << '\n'
-            //           << "XLEN: " << entry.XLEN_ << '\n'
-            //           << "BaseURL: " << baseURL << '\n';
+            // std::println("opcode:   0x{:02X}", entry.opcode_);
+            // std::println("functKey: 0x{:04X}", entry.funct_);
+            // std::println("name:     {}", entry.name_);
+            // std::println("XLEN:     {}", entry.XLEN_);
+            // std::println("BaseURL:  {}", baseURL);
 
             code2info.emplace(entry.funct_,
                               BiLookupTable<KeyT>::NameInfo { .manual_= manualURL,

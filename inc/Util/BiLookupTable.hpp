@@ -1,12 +1,13 @@
 #pragma once
 
 #include <cstdint>
-#include <iomanip>
-#include <iostream>
+#include <format>
+#include <iterator>
+#include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <optional>
 
 template <typename KeyT= uint16_t>
 class BiLookupTable { // Bidirectional lookup table for code2name and name2code
@@ -59,41 +60,62 @@ public:
 
     bool Contains(std::string_view name) const noexcept { return Name2IdxInfo_.contains(name); }
 
-    void PrintCode2NameMap(std::ostream &os= std::cout) const noexcept
+    void PrintCode2NameMap() const noexcept
     {
-        os << "==================================== Code -> Name Info Map ====================================\n";
+        std::string buf;
+        buf.reserve(128 + Code2NameInfo_.size() * 192);
+        auto out= std::back_inserter(buf);
+        std::format_to(out, "==================================== Code -> Name Info Map ====================================\n");
         if(Code2NameInfo_.empty()) {
-            os << "Map is empty.\n";
+            std::format_to(out, "Map is empty.\n");
+            std::print("{}", buf);
             return;
         }
 
         for(const auto &[key, name_info]: Code2NameInfo_) {
-            os << "--------------------------------------------------------------------------------------------\n"
-               << "  Code (functKey): 0x" << std::hex << std::setw(4) << std::setfill('0') << key << std::dec << '\n'
-               << "  Instruction Name: " << name_info.name_ << '\n'
-               << "  XLEN Architecture: " << name_info.XLEN_ << '\n'
-               << "  Manual URL: " << name_info.manual_ << '\n';
+            std::format_to(out,
+                           "--------------------------------------------------------------------------------------------\n"
+                           "  Code (functKey): 0x{:04X}\n"
+                           "  Instruction Name: {}\n"
+                           "  XLEN Architecture: {}\n"
+                           "  Manual URL: {}\n",
+                           key,
+                           name_info.name_,
+                           name_info.XLEN_,
+                           name_info.manual_);
         }
-        os << "==============================================================================================\n\n";
+        std::format_to(out, "==============================================================================================\n\n");
+        std::print("{}", buf);
     }
 
-    void PrintName2IndexMap(std::ostream &os= std::cout) const noexcept
+    void PrintName2IndexMap() const noexcept
     {
-        os << "==================================== Name -> Index Info Map ===================================\n";
+        std::string buf;
+        buf.reserve(128 + Name2IdxInfo_.size() * 192);
+        auto out= std::back_inserter(buf);
+        std::format_to(out, "==================================== Name -> Index Info Map ===================================\n");
         if(Name2IdxInfo_.empty()) {
-            os << "Map is empty.\n";
+            std::format_to(out, "Map is empty.\n");
+            std::print("{}", buf);
             return;
         }
 
         for(const auto &[name, index_info]: Name2IdxInfo_) {
-            os << "--------------------------------------------------------------------------------------------\n"
-               << "  Instruction Name: " << name << '\n'
-               << "  XLEN Architecture: " << index_info.XLEN_ << '\n'
-               << "  FunctKey: 0x" << std::hex << std::setw(4) << std::setfill('0') << index_info.funct_ << std::dec << '\n'
-               << "  Opcode: 0x" << std::hex << std::setw(2) << std::setfill('0') << index_info.opcode_ << std::dec << '\n'
-               << "  Manual URL: " << index_info.manual_ << '\n';
+            std::format_to(out,
+                           "--------------------------------------------------------------------------------------------\n"
+                           "  Instruction Name: {}\n"
+                           "  XLEN Architecture: {}\n"
+                           "  FunctKey: 0x{:04X}\n"
+                           "  Opcode: 0x{:02X}\n"
+                           "  Manual URL: {}\n",
+                           name,
+                           index_info.XLEN_,
+                           index_info.funct_,
+                           index_info.opcode_,
+                           index_info.manual_);
         }
-        os << "==============================================================================================\n\n";
+        std::format_to(out, "==============================================================================================\n\n");
+        std::print("{}", buf);
     }
 
 private:

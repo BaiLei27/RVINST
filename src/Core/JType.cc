@@ -1,27 +1,33 @@
-#include <iostream>
+#include <print>
 
 #include "Core/JType.hh"
 #include "ISA/Regs.hpp"
+#include "Util/InputParse.hpp"
 
 namespace {
 
-int32_t decodeJImm(const InstLayout &L)
+int32_t decodeJImm(const InstLayout &l)
 {
-    uint32_t u= (static_cast<uint32_t>(L.J.imm14) << 20) | (static_cast<uint32_t>(L.J.imm1tA) << 1)
-                | (static_cast<uint32_t>(L.J.immB) << 11) | (static_cast<uint32_t>(L.J.immCt13) << 12);
-    if(u & (1u << 20)) {
-        u|= 0xFFE00000u;
+    int32_t sImm= (l.J.imm14 << 20)
+                | (l.J.imm1tA << 1)
+                | (l.J.immB << 11)
+                | (l.J.immCt13 << 12);
+
+    if(uint32_t signedBit= 1U << 20; (sImm & signedBit) != 0U) {
+        sImm|= ~0x1FFFFF;
     }
-    return static_cast<int32_t>(u);
+
+    return sImm;
 }
 
-void encodeJImm(InstLayout &L, int32_t imm)
+void encodeJImm(InstLayout &l, int32_t imm)
 {
-    uint32_t u= static_cast<uint32_t>(imm) & 0x1FFFFFu;
-    L.J.imm14  = (u >> 20) & 1;
-    L.J.imm1tA = (u >> 1) & 0x3FF;
-    L.J.immB   = (u >> 11) & 1;
-    L.J.immCt13= (u >> 12) & 0xFF;
+    int32_t sImm= imm & 0x1FFFFF;
+
+    l.J.imm14  = sImm >> 20;
+    l.J.imm1tA = sImm >> 1;
+    l.J.immB   = sImm >> 11;
+    l.J.immCt13= sImm >> 12;
 }
 
 } // namespace
@@ -40,27 +46,30 @@ JType::JType(std::vector<std::string> instAssembly, InstFormat format, bool hasS
 
 void JType::Parse()
 {
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.J.opc));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.J.rd));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.J.immCt13));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.J.immB));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.J.imm1tA));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.J.imm14));
+    InstBitsField_.push_back(Layout_.J.opc);
+    InstBitsField_.push_back(Layout_.J.rd);
+    InstBitsField_.push_back(Layout_.J.immCt13);
+    InstBitsField_.push_back(Layout_.J.immB);
+    InstBitsField_.push_back(Layout_.J.imm1tA);
+    InstBitsField_.push_back(Layout_.J.imm14);
 
-    const int32_t imm= decodeJImm(Layout_);
-    std::cout << "opcode: 0x" << std::hex << Opcode_ << '\n'
-              << "Hexadecimal: 0x" << Layout_.entity_ << '\n'
-              << "rd: " << std::dec << Layout_.J.rd << '\n'
-              << "imm: " << imm << '\n';
+    int32_t imm= decodeJImm(Layout_);
+#ifdef DEBUG_
+    std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nrd: {}\nimm: {}",
+                 Opcode_,
+                 Layout_.entity_,
+                 +Layout_.J.rd,
+                 imm);
+#endif
 }
 
 void JType::mnemonicHelper()
 {
-    auto rd       = isa::LOOKUP_REG_NAME(Layout_.J.rd, HasSetABI_);
-    int32_t imm   = decodeJImm(Layout_);
+    auto rd           = isa::LOOKUP_REG_NAME(Layout_.J.rd, HasSetABI_);
+    int32_t imm       = decodeJImm(Layout_);
     std::string immStr= std::to_string(imm);
 
-    appendOperands({" ", rd, ",", std::string_view(immStr) });
+    appendOperands({ " ", rd, ",", immStr });
 }
 
 const std::vector<std::string> &JType::Disassembly()
@@ -88,8 +97,10 @@ const InstLayout &JType::Assembly()
         if(auto rdOpt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
             Layout_.J.rd= *rdOpt;
         }
-        int32_t imm= std::stoi(InstAssembly_.at(2));
-        encodeJImm(Layout_, imm);
+        int32_t imm {};
+        if(util::ParseInt(InstAssembly_.at(2), imm)) {
+            encodeJImm(Layout_, imm);
+        }
     }
 
     mnemonicHelper();

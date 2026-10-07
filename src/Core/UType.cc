@@ -1,24 +1,19 @@
-#include <iostream>
+#include <print>
 #include <string>
 
 #include "Core/UType.hh"
 #include "ISA/Regs.hpp"
+#include "Util/InputParse.hpp"
 
 namespace {
 
-uint32_t decodeUImm20(const InstLayout &L)
-{
-    return static_cast<uint32_t>(L.U.immCt1F) & 0xFFFFFU;
-}
-
 uint32_t parseAsmImm20(std::string_view tok)
 {
-    const std::string s(tok);
-    const unsigned long v= std::stoul(s, nullptr, 0);
-    if(v <= 0xFFFFFUL) {
-        return static_cast<uint32_t>(v);
+    uint32_t v {};
+    if(!util::ParseInt(tok, v)) {
+        return 0;
     }
-    return (static_cast<uint32_t>(v) >> 12) & 0xFFFFFU;
+    return v <= 0xFFFFF ? v : v >> 12;
 }
 
 } // namespace
@@ -37,22 +32,25 @@ UType::UType(std::vector<std::string> instAssembly, InstFormat format, bool hasS
 
 void UType::Parse()
 {
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.U.opc));
-    InstBitsField_.emplace_back(static_cast<uint32_t>(Layout_.U.rd));
-    InstBitsField_.emplace_back(decodeUImm20(Layout_));
+    InstBitsField_.push_back(Layout_.U.opc);
+    InstBitsField_.push_back(Layout_.U.rd);
+    InstBitsField_.push_back(Layout_.U.immCt1F);
 
-    const uint32_t imm20= decodeUImm20(Layout_);
-    std::cout << "opcode: 0x" << std::hex << Opcode_ << '\n'
-              << "Hexadecimal: 0x" << Layout_.entity_ << '\n'
-              << "rd: " << std::dec << Layout_.U.rd << '\n'
-              << "imm[31:12]: " << imm20 << '\n';
+#ifdef DEBUG_
+    std::println(std::cout,
+                 "opcode: 0x{:x}\nHexadecimal: 0x{:x}\nrd: {}\nimm[31:12]: {}",
+                 Opcode_,
+                 Layout_.entity_,
+                 +Layout_.U.rd,
+                 Layout_.U.immCt1F);
+#endif
 }
 
 void UType::mnemonicHelper()
 {
-    auto rd = isa::LOOKUP_REG_NAME(Layout_.U.rd, HasSetABI_);
-    const std::string immStr= std::to_string(decodeUImm20(Layout_));
-    appendOperands({" ", rd, ",", std::string_view(immStr) });
+    auto rd           = isa::LOOKUP_REG_NAME(Layout_.U.rd, HasSetABI_);
+    std::string immStr= std::to_string(Layout_.U.immCt1F);
+    appendOperands({ " ", rd, ",", immStr });
 }
 
 const std::vector<std::string> &UType::Disassembly()
@@ -90,7 +88,7 @@ const InstLayout &UType::Assembly()
 
 IBaseInstType::KeyT UType::calculateFunctKey()
 {
-    FunctKey_= static_cast<KeyT>(Opcode_);
+    FunctKey_= Opcode_;
     return FunctKey_;
 }
 

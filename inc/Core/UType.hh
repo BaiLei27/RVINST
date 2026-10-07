@@ -7,8 +7,8 @@ class UType: public IBaseInstType {
 public:
     // funct_ is opcode (0x17 / 0x37): U-type has no funct3/funct7; keys must be unique in the table.
     constexpr static std::array<InstInfo, 2> G_INST_TABLE= {
-        { { .name_="auipc", .XLEN_="RV32I", .funct_=0x17, .opcode_=0x17 },
-          { .name_="lui",   .XLEN_="RV32I", .funct_=0x37, .opcode_=0x37 } }
+        { { .name_= "auipc", .XLEN_= "RV32I", .funct_= 0x17, .opcode_= 0x17 },
+         { .name_= "lui", .XLEN_= "RV32I", .funct_= 0x37, .opcode_= 0x37 } }
     };
 
 public:
