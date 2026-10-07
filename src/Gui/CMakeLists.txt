@@ -1,6 +1,6 @@
 
 project(${CMAKE_PROJECT_NAME}_gui
-    VERSION "0.0.1"
+    VERSION "${CMAKE_PROJECT_VERSION}"
     LANGUAGES CXX
 )
 
@@ -13,19 +13,6 @@ pkg_check_modules(GTKMM REQUIRED gtkmm-4.0)
 add_executable(${PROJECT_NAME}
     ${projectScrDir}/Main.cc
 )
-
-function(CopyRuntimeDLLs target)
-    if(WIN32)
-        add_custom_command(
-            TARGET ${target}
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:${target}>
-            $<TARGET_FILE_DIR:${target}>
-            COMMAND_EXPAND_LISTS
-        )
-    endif()
-endfunction()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ${backend}
@@ -44,20 +31,22 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     ${GTKMM_INCLUDE_DIRS}
 )
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/resource)
+# file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/resource)
 
 configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/InstStyle.css
-    ${CMAKE_CURRENT_BINARY_DIR}/resource/InstStyle.css
+    InstStyle.css
+    ${CMAKE_BINARY_DIR}/gen/resources/InstStyle.css
     COPYONLY
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC
-    CSS_FILE_PATH="${CMAKE_CURRENT_BINARY_DIR}/resource/InstStyle.css"
+    CSS_FILE_PATH="${CMAKE_BINARY_DIR}/gen/resources/InstStyle.css"
 )
 
 target_sources(${PROJECT_NAME} PRIVATE
     ${projectIncDir}/Gui/InstCommST.hh
+    ${projectIncDir}/Gui/IHoverWidget.hh
+    ${projectScrDir}/IHoverWidget.cc
 
     ${projectIncDir}/Gui/AsmMnemonicWidget.hh
     ${projectScrDir}/AsmMnemonicWidget.cc
@@ -68,10 +57,6 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${projectIncDir}/Gui/InstFormatUI.hh
     ${projectScrDir}/InstFormatUI.cc
 
-    ${projectIncDir}/Gui/RISCVApplication.hh
-    ${projectScrDir}/RISCVApplication.cc
-
     ${projectIncDir}/Gui/RISCVInstructionWindow.hh
     ${projectScrDir}/RISCVInstructionWindow.cc
 )
-CopyRuntimeDLLs(${PROJECT_NAME})

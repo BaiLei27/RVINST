@@ -1,50 +1,45 @@
-#ifndef RISCV_INSTRUCTION_WINDOW_HH
-#define RISCV_INSTRUCTION_WINDOW_HH
+#pragma once
 
-#include <gtkmm.h>
+#include <array>
+#include <memory>
 #include <string>
-#include <giomm.h>  // Gio::Application
-#include <glibmm.h> // Glib::RefPtr
+#include <gtkmm.h>
+
 #include "Core/Instruction.hh"
 #include "Gui/InstFormatUI.hh"
+#include "ISA/InstFormat.hh"
 
 class RISCVInstructionWindow: public Gtk::Window {
 public:
     Gtk::Box *uiContainer_ {};
     Gtk::Box *pEntryRow_ {};
-    Gtk::Entry *InsEntry_ {};
-    Gtk::Button *InsButtonParse_ {};
-    Gtk::TextView *InsTextView_ {};
+    Gtk::Entry *insEntry_ {};
+    Gtk::Button *insButtonParse_ {};
+    Gtk::TextView *insTextView_ {};
     Gtk::Button *pSettingsBtn_ {};
     Gtk::Popover *pSettingsPopover_ {};
     Gtk::Switch *pAbiSwitch_ {};
     Gtk::MenuButton *pIsaMenuBtn_ {};
-    Instruction *pInst_ {};
-    InstFormatUI *rTypeUI_ {};
-    InstFormatUI *iTypeUI_ {};
-    InstFormatUI *jTypeUI_ {};
-    InstFormatUI *uTypeUI_ {};
-    InstFormatUI *sTypeUI_ {};
-    InstFormatUI *bTypeUI_ {};
+    std::unique_ptr<Instruction> inst_;
+    std::array<InstFormatUI *, 6> formatUi_ {};
 
-    bool hasSetABI_              = false;
-    int selectedIsaIndex_       = 0;  // 0=AUTO, 1=RV32I, 2=RV64I, 3=RV128I
+    bool hasSetABI_ {};
+    int selectedIsaIndex_ {};
 
 public:
     RISCVInstructionWindow();
-    ~RISCVInstructionWindow()= default;
 
 private:
     void onInsButtonParseClicked();
     void showInsResult(Instruction &inst);
     void showError(const std::string &message);
-    void loadCssFromFile(Gtk::Window &window);
 
     void initInstFormatUI();
     void hideAllTypeUI();
-    void UpdateDisplay(InstFormatUI &instUi, Instruction &inst);
     void setupSettingsPopover();
     void refreshAssemblyForAbiChange();
+    [[nodiscard]] InstFormatUI *uiFor(InstFormat fmt) const noexcept;
+    static void loadCSSFromFile();
 };
 
-#endif // RISCV_INSTRUCTION_WINDOW_HH
+// Date:26/10/07/21:59

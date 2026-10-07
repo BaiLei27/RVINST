@@ -1,98 +1,69 @@
+#include "Gui/AsmMnemonicWidget.hh"
 #include "Gui/BinaryFieldWidget.hh"
 
-BinaryFieldWidget::BinaryFieldWidget(std::vector<Gtk::Label *> &binaryLabelsV, const InstBinaryField &field)
-    : mBox_(Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0))
+BinaryFieldWidget::BinaryFieldWidget(const InstField &field, int &nibbleIndex)
 {
-    mBox_->set_css_classes({ field.cssClass_ });
-    mBox_->set_margin_start(0);
-    mBox_->set_margin_end(0);
-    mBox_->set_hexpand(false);
-    for(int i= field.startBit_; i <= field.endBit_; ++i) {
-        auto pTmpLabel= Gtk::make_managed<Gtk::Label>("0");
-        pTmpLabel->set_width_chars(1);
-        pTmpLabel->set_halign(Gtk::Align::CENTER);
-        pTmpLabel->set_valign(Gtk::Align::CENTER);
-        pTmpLabel->set_size_request(18, 30);
-        pTmpLabel->set_css_classes({ "binary-bit" });
-        if(g_index > 0 && g_index % 4 == 0)
-            pTmpLabel->set_margin_start(8);
-        controlLabels_.push_back(pTmpLabel);
-        mBox_->append(*pTmpLabel);
-        g_index++;
+    auto *pBox= Gtk::make_managed<Gtk::Overlay>();
+    PRoot_    = pBox;
+    pBox->add_css_class("bit-field-container");
+    pBox->set_hexpand(false);
+    pBox->set_valign(Gtk::Align::CENTER);
+
+    auto *pBits= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
+    pBits->set_halign(Gtk::Align::CENTER);
+    pBits->set_can_target(false);
+
+    const int WIDTH= field.endBit_ - field.startBit_ + 1;
+    controlLabels_.reserve(static_cast<size_t>(WIDTH));
+    for(int i= 0; i < WIDTH; ++i) {
+        auto *pBit= Gtk::make_managed<Gtk::Label>("0");
+        pBit->set_width_chars(1);
+        pBit->set_halign(Gtk::Align::CENTER);
+        pBit->set_valign(Gtk::Align::CENTER);
+        pBit->set_size_request(18, 30);
+        pBit->add_css_class("binary-bit");
+        pBit->set_can_target(false);
+        if(nibbleIndex > 0 && nibbleIndex % 4 == 0)
+            pBit->set_margin_start(8);
+        controlLabels_.emplace_back(pBit);
+        pBits->append(*pBit);
+        ++nibbleIndex;
     }
+
+    auto caption= field.desc_.empty() ? field.name_ : field.desc_;
+    auto *pName = Gtk::make_managed<Gtk::Label>(Glib::ustring(caption.data(), caption.size()));
+    pName->add_css_class("field-label");
+    pName->set_halign(Gtk::Align::CENTER);
+    pName->set_valign(Gtk::Align::START);
+    pName->set_can_target(false);
+
+    pBox->set_child(*pBits);
+    pBox->add_overlay(*pName);
+    pBox->set_measure_overlay(*pName, false);
 }
 
-void BinaryFieldWidget::Highlight()
+void BinaryFieldWidget::onHoverChanged(bool on)
 {
-    for(auto &label: controlLabels_) {
-        label->add_css_class("highlighted");
-    }
+    IHoverWidget::SetHighlightedAll(relatedAsm_, on);
+    IHoverWidget::SetHighlightedAll(relatedBinary_, on);
 }
 
-void BinaryFieldWidget::Unhighlight()
+void BinaryFieldWidget::SetupHover(std::string_view name,
+                                   const util::InstFormatView &view,
+                                   InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets,
+                                   InstCommST::AsmMnemonicWidgetMap_u &asmFieldWidgets)
 {
-    for(auto &label: controlLabels_) {
-        label->remove_css_class("highlighted");
-    }
+    const auto &rels= util::FIND_FIELD_REL(view.binaryRel_, name);
+    IHoverWidget::CollectRelated(asmFieldWidgets, rels, relatedAsm_);
+    IHoverWidget::CollectRelated(binaryFieldWidgets, rels, relatedBinary_, this);
+    attachMotion();
 }
 
-void BinaryFieldWidget::HighlightInMouse()
+void BinaryFieldWidget::UpdateBits(uint32_t fieldValue)
 {
-    for(auto &label: controlLabels_) {
-        label->add_css_class("highlighted-in-mouse");
-    }
-}
-
-void BinaryFieldWidget::UnhighlightInMouse()
-{
-    for(auto &label: controlLabels_) {
-        label->remove_css_class("highlighted-in-mouse");
-    }
-}
-
-void BinaryFieldWidget::SetupController(const std::string &name,
-                                        InstTypeRelationEntity &instFmt,
-                                        InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets,
-                                        InstCommST::AsmMnemonicWidgetMap_u &asmFieldWidgets)
-{
-    pMotionController_= Gtk::EventControllerMotion::create();
-    pMotionController_->signal_motion().connect([this, &name, &instFmt, &binaryFieldWidgets, &asmFieldWidgets](double x, double y) {
-        HighlightInMouse();
-        mBox_->set_tooltip_text(name);
-        auto binaryFieldRelations= instFmt.binaryFieldRelations_;
-        for(auto &relatedField: binaryFieldRelations[name]) {
-            auto asmIter= asmFieldWidgets.find(relatedField);
-            if(asmIter != asmFieldWidgets.end()) {
-                asmIter->second->Highlight();
-            }
-            auto binaryIter= binaryFieldWidgets.find(relatedField);
-            if(binaryIter != binaryFieldWidgets.end()) {
-                binaryIter->second->Highlight();
-            }
-        }
-    });
-    pMotionController_->signal_leave().connect([this, &name, &instFmt, &binaryFieldWidgets, &asmFieldWidgets]() {
-        UnhighlightInMouse();
-        auto binaryFieldRelations= instFmt.binaryFieldRelations_;
-        for(auto &relatedField: binaryFieldRelations[name]) {
-            auto asmIter= asmFieldWidgets.find(relatedField);
-            if(asmIter != asmFieldWidgets.end()) {
-                asmIter->second->Unhighlight();
-            }
-            auto binaryIter= binaryFieldWidgets.find(relatedField);
-            if(binaryIter != binaryFieldWidgets.end()) {
-                binaryIter->second->Unhighlight();
-            }
-        }
-    });
-    mBox_->add_controller(pMotionController_);
-}
-
-void BinaryFieldWidget::UpdateControlLables(uint32_t instructionValue)
-{
-    for(std::size_t i= 0; i < controlLabels_.size(); ++i) {
-        int bitPosition= controlLabels_.size() - 1 - i;
-        int bitValue   = (instructionValue >> bitPosition) & 0x1;
-        controlLabels_[i]->set_text(std::to_string(bitValue));
+    const auto N= controlLabels_.size();
+    for(size_t i= 0; i < N; ++i) {
+        auto bit= (fieldValue >> (N - 1 - i)) & 1U;
+        controlLabels_[i]->set_text(bit != 0U ? "1" : "0");
     }
 }

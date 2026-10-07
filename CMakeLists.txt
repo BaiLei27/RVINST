@@ -111,6 +111,7 @@ target_sources(${backend} PRIVATE
     inc/Util/BiLookupTable.hpp
     inc/Util/InputParse.hpp
     inc/Util/config.hpp.in
+    inc/Util/InstFormatView.hpp
 
     inc/Core/IBaseInstType.hh
     src/Core/IBaseInstType.cc

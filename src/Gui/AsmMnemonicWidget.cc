@@ -1,68 +1,36 @@
 #include "Gui/AsmMnemonicWidget.hh"
+#include "Gui/BinaryFieldWidget.hh"
 
-AsmMnemonicWidget::AsmMnemonicWidget(const std::string &name, Gtk::Box *pParentAsmBox)
+AsmMnemonicWidget::AsmMnemonicWidget(std::string_view token, Gtk::Box *pParentAsmBox)
 {
-    if(pParentAsmBox) {
-        mBox_= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
-        mBox_->set_css_classes({ "instruction-container" });
-        mLabel_= Gtk::make_managed<Gtk::Label>(name);
-        if(name == "mnemonic") {
-            mLabel_->set_margin_end(8);
-            mLabel_->set_css_classes({ "instruction-label" });
-        } else if(name == ",") {
+    if(!pParentAsmBox) return;
 
-        } else {
-            mLabel_->set_css_classes({ "register-label" });
-        }
-        mBox_->append(*mLabel_);
-        pParentAsmBox->append(*mBox_);
+    auto *pBox= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
+    PRoot_    = pBox;
+    pBox->add_css_class("instruction-container");
+    pLabel_= Gtk::make_managed<Gtk::Label>(Glib::ustring(token.data(), token.size()));
+    pLabel_->set_can_target(false);
+    if(token == "mnemonic") {
+        pLabel_->set_margin_end(8);
+        pLabel_->add_css_class("instruction-label");
+    } else if(token != ",") {
+        pLabel_->add_css_class("register-label");
     }
+    pBox->append(*pLabel_);
+    pParentAsmBox->append(*pBox);
 }
 
-void AsmMnemonicWidget::Highlight()
+void AsmMnemonicWidget::onHoverChanged(bool on)
 {
-    mLabel_->add_css_class("highlighted");
+    IHoverWidget::SetHighlightedAll(relatedBinary_, on);
 }
 
-void AsmMnemonicWidget::Unhighlight()
-{
-    mLabel_->remove_css_class("highlighted");
-}
+Gtk::Label *AsmMnemonicWidget::GetLabel() const noexcept { return pLabel_; }
 
-void AsmMnemonicWidget::HighlightInMouse()
+void AsmMnemonicWidget::SetupHover(std::string_view name,
+                                   const util::InstFormatView &view,
+                                   InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets)
 {
-    mLabel_->add_css_class("highlighted-in-mouse");
-}
-
-void AsmMnemonicWidget::UnhighlightInMouse()
-{
-    mLabel_->remove_css_class("highlighted-in-mouse");
-}
-
-void AsmMnemonicWidget::SetupController(const std::string &name,
-                                        InstTypeRelationEntity &instFmt,
-                                        InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets)
-{
-    pMotionController_= Gtk::EventControllerMotion::create();
-    pMotionController_->signal_motion().connect([this, &name, &instFmt, &binaryFieldWidgets](double x, double y) {
-        HighlightInMouse();
-        auto asmFieldRelations= instFmt.asmFieldRelations;
-        for(const auto &relatedField: asmFieldRelations[name]) {
-            auto iter= binaryFieldWidgets.find(relatedField);
-            if(iter != binaryFieldWidgets.end()) {
-                iter->second->Highlight();
-            }
-        }
-    });
-    pMotionController_->signal_leave().connect([this, &name, &instFmt, &binaryFieldWidgets]() {
-        UnhighlightInMouse();
-        auto asmFieldRelations= instFmt.asmFieldRelations;
-        for(const auto &relatedField: asmFieldRelations[name]) {
-            auto iter= binaryFieldWidgets.find(relatedField);
-            if(iter != binaryFieldWidgets.end()) {
-                iter->second->Unhighlight();
-            }
-        }
-    });
-    mBox_->add_controller(pMotionController_);
+    IHoverWidget::CollectRelated(binaryFieldWidgets, util::FIND_FIELD_REL(view.asmRel_, name), relatedBinary_);
+    attachMotion();
 }

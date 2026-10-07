@@ -1,31 +1,32 @@
-#ifndef ASMMNEMONICWIDGET_HH
-#define ASMMNEMONICWIDGET_HH
-#include <iostream>
-#include <unordered_map>
+
+#pragma once
+
 #include <gtkmm.h>
-#include <string>   // std::string
-#include <gtkmm.h>  // Gtk::Box, Gtk::Label, Gtk::EventControllerMotion
-#include <glibmm.h> // Glib::RefPtr
+#include <string_view>
+#include <vector>
+
+#include "Gui/IHoverWidget.hh"
 #include "Gui/InstCommST.hh"
-#include "Gui/BinaryFieldWidget.hh"
+#include "Util/InstFormatView.hpp"
 
-class AsmMnemonicWidget {
+class BinaryFieldWidget;
+
+class AsmMnemonicWidget: public IHoverWidget {
 public:
-    AsmMnemonicWidget(const std::string &mnemonicName, Gtk::Box *pParentAsmBox);
-    ~AsmMnemonicWidget()= default;
+    Gtk::Label *pLabel_ {};
+    std::vector<BinaryFieldWidget *> relatedBinary_;
+
+    AsmMnemonicWidget(std::string_view token, Gtk::Box *pParentAsmBox);
 
 public:
-    Gtk::Box *mBox_                                            = nullptr;
-    Gtk::Label *mLabel_                                        = nullptr;
-    Glib::RefPtr<Gtk::EventControllerMotion> pMotionController_= nullptr;
+    [[nodiscard]] Gtk::Label *GetLabel() const noexcept;
 
-public:
-    void Highlight();
-    void Unhighlight();
-    void HighlightInMouse();
-    void UnhighlightInMouse();
+    void SetupHover(std::string_view name,
+                    const util::InstFormatView &view,
+                    InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets);
 
-    void SetupController(const std::string &name, InstTypeRelationEntity &instFmt, InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets);
+protected:
+    void onHoverChanged(bool on) override;
 };
 
-#endif
+// Date:26/10/07/21:58
