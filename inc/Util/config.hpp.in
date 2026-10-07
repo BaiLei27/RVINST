@@ -1,0 +1,9 @@
+#pragma once
+#include <string_view>
+
+namespace util {
+using namespace std::string_view_literals;
+/** Short git commit hash from CMake configure_file (see CMakeLists.txt). */
+constexpr std::string_view G_RVINST_VERSION= "@RVINST_VERSION@"sv;
+
+} // namespace util

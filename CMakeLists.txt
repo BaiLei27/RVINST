@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.25...3.27)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project(INST
-    VERSION "0.0.2"
+project(RVINST
+    VERSION "0.0.3"
     HOMEPAGE_URL "https://github.com/Baiyi27/RVINST.git"
     LANGUAGES CXX
 )
@@ -17,9 +17,35 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
+option(enableTests "Build the INST smoke test executable" ON)
+
+# One directory for exes and shared libs so Cli/GUI share a single backend DLL
+# (Windows/MSYS load from the executable's directory). GUI still copies GTK DLLs there.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
 set(backend ${PROJECT_NAME}_backend)
 set(customModulesPath ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules CACHE PATH "custom modules directory")
 list(APPEND CMAKE_MODULE_PATH "${customModulesPath}")
+
+find_package(Git QUIET)
+set(RVINST_VERSION ${PROJECT_VERSION})
+
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        OUTPUT_VARIABLE RVINST_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+endif()
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/inc/Util/config.hpp.in
+    ${CMAKE_BINARY_DIR}/gen/config.hpp
+    @ONLY
+)
 
 include(CheckIPOSupported)
 include(CodeCheck)
@@ -44,8 +70,8 @@ add_compile_options(
     -ffunction-sections
     -funroll-loops
     -fomit-frame-pointer
-    "$<$<CONFIG:Debug>:-ggdb3;-DDEBUG>"
-    $<$<CONFIG:Release,MinSizeRel>:-DNDEBUG>
+    "$<$<CONFIG:Debug>:-ggdb3;-DDEBUG_>"
+    $<$<CONFIG:Release,MinSizeRel>:-DNDEBUG_>
 )
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_|amd|AMD)64$")
@@ -65,7 +91,6 @@ add_link_options(
 
 add_subdirectory(Logger)
 add_library(${backend} SHARED)
-add_executable(${PROJECT_NAME} tests/INST.cc)
 
 set_target_properties(${backend} PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -79,16 +104,13 @@ include_directories(
     Logger
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${backend}
-    $<$<CONFIG:Debug>:Logger>
-)
-
 target_sources(${backend} PRIVATE
     inc/ISA/Regs.hpp
     src/ISA/Regs.cc
 
     inc/Util/BiLookupTable.hpp
+    inc/Util/InputParse.hpp
+    inc/Util/config.hpp.in
 
     inc/Core/IBaseInstType.hh
     src/Core/IBaseInstType.cc
@@ -120,9 +142,25 @@ target_sources(${backend} PRIVATE
     inc/Core/Instruction.hh
     src/Core/Instruction.cc
 )
+add_subdirectory(src/Cli)
 add_subdirectory(src/Gui)
 
-SetupCodeChecks(${PROJECT_NAME} ${backend} ${PROJECT_NAME}_gui)
+if(enableTests)
+    add_executable(tests_inst
+        tests/INST.cc
+    )
+
+    target_link_libraries(tests_inst PRIVATE
+        ${backend}
+        Logger
+    )
+
+    set_target_properties(tests_inst PROPERTIES
+        SUFFIX ".exe"
+    )
+endif()
+
+SetupCodeChecks(${PROJECT_NAME}_cli ${backend} ${PROJECT_NAME}_gui)
 DefineCodeChecksTargets("fmt" "tidy")
 
 if(NOT rootBuilddir OR NOT IS_DIRECTORY "${rootBuilddir}")

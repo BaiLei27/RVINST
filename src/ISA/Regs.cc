@@ -16,7 +16,7 @@ std::optional<uint16_t> Str2Int(std::string_view target, int base)
 {
     uint16_t result= 0;
     auto [ptr, ec] = std::from_chars(target.data(), target.data() + target.size(), result, base);
-    if(ec == std::errc()) {
+    if(std::errc() == ec) {
         // std::cout << "res " << result << '\n';
         return std::make_optional<uint16_t>(result);
     }
@@ -100,7 +100,7 @@ constexpr std::optional<size_t> PARSE_REG_IDX(std::string_view name) noexcept
         std::string_view numStr(name.substr(1));
         size_t num    = 0;
         auto [ptr, ec]= std::from_chars(numStr.data(), numStr.data() + numStr.size(), num); // NOLINT
-        if(ec == std::errc() && num < G_REG_NUMBER) {
+        if(std::errc() == ec && num < G_REG_NUMBER) {
             return num;
         }
         return std::nullopt;

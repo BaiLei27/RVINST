@@ -1,7 +1,6 @@
-#include <format>
-#include <iostream>
 #include <algorithm>
-#include <array>
+#include <format>
+#include <print>
 
 #include "Core/Instruction.hh"
 #include "Core/InstTypeFactory.hh"
@@ -96,13 +95,7 @@ std::string_view Instruction::GetFormat() const noexcept
 {
     if(!Type_) return "UNKNOW";
 
-    const auto FMT= Type_->GetInstFormat();
-    if(InstFormat::UNKNOWN == FMT) return "UNKNOW";
-    using namespace std::string_view_literals;
-    static constexpr std::array<std::string_view, 6> S_NAMES { "R-Type"sv, "I-Type"sv, "S-Type"sv, "B-Type"sv, "U-Type"sv, "J-Type"sv };
-
-    const auto IDX= static_cast<std::size_t>(FMT);
-    return IDX < S_NAMES.size() ? S_NAMES[IDX] : "UNKNOW";
+    return InstFormatName(Type_->GetInstFormat());
 }
 
 bool Instruction::Decode()
@@ -121,23 +114,24 @@ bool Instruction::Decode()
         const auto &v= Type_->GetInstAssembly();
         for(const auto &e: v) {
             Disassembly_ << e;
-            // std::cout << Disassembly_.str() << '\n';
+            // std::println("{}", Disassembly_.str());
         }
         return true;
     }
 
-    std::cout << "unimp instruction: 0x" << std::hex << BitField_.to_ulong() << '\n';
+    std::println(stderr, "unimp instruction: 0x{:08X}", BitField_.to_ulong());
 
     return false;
 }
 
 void Instruction::ShowInfo() const
 {
-    std::cout << "BitField: " << BitField_ << '\n'
-              << "Assembly: " << Disassembly_.str() << '\n';
-    std::cout << "Format: " << Format_ << '\n'
-              << "Arch: " << XLEN_ << '\n'
-              << "Manual: " << Manual_ << '\n';
+    std::println("BitField: {}\nAssembly: {}\nFormat: {}\nArch: {}\nManual: {}",
+                 BitField_.to_string(),
+                 Disassembly_.str(),
+                 Format_,
+                 XLEN_,
+                 Manual_);
 }
 
 void Instruction::resetStream()
