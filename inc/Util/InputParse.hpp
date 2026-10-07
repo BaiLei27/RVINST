@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
-#include <string>
 #include <string_view>
+#include <type_traits>
 
 namespace util {
 
@@ -23,11 +25,10 @@ struct ParsedInstInput {
 
 [[nodiscard]] constexpr std::string_view STRIP_INT_PREFIX(std::string_view s) noexcept
 {
-    if(s.size() >= 2
-       && (s.starts_with("0x")
-           || s.starts_with("0X")
-           || s.starts_with("0b")
-           || s.starts_with("0B"))) return s.substr(2);
+    if(s.starts_with("0x")
+       || s.starts_with("0X")
+       || s.starts_with("0b")
+       || s.starts_with("0B")) return s.substr(2);
 
     return s;
 }
@@ -36,7 +37,7 @@ struct ParsedInstInput {
 {
     if(s.empty()) return false;
 
-    auto digits= (s.size() >= 2 && (s.starts_with("0x") || s.starts_with("0X"))) ? s.substr(2) : s;
+    auto digits= s.starts_with("0x") || s.starts_with("0X") ? s.substr(2) : s;
 
     if(digits.empty()) return false;
 
@@ -48,7 +49,7 @@ struct ParsedInstInput {
     if(s.empty()) return false;
 
     std::string_view digits(s);
-    if(s.size() >= 2 && (s.starts_with("0b") || s.starts_with("0B"))) {
+    if(s.starts_with("0b") || s.starts_with("0B")) {
         digits= s.substr(2);
     } else if(digits.size() < 2) {
         return false;
@@ -61,22 +62,77 @@ struct ParsedInstInput {
 [[nodiscard]] inline ParsedInstInput ClassifyInstInput(std::string_view input)
 {
     ParsedInstInput r;
-    auto parseword= [](std::string_view digits, int base) {
-        auto v= std::stoull(std::string(digits), nullptr, base);
-        if(v > 0xFFFFFFFFULL) throw std::out_of_range("instruction value out of 32-bit range");
-        return static_cast<uint32_t>(v);
+    // NOLINTBEGIN
+    auto parseW= [](std::string_view digits, int base) {
+        uint32_t value {};
+        auto [ptr, ec]= std::from_chars(digits.data(), digits.data() + digits.size(), value, base);
+        if(ec != std::errc() || ptr != digits.data() + digits.size()) {
+            throw std::out_of_range("instruction value out of 32-bit range");
+        }
+        return value;
     };
-
+    // NOLINTEND
     if(LooksLikeBinary(input)) {
         r.kind_= InputKind::BINARY;
-        r.word_= parseword(STRIP_INT_PREFIX(input), 2);
+        r.word_= parseW(STRIP_INT_PREFIX(input), 2);
     } else if(LooksLikeHex(input)) {
         r.kind_= InputKind::HEX;
-        r.word_= parseword(STRIP_INT_PREFIX(input), 16);
+        r.word_= parseW(STRIP_INT_PREFIX(input), 16);
     } else {
         r.kind_= InputKind::ASSEMBLY;
     }
     return r;
+}
+
+/**
+ * @brief Parse a C/C++ integer literal (decimal, 0x hex, 0b binary, leading-0 octal, optional +/- sign)
+ *  via std::from_chars. Returns false on invalid or out-of-range input.
+ * @tparam T
+ * @param s
+ * @param out
+ */
+template <typename T>
+[[nodiscard]] bool ParseInt(std::string_view s, T &out)
+{
+    bool neg= false;
+    if(!s.empty() && (s.front() == '-' || s.front() == '+')) {
+        neg= s.front() == '-';
+        s.remove_prefix(1);
+    }
+
+    int base= 10;
+    if(s.starts_with("0x") || s.starts_with("0X")) {
+        base= 16;
+        s.remove_prefix(2);
+    } else if(s.starts_with("0b") || s.starts_with("0B")) {
+        base= 2;
+        s.remove_prefix(2);
+    } else if(s.starts_with('0')) {
+        base= 8;
+        s.remove_prefix(1);
+    }
+    // NOLINTBEGIN
+    std::make_unsigned_t<T> mag {};
+    auto [ptr, ec]= std::from_chars(s.data(), s.data() + s.size(), mag, base);
+    if(ec != std::errc() || ptr != s.data() + s.size()) return false;
+
+    if constexpr(std::is_signed_v<T>) {
+        using U        = std::make_unsigned_t<T>;
+        constexpr U MAX= static_cast<U>(std::numeric_limits<T>::max());
+        if(neg) {
+            if(mag > MAX + 1U) return false;
+            out= (mag == MAX + 1U) ? std::numeric_limits<T>::min() : static_cast<T>(-static_cast<T>(mag));
+        } else {
+            if(mag > MAX) return false;
+            out= static_cast<T>(mag);
+        }
+    } else {
+        if(neg) return false;
+        out= static_cast<T>(mag);
+    }
+    // NOLINTEND
+
+    return true;
 }
 
 } // namespace util

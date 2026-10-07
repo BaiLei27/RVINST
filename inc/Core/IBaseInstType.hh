@@ -31,7 +31,7 @@ protected:
     std::optional<BiLookupTable<KeyT>::NameInfo> NameAndXlenCache_;
     std::vector<std::string> InstAssembly_;
     std::vector<uint32_t> InstBitsField_;
-    std::string BaseURL_ { R"(https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/insts/)" };
+    std::string BaseURL_ { R"(https://riscv.github.io/riscv-unified-db/manual/html/isa/isa_20240411/insts/)" };
     InstFormat Format_ { InstFormat::UNKNOWN };
     InstLayout Layout_;
     uint16_t Opcode_ {};
@@ -84,7 +84,7 @@ public:
 protected:
     virtual pBiTable_u buildTable() = 0;
     virtual KeyT calculateFunctKey()= 0;
-    virtual void mnemonicHelper() {};
+    virtual void mnemonicHelper()   = 0;
     void init();
     void appendOperands(std::initializer_list<std::string_view> regs);
 };

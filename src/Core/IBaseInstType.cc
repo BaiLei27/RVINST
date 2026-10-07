@@ -95,7 +95,7 @@ void IBaseInstType::appendOperands(std::initializer_list<std::string_view> regMn
     }
 }
 
-template <std::size_t N>
+template <size_t N>
 consteval auto FILTER_VALID_ENTRIES(const std::array<IBaseInstType::infoTup_u, N> &arr)
 {
     std::array<IBaseInstType::infoTup_u, N> validArr {};

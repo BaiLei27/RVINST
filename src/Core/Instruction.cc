@@ -82,7 +82,7 @@ const std::bitset<32> &Instruction::GetBitField() const { return BitField_; }
 
 std::string Instruction::GetHexStr() const
 {
-    return std::format("{:08X}", static_cast<unsigned>(BitField_.to_ulong()));
+    return std::format("{:08X}", BitField_.to_ulong());
 }
 
 std::string Instruction::GetBinStr() const { return BitField_.to_string(); }
