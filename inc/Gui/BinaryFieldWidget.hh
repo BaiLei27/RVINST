@@ -1,39 +1,37 @@
+#pragma once
 
-
-#ifndef BINARYFIELDWIDGET_HH
-#define BINARYFIELDWIDGET_HH
-#include <iostream>
-#include <unordered_map>
-#include <gtkmm.h>
+#include <cstdint>
+#include <string_view>
 #include <vector>
 #include <gtkmm.h>
-#include <glibmm.h>
-#include <cstdint>
+
+#include "Gui/IHoverWidget.hh"
 #include "Gui/InstCommST.hh"
-#include "Gui/AsmMnemonicWidget.hh"
+#include "ISA/InstFormat.hh"
+#include "Util/InstFormatView.hpp"
 
-class BinaryFieldWidget {
-public:
-    BinaryFieldWidget(std::vector<Gtk::Label *> &binaryLabelsV, const InstBinaryField &field);
-    ~BinaryFieldWidget()= default;
+class AsmMnemonicWidget;
 
+class BinaryFieldWidget: public IHoverWidget {
 public:
-    Gtk::Box *mBox_= nullptr;
     std::vector<Gtk::Label *> controlLabels_;
-    inline static int g_index                                  = 0;
-    Glib::RefPtr<Gtk::EventControllerMotion> pMotionController_= nullptr;
+    std::vector<BinaryFieldWidget *> relatedBinary_;
+    std::vector<AsmMnemonicWidget *> relatedAsm_;
 
 public:
-    void Highlight();
-    void Unhighlight();
-    void HighlightInMouse();
-    void UnhighlightInMouse();
-    void SetupController(const std::string &name,
-                         InstTypeRelationEntity &instFmt,
-                         InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets,
-                         InstCommST::AsmMnemonicWidgetMap_u &AsmFieldWidgets_);
+    BinaryFieldWidget(const InstField &field, int &nibbleIndex);
 
-    void UpdateControlLables(uint32_t instructionValue);
+public:
+    [[nodiscard]] const std::vector<Gtk::Label *> &GetLabels() const noexcept { return controlLabels_; }
+
+    void SetupHover(std::string_view name,
+                    const util::InstFormatView &view,
+                    InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets,
+                    InstCommST::AsmMnemonicWidgetMap_u &asmFieldWidgets);
+    void UpdateBits(uint32_t fieldValue);
+
+protected:
+    void onHoverChanged(bool on) override;
 };
 
-#endif
+// Date:26/10/07/21:58

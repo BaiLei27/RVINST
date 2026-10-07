@@ -1,58 +1,42 @@
-#ifndef INSTFORMATUI_HH
-#define INSTFORMATUI_HH
-#include <gtkmm.h>
-#include <glibmm.h>
+#pragma once
+
+#include <memory>
 #include <string>
 #include <vector>
-#include <iostream>
-#include <unordered_map>
-#include <cstdint> // uint32_t
+#include <gtkmm.h>
+
+#include "Core/Instruction.hh"
 #include "Gui/InstCommST.hh"
 #include "ISA/InstFormat.hh"
-#include "Core/Instruction.hh"
-#include "Gui/BinaryFieldWidget.hh"
-#include "Gui/AsmMnemonicWidget.hh"
-#include "Gui/InstCommST.hh"
+#include "Util/InstFormatView.hpp"
 
 class InstFormatUI: public Gtk::Box {
 public:
-    InstTypeRelationEntity format_;
-    Gtk::Label *pHexLabel_ = nullptr;
-    InstCommST::BinaryFieldWidgetMap_u BinaryFieldWidgets_;
-    InstCommST::AsmMnemonicWidgetMap_u AsmFieldWidgets_;
+    const util::InstFormatView *pView_ {};
+    Gtk::Label *pHexLabel_ {};
+    InstCommST::BinaryFieldWidgetMap_u binaryFieldWidgets_;
+    InstCommST::AsmMnemonicWidgetMap_u asmFieldWidgets_;
+    std::vector<std::unique_ptr<class BinaryFieldWidget>> binaryOwned_;
+    std::vector<std::unique_ptr<class AsmMnemonicWidget>> asmOwned_;
 
-    sigc::signal<void(const std::string &)> signal_put_to_output;
+public:
+    sigc::signal<void(const std::string &)> signalOutput_;
 
-    explicit InstFormatUI(const InstTypeRelationEntity &format);
-    void UpdateDisplay(Instruction &inst);
+    explicit InstFormatUI(InstFormat fmt);
+    void UpdateDisplay(const Instruction &inst);
 
-    std::string getAssemblyContent() const;
-    std::string getBinaryContent() const;
-    std::string getHexContent() const;
+    [[nodiscard]] std::string GetAssemblyContent() const;
+    [[nodiscard]] std::string GetBinaryContent() const;
+    [[nodiscard]] std::string GetHexContent() const;
 
-protected:
-    void setupFieldControllers();
+private:
     void setupAssemblyDisplay();
     void setupBinaryDisplay();
     void setupHexDisplay();
-    void updateAssemblyDisplay(Instruction &inst);
-    void updateBinaryDisplay(Instruction &inst);
-    void updateHexDisplay(Instruction &inst);
-
-    std::vector<Gtk::Label *> BinaryLabelsV_;
-    std::unordered_map<std::string, Gtk::Box *> FieldBoxes_;
-    std::unordered_map<std::string, Gtk::Label *> FieldValueLabels_;
-
-private:
-    void updateRTypeDisplay(Instruction &inst);
-    void updateITypeDisplay(Instruction &inst);
+    void setupHover();
+    void updateAssemblyDisplay(const Instruction &inst);
+    void updateBinaryDisplay(const Instruction &inst);
+    void updateHexDisplay(const Instruction &inst);
 };
 
-InstTypeRelationEntity createRTypeFormat();
-InstTypeRelationEntity createITypeFormat();
-InstTypeRelationEntity createJTypeFormat();
-InstTypeRelationEntity createUTypeFormat();
-InstTypeRelationEntity createSTypeFormat();
-InstTypeRelationEntity createBTypeFormat();
-
-#endif // INSTFORMATUI_HH_
+// Date:26/10/07/21:59

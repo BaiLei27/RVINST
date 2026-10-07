@@ -1,34 +1,40 @@
-#include <functional>
-#include <gdkmm.h>
+#include "Gui/AsmMnemonicWidget.hh"
+#include "Gui/BinaryFieldWidget.hh"
 #include "Gui/InstFormatUI.hh"
 
-static void appendCopyAndToViewButtons(Gtk::Box &row, InstFormatUI *pUI,
-                                       const std::function<std::string()> &getContent)
+namespace {
+
+Gtk::Box *makeLabeledRow(const char *pTitle)
 {
-    auto pSpacer = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
+    auto *pRow     = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
+    auto *pTitleLbl= Gtk::make_managed<Gtk::Label>(pTitle);
+    pTitleLbl->set_margin_end(8);
+    pRow->set_hexpand(true);
+    pRow->append(*pTitleLbl);
+    return pRow;
+}
+
+void appendCopyAndToViewButtons(Gtk::Box &row, InstFormatUI *pUI, std::string (InstFormatUI::*getter)() const)
+{
+    auto *pSpacer= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
     pSpacer->set_hexpand(true);
 
-    auto pCopyBtn  = Gtk::make_managed<Gtk::Button>("Copy");
-    auto pToViewBtn= Gtk::make_managed<Gtk::Button>("To View");
+    auto *pCopyBtn  = Gtk::make_managed<Gtk::Button>("Copy");
+    auto *pToViewBtn= Gtk::make_managed<Gtk::Button>("To View");
     pCopyBtn->set_margin_start(8);
     pToViewBtn->set_margin_start(4);
 
-    pCopyBtn->signal_clicked().connect([getContent] {
-        auto content = getContent();
-        if(!content.empty()) {
-            if(auto display = Gdk::Display::get_default()) {
-                if(auto clipboard = display->get_clipboard()) {
-                    clipboard->set_text(Glib::ustring(content));
-                }
-            }
+    pCopyBtn->signal_clicked().connect([pUI, getter] {
+        auto content= (pUI->*getter)();
+        if(content.empty()) return;
+
+        if(auto display= Gdk::Display::get_default()) {
+            if(auto clipboard= display->get_clipboard()) clipboard->set_text(Glib::ustring(content));
         }
     });
-
-    pToViewBtn->signal_clicked().connect([pUI, getContent] {
-        auto content = getContent();
-        if(!content.empty()) {
-            pUI->signal_put_to_output.emit(content);
-        }
+    pToViewBtn->signal_clicked().connect([pUI, getter] {
+        auto content= (pUI->*getter)();
+        if(!content.empty()) pUI->signalOutput_.emit(content);
     });
 
     row.append(*pSpacer);
@@ -36,414 +42,149 @@ static void appendCopyAndToViewButtons(Gtk::Box &row, InstFormatUI *pUI,
     row.append(*pToViewBtn);
 }
 
-InstFormatUI::InstFormatUI(const InstTypeRelationEntity &format)
-    : Gtk::Box(Gtk::Orientation::VERTICAL, 10), format_(format)
+} // namespace
+
+InstFormatUI::InstFormatUI(InstFormat fmt)
+    : Gtk::Box(Gtk::Orientation::VERTICAL, 10),
+      pView_(&util::GetInstFormatView(fmt))
 {
     setupAssemblyDisplay();
     setupBinaryDisplay();
     setupHexDisplay();
-    setupFieldControllers();
+    setupHover();
 }
 
 void InstFormatUI::setupAssemblyDisplay()
 {
-    auto pAsmArea = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
-    pAsmArea->set_hexpand(true);
-    auto pAsmTitle= Gtk::make_managed<Gtk::Label>("Assembly =");
-    pAsmTitle->set_margin_end(8);
-    pAsmArea->append(*pAsmTitle);
+    auto *pAsmArea= makeLabeledRow("Assembly =");
 
-    for(const std::string &iStr: format_.instTypeV_) {
-        AsmMnemonicWidget *pAsmMnemonic= new AsmMnemonicWidget(iStr, pAsmArea);
-        if(iStr.compare(",") == 0)
-            continue;
-        AsmFieldWidgets_[iStr]= pAsmMnemonic;
+    for(const auto &token: pView_->asmTokens_) {
+        auto pAsm= std::make_unique<AsmMnemonicWidget>(token, pAsmArea);
+        if(token != ",") asmFieldWidgets_.emplace(std::string(token), pAsm.get());
+        asmOwned_.emplace_back(std::move(pAsm));
     }
 
-    appendCopyAndToViewButtons(*pAsmArea, this, [this] { return getAssemblyContent(); });
+    appendCopyAndToViewButtons(*pAsmArea, this, &InstFormatUI::GetAssemblyContent);
     append(*pAsmArea);
 }
 
 void InstFormatUI::setupBinaryDisplay()
 {
-    auto pBinaryArea = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
-    auto pBinaryTitle= Gtk::make_managed<Gtk::Label>("Binary =");
-    pBinaryTitle->set_margin_end(8);
-    pBinaryArea->append(*pBinaryTitle);
+    auto *pBinaryArea= makeLabeledRow("Binary =");
     pBinaryArea->set_halign(Gtk::Align::FILL);
     pBinaryArea->set_valign(Gtk::Align::CENTER);
-    pBinaryArea->set_hexpand(true);
+    pBinaryArea->set_margin_bottom(22);
 
-    for(const auto &binaryElem: format_.binaryV_) {
-        BinaryFieldWidget *pTmpBinaryField   = new BinaryFieldWidget(BinaryLabelsV_, binaryElem);
-        BinaryFieldWidgets_[binaryElem.name_]= pTmpBinaryField;
-        pBinaryArea->append(*pTmpBinaryField->mBox_);
+    int nibbleIndex= 0;
+    binaryOwned_.reserve(pView_->fields_.size());
+    for(const auto &field: pView_->fields_) {
+        auto pBits= std::make_unique<BinaryFieldWidget>(field, nibbleIndex);
+        binaryFieldWidgets_.emplace(std::string(field.name_), pBits.get());
+        pBinaryArea->append(*pBits->GetRoot());
+        binaryOwned_.emplace_back(std::move(pBits));
     }
 
-    appendCopyAndToViewButtons(*pBinaryArea, this, [this] { return getBinaryContent(); });
+    appendCopyAndToViewButtons(*pBinaryArea, this, &InstFormatUI::GetBinaryContent);
     append(*pBinaryArea);
 }
 
 void InstFormatUI::setupHexDisplay()
 {
-    auto pHexArea = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
-    pHexArea->set_hexpand(true);
-    auto pHexTitle= Gtk::make_managed<Gtk::Label>("Hexadecimal =");
-    pHexTitle->set_margin_end(8);
-    pHexArea->append(*pHexTitle);
+    auto *pHexArea= makeLabeledRow("Hexadecimal =");
 
-    pHexLabel_ = Gtk::make_managed<Gtk::Label>("0x00000000");
+    pHexLabel_= Gtk::make_managed<Gtk::Label>("0x00000000");
     pHexLabel_->set_margin_end(8);
     pHexArea->append(*pHexLabel_);
 
-    appendCopyAndToViewButtons(*pHexArea, this, [this] { return getHexContent(); });
+    appendCopyAndToViewButtons(*pHexArea, this, &InstFormatUI::GetHexContent);
     append(*pHexArea);
 }
 
-void InstFormatUI::setupFieldControllers()
+void InstFormatUI::setupHover()
 {
-    for(const auto &asmElem: AsmFieldWidgets_) {
-        asmElem.second->SetupController(asmElem.first, format_, BinaryFieldWidgets_);
-    }
-
-    for(const auto &binaryElem: BinaryFieldWidgets_) {
-        binaryElem.second->SetupController(binaryElem.first, format_, BinaryFieldWidgets_, AsmFieldWidgets_);
-    }
+    for(auto &[name, pAsm]: asmFieldWidgets_)
+        pAsm->SetupHover(name, *pView_, binaryFieldWidgets_);
+    for(auto &[name, pBin]: binaryFieldWidgets_)
+        pBin->SetupHover(name, *pView_, binaryFieldWidgets_, asmFieldWidgets_);
 }
 
-void InstFormatUI::UpdateDisplay(Instruction &inst)
+void InstFormatUI::UpdateDisplay(const Instruction &inst)
 {
     updateAssemblyDisplay(inst);
     updateBinaryDisplay(inst);
     updateHexDisplay(inst);
 }
 
-void InstFormatUI::updateRTypeDisplay(Instruction &inst)
+void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
 {
-    if(inst.GetTypePtr() == nullptr) {
+    const auto *pType= inst.GetTypePtr();
+    if(!pType)
         return;
-    }
-    int size                                    = 0;
-    const std::vector<std::string> &instAssembly= inst.GetTypePtr()->GetInstAssembly();
-    size                                        = format_.instTypeV_.size();
-    for(int i= 0, j= 0; i < size; ++i) {
-        if(format_.instTypeV_[i] == ",")
-            continue;
-        if(instAssembly.at(j) == " " || instAssembly.at(j) == ",") {
-            j++;
-        }
-        AsmFieldWidgets_[format_.instTypeV_[i]]->mLabel_->set_text(instAssembly.at(j++));
+
+    const auto &parts= pType->GetInstAssembly();
+    size_t j         = 0;
+    for(const auto &token: pView_->asmTokens_) {
+        if(token == ",") continue;
+
+        while(j < parts.size() && (parts[j] == " " || parts[j] == ","))
+            ++j;
+
+        auto it= asmFieldWidgets_.find(token);
+        if(it != asmFieldWidgets_.end()
+           && it->second->GetLabel()
+           && j < parts.size()) it->second->GetLabel()->set_text(parts[j++]);
     }
 }
 
-void InstFormatUI::updateITypeDisplay(Instruction &inst)
+void InstFormatUI::updateBinaryDisplay(const Instruction &inst)
 {
-    if(inst.GetTypePtr() == nullptr) {
-        return;
-    }
-    int size                                    = 0;
-    const std::vector<std::string> &instAssembly= inst.GetTypePtr()->GetInstAssembly();
-    size                                        = format_.instTypeV_.size();
-    for(int i= 0, j= 0; i < size; ++i) {
-        if(format_.instTypeV_[i] == ",")
-            continue;
-        if(j < static_cast<int>(instAssembly.size()) && (instAssembly.at(j) == " " || instAssembly.at(j) == ",")) {
-            j++;
-        }
-        if(j < static_cast<int>(instAssembly.size())) {
-            AsmFieldWidgets_[format_.instTypeV_[i]]->mLabel_->set_text(instAssembly.at(j++));
-        }
-    }
+    const auto *pType= inst.GetTypePtr();
+    if(!pType) return;
+
+    const auto &bits= pType->GetInstBitsField();
+    const auto N    = binaryOwned_.size();
+    const auto M    = bits.size();
+    for(size_t i= 0; i < N && i < M; ++i)
+        binaryOwned_[N - 1 - i]->UpdateBits(bits[i]);
 }
 
-void InstFormatUI::updateBinaryDisplay(Instruction &inst)
+void InstFormatUI::updateHexDisplay(const Instruction &inst)
 {
-    if(inst.GetTypePtr() == nullptr) {
-        return;
-    }
-    int size                                  = 0;
-    const std::vector<uint32_t> &instBitsField= inst.GetTypePtr()->GetInstBitsField();
-    size                                      = format_.binaryV_.size();
-
-    for(int i= size - 1, j= 0; i >= 0; i--) {
-        BinaryFieldWidgets_[format_.binaryV_[i].name_]->UpdateControlLables(instBitsField.at(j++));
-    }
+    if(pHexLabel_)
+        pHexLabel_->set_text("0x" + inst.GetHexStr());
 }
 
-void InstFormatUI::updateAssemblyDisplay(Instruction &inst)
-{
-    const auto *pInstType= inst.GetTypePtr();
-    if(pInstType == nullptr) {
-        return;
-    }
-    switch(pInstType->GetInstFormat()) {
-    case InstFormat::R:
-        updateRTypeDisplay(inst);
-        break;
-    case InstFormat::I:
-    case InstFormat::J:
-    case InstFormat::U:
-    case InstFormat::S:
-    case InstFormat::B:
-        updateITypeDisplay(inst);
-        break;
-    default:
-        break;
-    }
-}
-
-inline std::string getHexStr(uint32_t val)
-{
-    return std::format("{:08x}", val);
-}
-
-void InstFormatUI::updateHexDisplay(Instruction &inst)
-{
-    if(inst.GetTypePtr() == nullptr) {
-        return;
-    }
-
-    uint32_t val= static_cast<uint32_t>(inst);
-    pHexLabel_->set_text("0x" + getHexStr(val));
-}
-
-std::string InstFormatUI::getAssemblyContent() const
+std::string InstFormatUI::GetAssemblyContent() const
 {
     std::string result;
-    for(const std::string &key: format_.instTypeV_) {
-        if(key == ",") {
-            result += ", ";
+    for(const auto &token: pView_->asmTokens_) {
+        if(token == ",") {
+            result+= ", ";
             continue;
         }
-        auto it = AsmFieldWidgets_.find(key);
-        if(it != AsmFieldWidgets_.end() && it->second->mLabel_) {
-            result += it->second->mLabel_->get_text().raw();
-            if(key == "mnemonic") {
-                result += " ";
-            }
+        auto it= asmFieldWidgets_.find(token);
+        if(it == asmFieldWidgets_.end() || !it->second->GetLabel()) continue;
+
+        result+= it->second->GetLabel()->get_text().raw();
+        if(token == "mnemonic")
+            result+= " ";
+    }
+    return result;
+}
+
+std::string InstFormatUI::GetBinaryContent() const
+{
+    std::string result;
+    result.reserve(32);
+    for(const auto &pField: binaryOwned_) {
+        for(auto *pLabel: pField->GetLabels()) {
+            if(pLabel) result+= pLabel->get_text().raw();
         }
     }
     return result;
 }
 
-std::string InstFormatUI::getBinaryContent() const
+std::string InstFormatUI::GetHexContent() const
 {
-    std::string result;
-    for(const auto &elem: format_.binaryV_) {
-        auto it = BinaryFieldWidgets_.find(elem.name_);
-        if(it != BinaryFieldWidgets_.end()) {
-            for(auto *label: it->second->controlLabels_) {
-                if(label) {
-                    result += label->get_text().raw();
-                }
-            }
-        }
-    }
-    return result;
-}
-
-std::string InstFormatUI::getHexContent() const
-{
-    if(pHexLabel_) {
-        return std::string(pHexLabel_->get_text().raw());
-    }
-    return {};
-}
-
-InstTypeRelationEntity createRTypeFormat()
-{
-    InstTypeRelationEntity rFormat;
-
-    rFormat.typeName_ = "R-Type";
-    rFormat.fmt_      = InstFormat::R;
-    rFormat.instTypeV_= { "mnemonic", "rd", ",", "rs1", ",", "rs2" };
-    rFormat.binaryV_  = {
-        { "funct7", 25, 31, "funct7" },
-        { "rs2",    20, 24, "rs2"    },
-        { "rs1",    15, 19, "rs1"    },
-        { "funct3", 12, 14, "funct3" },
-        { "rd",     7,  11, "rd"     },
-        { "opcode", 0,  6,  "opcode" },
-    };
-
-    rFormat.binaryFieldRelations_= {
-        { "opcode", { "mnemonic", "funct3", "funct7" } },
-        { "funct3", { "mnemonic", "opcode", "funct7" } },
-        { "funct7", { "mnemonic", "opcode", "funct3" } },
-        { "rd",     { "rd" }                           },
-        { "rs1",    { "rs1" }                          },
-        { "rs2",    { "rs2" }                          },
-    };
-    rFormat.asmFieldRelations= {
-        { "mnemonic", { "opcode", "funct3", "funct7" } },
-        { "rd",       { "rd" }                         },
-        { "rs1",      { "rs1" }                        },
-        { "rs2",      { "rs2" }                        },
-    };
-
-    return rFormat;
-}
-
-InstTypeRelationEntity createITypeFormat()
-{
-    InstTypeRelationEntity iFormat;
-
-    iFormat.typeName_ = "I-Type";
-    iFormat.fmt_      = InstFormat::I;
-    iFormat.instTypeV_= { "mnemonic", "rd", ",", "rs1", ",", "imm" };
-    iFormat.binaryV_  = {
-        { "imm",    20, 31, "imm[11:0]" },
-        { "rs1",    15, 19, "rs1"       },
-        { "funct3", 12, 14, "funct3"    },
-        { "rd",     7,  11, "rd"        },
-        { "opcode", 0,  6,  "opcode"    },
-    };
-
-    iFormat.binaryFieldRelations_= {
-        { "opcode", { "mnemonic", "funct3", "imm" } },
-        { "funct3", { "mnemonic", "opcode", "imm" } },
-        { "imm",    { "mnemonic", "opcode", "funct3" } },
-        { "rd",     { "rd" }                           },
-        { "rs1",    { "rs1" }                          },
-    };
-    iFormat.asmFieldRelations= {
-        { "mnemonic", { "opcode", "funct3", "imm" } },
-        { "rd",       { "rd" }                     },
-        { "rs1",      { "rs1" }                    },
-        { "imm",      { "imm" }                    },
-    };
-
-    return iFormat;
-}
-
-InstTypeRelationEntity createJTypeFormat()
-{
-    InstTypeRelationEntity jFormat;
-
-    jFormat.typeName_ = "J-Type";
-    jFormat.fmt_      = InstFormat::J;
-    jFormat.instTypeV_= { "mnemonic", "rd", ",", "imm" };
-    jFormat.binaryV_  = {
-        { "imm20",    31, 31, "imm[20]"   },
-        { "imm10_1",  21, 30, "imm[10:1]" },
-        { "imm11",    20, 20, "imm[11]"   },
-        { "imm19_12", 12, 19, "imm[19:12]" },
-        { "rd",       7,  11, "rd"        },
-        { "opcode",   0,  6,  "opcode"    },
-    };
-
-    jFormat.binaryFieldRelations_= {
-        { "opcode",   { "mnemonic" } },
-        { "imm20",    { "imm" } },
-        { "imm10_1",  { "imm" } },
-        { "imm11",    { "imm" } },
-        { "imm19_12", { "imm" } },
-        { "rd",       { "rd" } },
-    };
-    jFormat.asmFieldRelations= {
-        { "mnemonic", { "opcode" } },
-        { "rd",       { "rd" } },
-        { "imm",      { "imm20", "imm10_1", "imm11", "imm19_12" } },
-    };
-
-    return jFormat;
-}
-
-InstTypeRelationEntity createUTypeFormat()
-{
-    InstTypeRelationEntity uFormat;
-
-    uFormat.typeName_ = "U-Type";
-    uFormat.fmt_      = InstFormat::U;
-    uFormat.instTypeV_= { "mnemonic", "rd", ",", "imm" };
-    uFormat.binaryV_  = {
-        { "imm31_12", 12, 31, "imm[31:12]" },
-        { "rd",       7,  11, "rd"         },
-        { "opcode",   0,  6,  "opcode"     },
-    };
-
-    uFormat.binaryFieldRelations_= {
-        { "opcode",   { "mnemonic" } },
-        { "imm31_12", { "imm" } },
-        { "rd",       { "rd" } },
-    };
-    uFormat.asmFieldRelations= {
-        { "mnemonic", { "opcode" } },
-        { "rd",       { "rd" } },
-        { "imm",      { "imm31_12" } },
-    };
-
-    return uFormat;
-}
-
-InstTypeRelationEntity createSTypeFormat()
-{
-    InstTypeRelationEntity sFormat;
-
-    sFormat.typeName_ = "S-Type";
-    sFormat.fmt_      = InstFormat::S;
-    sFormat.instTypeV_= { "mnemonic", "rs2", ",", "imm", "(", "rs1", ")" };
-    sFormat.binaryV_  = {
-        { "imm11_5", 25, 31, "imm[11:5]" },
-        { "rs2",     20, 24, "rs2"      },
-        { "rs1",     15, 19, "rs1"      },
-        { "funct3",  12, 14, "funct3"   },
-        { "imm4_0",  7,  11, "imm[4:0]" },
-        { "opcode",  0,  6,  "opcode"   },
-    };
-
-    sFormat.binaryFieldRelations_= {
-        { "opcode",  { "mnemonic", "funct3" } },
-        { "funct3",  { "mnemonic", "opcode" } },
-        { "imm11_5", { "imm" } },
-        { "imm4_0",  { "imm" } },
-        { "rs1",     { "rs1" } },
-        { "rs2",     { "rs2" } },
-    };
-    sFormat.asmFieldRelations= {
-        { "mnemonic", { "opcode", "funct3" } },
-        { "rs2",      { "rs2" } },
-        { "imm",      { "imm11_5", "imm4_0" } },
-        { "rs1",      { "rs1" } },
-    };
-
-    return sFormat;
-}
-
-InstTypeRelationEntity createBTypeFormat()
-{
-    InstTypeRelationEntity bFormat;
-
-    bFormat.typeName_ = "B-Type";
-    bFormat.fmt_      = InstFormat::B;
-    bFormat.instTypeV_= { "mnemonic", "rs1", ",", "rs2", ",", "imm" };
-    bFormat.binaryV_  = {
-        { "imm12",    31, 31, "imm[12]"   },
-        { "imm10_5",  25, 30, "imm[10:5]" },
-        { "rs2",      20, 24, "rs2"       },
-        { "rs1",      15, 19, "rs1"       },
-        { "funct3",   12, 14, "funct3"    },
-        { "imm4_1",   8,  11, "imm[4:1]"  },
-        { "imm11",    7,  7,  "imm[11]"   },
-        { "opcode",   0,  6,  "opcode"    },
-    };
-
-    bFormat.binaryFieldRelations_= {
-        { "opcode",  { "mnemonic", "funct3" } },
-        { "funct3",  { "mnemonic", "opcode" } },
-        { "imm12",   { "imm" } },
-        { "imm10_5", { "imm" } },
-        { "imm4_1",  { "imm" } },
-        { "imm11",   { "imm" } },
-        { "rs1",     { "rs1" } },
-        { "rs2",     { "rs2" } },
-    };
-    bFormat.asmFieldRelations= {
-        { "mnemonic", { "opcode", "funct3" } },
-        { "rs1",      { "rs1" } },
-        { "rs2",      { "rs2" } },
-        { "imm",      { "imm12", "imm10_5", "imm4_1", "imm11" } },
-    };
-
-    return bFormat;
+    return pHexLabel_ ? std::string(pHexLabel_->get_text().raw()) : std::string {};
 }

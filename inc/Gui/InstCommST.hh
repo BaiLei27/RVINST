@@ -1,38 +1,32 @@
-#ifndef INSTCOMMST_HH
-#define INSTCOMMST_HH
-#include <gtkmm.h>
-#include <unordered_map>
-#include <vector>
-#include <string>
-#include <iostream>
-#include "ISA/InstFormat.hh"
+#pragma once
 
-struct InstBinaryField {
-    std::string name_;
-    int startBit_;
-    int endBit_;
-    std::string tooltip_;
-    std::string cssClass_= "bit-field-container";
-};
+#include <string>
+#include <string_view>
+#include <unordered_map>
 
 class BinaryFieldWidget;
 class AsmMnemonicWidget;
 
-namespace InstCommST {
-using binaryRelationMap= std::unordered_map<std::string, std::vector<std::string>>;
-using asmRelationMap   = std::unordered_map<std::string, std::vector<std::string>>;
+namespace InstCommST { // NOLINT
 
-using BinaryFieldWidgetMap_u= std::unordered_map<std::string, BinaryFieldWidget *>;
-using AsmMnemonicWidgetMap_u= std::unordered_map<std::string, AsmMnemonicWidget *>;
-} // namespace InstCommST
+struct TransparentStringHash {
+    using is_transparent= void; // ! Must be set to 'void', enable heterogeneous lookup //NOLINT
 
-struct InstTypeRelationEntity {
-    std::string typeName_;
-    InstFormat fmt_;
-    std::vector<std::string> instTypeV_;
-    std::vector<InstBinaryField> binaryV_;
-    InstCommST::binaryRelationMap binaryFieldRelations_;
-    InstCommST::asmRelationMap asmFieldRelations;
+    size_t operator() (std::string_view s) const noexcept
+    {
+        return std::hash<std::string_view> {}(s);
+    }
+
+    size_t operator() (const std::string &s) const noexcept
+    {
+        return std::hash<std::string_view> {}(s);
+    }
 };
 
-#endif
+template <class W>
+using WidgetMap_u= std::unordered_map<std::string, W *, TransparentStringHash, std::equal_to<>>;
+
+using BinaryFieldWidgetMap_u= WidgetMap_u<BinaryFieldWidget>;
+using AsmMnemonicWidgetMap_u= WidgetMap_u<AsmMnemonicWidget>;
+
+} // namespace InstCommST

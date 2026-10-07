@@ -1,4 +1,4 @@
-.binary-bit {
+﻿.binary-bit {
     background-color: #f0f0f0;
     border: 1px solid #ccc;
     border-radius: 3px;
@@ -8,16 +8,17 @@
     padding: 0 2px;
 }
 
-.binary-bit.highlighted {
+.bit-field-container:hover .binary-bit,
+.bit-field-container.highlighted-in-mouse .binary-bit {
+    background-color: #b9e84a;
+    color: white;
+    border: 1px solid #61982a;
+}
+
+.bit-field-container.highlighted .binary-bit {
     background-color: #4a86e8;
     color: white;
     border: 1px solid #2a5298;
-}
-
-.binary-bit.highlighted-in-mouse {
-    background-color: #b9e84aff;
-    color: white;
-    border: 1px solid #61982aff;
 }
 
 .bit-field-container {
@@ -27,16 +28,28 @@
 
 .field-label {
     font-size: 0.85em;
-    color: #555;
-    margin-top: 3px;
+    font-family: monospace;
+    color: #fff;
+    background-color: rgba(32, 32, 32, 0.92);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-top: 32px;
+    min-height: 1.2em;
+    opacity: 0;
 }
 
-.instruction-container { 
+.bit-field-container:hover .field-label,
+.bit-field-container.highlighted-in-mouse .field-label {
+    opacity: 1;
+}
+
+.instruction-container {
     padding: 0 3px;
     border-radius: 4px;
 }
 
-.instruction-label {
+.instruction-label,
+.register-label {
     background-color: #f0f0f0;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -44,36 +57,21 @@
     font-weight: bold;
     margin: 1px;
     padding: 0 3px;
-    color: #10151aff;
-}
-.instruction-label.highlighted {
-    background-color: #4a86e8;
-    color: white;
-    border: 1px solid #2a5298;
-}
-.instruction-label.highlighted-in-mouse {
-    background-color: #b9e84aff;
-    color: white;
-    border: 1px solid #61982aff;
+    color: #10151a;
 }
 
-.register-label {
-    background-color: #f0f0f0;
-    border: 1px solid  #ccc;
-    border-radius: 4px;
-    font-family: monospace;
-    font-weight: bold;
-    margin: 1px;
-    padding: 0 3px;
-    color: #10151aff;
+.instruction-container:hover .instruction-label,
+.instruction-container:hover .register-label,
+.instruction-container.highlighted-in-mouse .instruction-label,
+.instruction-container.highlighted-in-mouse .register-label {
+    background-color: #b9e84a;
+    color: white;
+    border: 1px solid #61982a;
 }
-.register-label.highlighted {
+
+.instruction-container.highlighted .instruction-label,
+.instruction-container.highlighted .register-label {
     background-color: #4a86e8;
     color: white;
     border: 1px solid #2a5298;
-}
-.register-label.highlighted-in-mouse {
-    background-color: #b9e84aff;
-    color: white;
-    border: 1px solid #61982aff;
 }
