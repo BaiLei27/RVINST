@@ -1,4 +1,4 @@
-﻿.binary-bit {
+.binary-bit {
     background-color: #f0f0f0;
     border: 1px solid #ccc;
     border-radius: 3px;
@@ -74,4 +74,27 @@
     background-color: #4a86e8;
     color: white;
     border: 1px solid #2a5298;
+}
+
+.input-history-popover {
+    padding: 0;
+    border-radius: 0 0 4px 4px;
+}
+
+.input-history-list {
+    background-color: @theme_base_color;
+}
+
+.input-history-list row {
+    min-height: 28px;
+    padding: 0;
+    border-bottom: 1px solid alpha(@theme_fg_color, 0.08);
+}
+
+.input-history-list row:last-child {
+    border-bottom: none;
+}
+
+.input-history-list row:hover {
+    background-color: alpha(@theme_selected_bg_color, 0.25);
 }

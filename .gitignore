@@ -99,7 +99,7 @@ pythonenv*
 /docs/html/
 
 # static analyzer regression testing project files
-
+/tmp
 # automodapi puts generated documentation files here.
 
 # folder or file that is not ignored (start with `!`)
