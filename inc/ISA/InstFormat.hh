@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
+#include <string_view>
 
 enum class InstFormat : int8_t { // Instruction format enumeration
     UNKNOWN= -1,
@@ -79,5 +81,15 @@ union InstLayout {
 };
 
 // NOLINTEND
+
+struct InstField {
+    std::string_view name_;
+    int startBit_ {};
+    int endBit_ {};
+    std::string_view desc_;
+};
+
+std::string_view InstFormatName(InstFormat fmt) noexcept;
+std::span<const InstField> GetInstFields(InstFormat fmt);
 
 // Date:25/12/21/22:34
