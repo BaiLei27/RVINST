@@ -19,7 +19,7 @@ public:
     std::vector<AsmMnemonicWidget *> relatedAsm_;
 
 public:
-    BinaryFieldWidget(const InstField &field, int &nibbleIndex);
+    BinaryFieldWidget(const InstField &field, int toneIndex);
 
 public:
     [[nodiscard]] const std::vector<Gtk::Label *> &GetLabels() const noexcept { return controlLabels_; }

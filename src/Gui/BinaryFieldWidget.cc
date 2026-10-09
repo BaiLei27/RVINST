@@ -1,15 +1,55 @@
+#include <format>
+
 #include "Gui/AsmMnemonicWidget.hh"
 #include "Gui/BinaryFieldWidget.hh"
 
-BinaryFieldWidget::BinaryFieldWidget(const InstField &field, int &nibbleIndex)
-{
-    auto *pBox= Gtk::make_managed<Gtk::Overlay>();
-    PRoot_    = pBox;
-    pBox->add_css_class("bit-field-container");
-    pBox->set_hexpand(false);
-    pBox->set_valign(Gtk::Align::CENTER);
+namespace {
 
-    auto *pBits= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
+const char *toneClass(int toneIndex) noexcept
+{
+    switch(toneIndex % 3) {
+    case 0:  return "bit-tone-blue";
+    case 1:  return "bit-tone-green";
+    default: return "bit-tone-purple";
+    }
+}
+
+} // namespace
+
+BinaryFieldWidget::BinaryFieldWidget(const InstField &field, int toneIndex)
+{
+    auto *pWrap= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 4);
+    PRoot_     = pWrap;
+    pWrap->add_css_class("bit-field-wrap");
+    pWrap->set_hexpand(false);
+    pWrap->set_valign(Gtk::Align::START);
+    pWrap->set_halign(Gtk::Align::FILL);
+
+    const auto RANGE=
+        (field.startBit_ == field.endBit_)
+            ? std::format("{}", field.startBit_)
+            : std::format("{} : {}", field.endBit_, field.startBit_);
+
+    auto *pRange= Gtk::make_managed<Gtk::Label>(RANGE);
+    pRange->add_css_class("bit-range-label");
+    pRange->set_halign(Gtk::Align::CENTER);
+    pRange->set_can_target(false);
+    pWrap->append(*pRange);
+
+    auto *pBlock= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 6);
+    pBlock->add_css_class("bit-field-container");
+    pBlock->add_css_class(toneClass(toneIndex));
+    pBlock->set_halign(Gtk::Align::FILL);
+    pBlock->set_can_target(false);
+
+    const auto CAPTION= field.desc_.empty() ? field.name_ : field.desc_;
+    auto *pName       = Gtk::make_managed<Gtk::Label>(Glib::ustring(CAPTION.data(), CAPTION.size()));
+    pName->add_css_class("field-name-label");
+    pName->set_halign(Gtk::Align::CENTER);
+    pName->set_can_target(false);
+    pBlock->append(*pName);
+
+    auto *pBits= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 2);
     pBits->set_halign(Gtk::Align::CENTER);
     pBits->set_can_target(false);
 
@@ -20,26 +60,14 @@ BinaryFieldWidget::BinaryFieldWidget(const InstField &field, int &nibbleIndex)
         pBit->set_width_chars(1);
         pBit->set_halign(Gtk::Align::CENTER);
         pBit->set_valign(Gtk::Align::CENTER);
-        pBit->set_size_request(18, 30);
         pBit->add_css_class("binary-bit");
         pBit->set_can_target(false);
-        if(nibbleIndex > 0 && nibbleIndex % 4 == 0)
-            pBit->set_margin_start(8);
         controlLabels_.emplace_back(pBit);
         pBits->append(*pBit);
-        ++nibbleIndex;
     }
 
-    auto caption= field.desc_.empty() ? field.name_ : field.desc_;
-    auto *pName = Gtk::make_managed<Gtk::Label>(Glib::ustring(caption.data(), caption.size()));
-    pName->add_css_class("field-label");
-    pName->set_halign(Gtk::Align::CENTER);
-    pName->set_valign(Gtk::Align::START);
-    pName->set_can_target(false);
-
-    pBox->set_child(*pBits);
-    pBox->add_overlay(*pName);
-    pBox->set_measure_overlay(*pName, false);
+    pBlock->append(*pBits);
+    pWrap->append(*pBlock);
 }
 
 void BinaryFieldWidget::onHoverChanged(bool on)
@@ -63,7 +91,8 @@ void BinaryFieldWidget::UpdateBits(uint32_t fieldValue)
 {
     const auto N= controlLabels_.size();
     for(size_t i= 0; i < N; ++i) {
-        auto bit= (fieldValue >> (N - 1 - i)) & 1U;
-        controlLabels_[i]->set_text(bit != 0U ? "1" : "0");
+        const auto BIT= (fieldValue >> (N - 1 - i)) & 1U;
+        controlLabels_[i]->set_text(BIT != 0U ? "1" : "0");
+        IHoverWidget::SetCSSClass(controlLabels_[i], "bit-one", BIT != 0U);
     }
 }

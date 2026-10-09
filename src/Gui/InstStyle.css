@@ -1,102 +1,612 @@
-.binary-bit {
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
-    border-radius: 3px;
+/* ============================================================
+ * RVINST GTK4 UI — unified 25px type scale
+ * ============================================================ */
+
+@define-color bg_color              #f2f3f5;
+@define-color surface_color         #ffffff;
+@define-color surface_soft          #f7f8fa;
+@define-color border_color          #d8dce2;
+@define-color border_soft           #e6e8ec;
+
+@define-color text_primary          #1d1d1f;
+@define-color text_secondary        #6e6e73;
+@define-color text_tertiary         #8e8e93;
+
+@define-color accent_blue           #3b82f6;
+@define-color accent_blue_hover     #2563eb;
+
+@define-color bit_blue              #e8f1ff;
+@define-color bit_blue_border       #c5daf8;
+@define-color bit_green             #e8f7ee;
+@define-color bit_green_border      #c3e6d0;
+@define-color bit_purple            #efeaff;
+@define-color bit_purple_border     #d8ccfa;
+
+@define-color error_bg              #fff1f0;
+@define-color error_border          #ffccc7;
+@define-color error_text            #d70015;
+
+
+.app-window,
+.app-window > box,
+.main-container,
+.format-panel,
+.about-window,
+.about-container {
+    background-color: @bg_color;
+    color: @text_primary;
+    font-size: 25px;
+}
+
+.about-window,
+.about-container {
+    background-color: @surface_color;
+}
+
+.input-row {
+    min-height: 52px;
+}
+
+
+/* Entry */
+
+.input-entry {
+    min-height: 48px;
+    padding: 0 16px;
+    border: 1px solid @border_color;
+    border-radius: 14px;
+    background-color: @surface_color;
+    color: @text_primary;
     font-family: monospace;
-    font-weight: bold;
-    margin: 1px;
-    padding: 0 2px;
+    font-size: 25px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.bit-field-container:hover .binary-bit,
-.bit-field-container.highlighted-in-mouse .binary-bit {
-    background-color: #b9e84a;
-    color: white;
-    border: 1px solid #61982a;
+.input-entry text {
+    font-family: monospace;
+    font-size: 25px;
+    font-weight: 600;
+    color: @text_primary;
+    caret-color: @text_primary;
 }
 
-.bit-field-container.highlighted .binary-bit {
-    background-color: #4a86e8;
-    color: white;
-    border: 1px solid #2a5298;
+/* GTK4 draws the caret from the `cursor` CSS node. font-size: 25px on
+ * .input-entry is inherited and used as min-width, so the caret becomes
+ * ~1em (25px) wide. Pin it to a 2px bar. */
+.input-entry text > cursor {
+    min-width: 2px;
+    min-height: unset;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background-color: @text_primary;
+}
+
+.input-entry text > block-cursor {
+    min-width: 2px;
+    background-color: transparent;
+}
+
+.input-entry:hover {
+    border-color: #c5c9d0;
+}
+
+.input-entry:focus {
+    border-color: @accent_blue;
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.16),
+        0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.input-entry image {
+    color: @text_secondary;
+    -gtk-icon-size: 20px;
+}
+
+.input-entry selection {
+    background-color: rgba(59, 130, 246, 0.22);
+    color: @text_primary;
+}
+
+
+/* Icon / parse buttons */
+
+.icon-button {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0;
+    border: 1px solid @border_color;
+    border-radius: 12px;
+    background-color: @surface_color;
+    color: @text_secondary;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    -gtk-icon-size: 20px;
+}
+
+.icon-button:hover {
+    background-color: #f8f9fb;
+    border-color: #c8ccd2;
+    color: @text_primary;
+}
+
+.parse-button {
+    min-height: 48px;
+    min-width: 240px;
+    margin-top: 2px;
+    margin-bottom: 4px;
+    padding: 0 36px;
+    border: 1px solid #93c5fd;
+    border-radius: 24px;
+    background-image: none;
+    background-color: #dbeafe;
+    color: #1e40af;
+    font-size: 25px;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.18);
+}
+
+.parse-button:hover {
+    background-image: none;
+    background-color: #bfdbfe;
+    border-color: #60a5fa;
+    color: #1e3a8a;
+}
+
+
+/* Result card */
+
+.result-card {
+    padding: 6px 10px;
+    border: 1px solid @border_soft;
+    border-radius: 16px;
+    background-color: @surface_color;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.04),
+        0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.result-row {
+    min-height: 52px;
+    padding: 12px 10px;
+    border-bottom: 1px solid @border_soft;
+}
+
+.result-row-last {
+    border-bottom: none;
+}
+
+.result-row-title {
+    color: @text_secondary;
+    font-size: 25px;
+    font-weight: 600;
+}
+
+label.binary-value,
+label.hex-value,
+.binary-value,
+.hex-value {
+    color: @text_primary;
+    font-family: monospace;
+    font-size: 25px;
+    font-weight: 700;
+}
+
+.copy-icon-button,
+.use-input-button {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 9px;
+    background-color: transparent;
+    color: @text_tertiary;
+    -gtk-icon-size: 18px;
+}
+
+.copy-icon-button:hover,
+.use-input-button:hover {
+    background-color: #f1f3f6;
+    color: @text_primary;
+}
+
+
+/* Format card */
+
+.format-card {
+    padding: 14px;
+    border: 1px solid @border_soft;
+    border-radius: 16px;
+    background-color: @surface_color;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.04),
+        0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.format-card-header {
+    min-height: 30px;
+    margin-bottom: 4px;
+}
+
+.meta-key-label {
+    color: @text_secondary;
+    font-size: 25px;
+    font-weight: 600;
+}
+
+.info-badge {
+    padding: 4px 12px;
+    border: 1px solid @border_color;
+    border-radius: 8px;
+    background-color: @surface_soft;
+    color: @text_primary;
+    font-size: 25px;
+    font-weight: 600;
+}
+
+.opcode-badge {
+    padding: 4px 14px;
+    border: 1px solid #c5daf8;
+    border-radius: 999px;
+    background-color: #eaf2ff;
+    color: #1d4ed8;
+    font-family: monospace;
+    font-size: 25px;
+    font-weight: 600;
+}
+
+.value-chip {
+    padding: 4px 10px;
+    border: 1px solid @bit_green_border;
+    border-radius: 8px;
+    background-color: @bit_green;
+}
+
+.format-meta-row {
+    min-height: 30px;
+    margin-top: 6px;
+}
+
+.format-meta-label {
+    color: @text_secondary;
+    font-size: 25px;
+    font-weight: 600;
+    min-width: 100px;
+}
+
+.format-placeholder {
+    opacity: 0.35;
+}
+
+label.manual-link,
+.manual-link,
+.manual-link link,
+.manual-link * {
+    color: @accent_blue;
+    font-family: monospace;
+    font-size: 25px;
+    font-weight: 600;
+}
+
+.manual-link:hover,
+.manual-link:hover * {
+    color: @accent_blue_hover;
+}
+
+
+/* Bit fields */
+
+.bit-field-wrap {
+    padding: 2px;
+}
+
+.bit-range-label {
+    color: @text_tertiary;
+    font-family: monospace;
+    font-size: 25px;
+    font-weight: 600;
 }
 
 .bit-field-container {
-    padding: 1px;
-    border-radius: 3px;
+    padding: 8px 8px 10px 8px;
+    border: 1px solid transparent;
+    border-radius: 12px;
 }
 
-.field-label {
-    font-size: 0.85em;
+.bit-tone-blue {
+    background-color: @bit_blue;
+    border-color: @bit_blue_border;
+}
+
+.bit-tone-green {
+    background-color: @bit_green;
+    border-color: @bit_green_border;
+}
+
+.bit-tone-purple {
+    background-color: @bit_purple;
+    border-color: @bit_purple_border;
+}
+
+.field-name-label {
+    color: @text_secondary;
     font-family: monospace;
-    color: #fff;
-    background-color: rgba(32, 32, 32, 0.92);
-    padding: 1px 5px;
-    border-radius: 3px;
-    margin-top: 32px;
-    min-height: 1.2em;
-    opacity: 0;
+    font-size: 25px;
+    font-weight: 600;
 }
 
-.bit-field-container:hover .field-label,
-.bit-field-container.highlighted-in-mouse .field-label {
-    opacity: 1;
+.binary-bit {
+    min-width: 26px;
+    min-height: 26px;
+    margin: 1px;
+    padding: 2px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.85);
+    color: @text_primary;
+    font-family: monospace;
+    font-size: 25px;
+    font-weight: 700;
 }
+
+.binary-bit.bit-one {
+    background-color: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+}
+
+.bit-field-wrap:hover .bit-field-container,
+.bit-field-wrap.highlighted .bit-field-container {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.22);
+}
+
+
+/* Assembly */
 
 .instruction-container {
-    padding: 0 3px;
-    border-radius: 4px;
+    padding: 2px 3px;
+    border-radius: 8px;
 }
 
 .instruction-label,
 .register-label {
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    min-height: 30px;
+    margin: 2px;
+    padding: 3px 8px;
+    border: 1px solid @bit_green_border;
+    border-radius: 8px;
+    background-color: @bit_green;
+    color: #166534;
     font-family: monospace;
-    font-weight: bold;
-    margin: 1px;
-    padding: 0 3px;
-    color: #10151a;
+    font-size: 25px;
+    font-weight: 700;
 }
 
 .instruction-container:hover .instruction-label,
 .instruction-container:hover .register-label,
-.instruction-container.highlighted-in-mouse .instruction-label,
-.instruction-container.highlighted-in-mouse .register-label {
-    background-color: #b9e84a;
-    color: white;
-    border: 1px solid #61982a;
-}
-
 .instruction-container.highlighted .instruction-label,
 .instruction-container.highlighted .register-label {
-    background-color: #4a86e8;
-    color: white;
-    border: 1px solid #2a5298;
+    background-color: @bit_blue;
+    border-color: @bit_blue_border;
+    color: #1d4ed8;
 }
 
-.input-history-popover {
-    padding: 0;
-    border-radius: 0 0 4px 4px;
-}
 
-.input-history-list {
-    background-color: @theme_base_color;
+/* History / settings */
+
+.input-history-popover contents {
+    padding: 5px;
+    border-radius: 14px;
+    background-color: @surface_color;
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .input-history-list row {
-    min-height: 28px;
-    padding: 0;
-    border-bottom: 1px solid alpha(@theme_fg_color, 0.08);
-}
-
-.input-history-list row:last-child {
-    border-bottom: none;
+    min-height: 40px;
+    margin: 2px;
+    border-radius: 9px;
 }
 
 .input-history-list row:hover {
-    background-color: alpha(@theme_selected_bg_color, 0.25);
+    background-color: #f1f5fa;
+}
+
+.input-history-list row:selected {
+    background-color: #e7f0ff;
+}
+
+.input-history-list row label {
+    padding: 0 12px;
+    color: @text_primary;
+    font-family: monospace;
+    font-size: 25px;
+}
+
+.settings-popover contents {
+    padding: 14px;
+    border-radius: 16px;
+    background-color: @surface_color;
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.settings-row {
+    min-height: 40px;
+}
+
+.settings-label {
+    color: @text_primary;
+    font-size: 25px;
+    font-weight: 600;
+}
+
+.isa-dropdown {
+    min-width: 86px;
+    min-height: 36px;
+    font-size: 25px;
+}
+
+.isa-dropdown > button {
+    min-width: 86px;
+    border: 1px solid @border_color;
+    border-radius: 9px;
+    background-color: @surface_soft;
+    padding: 0 8px;
+    font-size: 25px;
+}
+
+.isa-dropdown > button:hover {
+    background-color: #eef1f5;
+}
+
+
+/* Switch */
+
+switch,
+switch.abi-switch {
+    min-width: 48px;
+    min-height: 28px;
+}
+
+switch trough,
+switch.abi-switch trough {
+    min-width: 48px;
+    min-height: 28px;
+    border-radius: 14px;
+    background-image: none;
+    background-color: #d2d2d7;
+}
+
+switch slider,
+switch.abi-switch slider {
+    min-width: 24px;
+    min-height: 24px;
+    margin: 2px;
+    border-radius: 50%;
+    background-image: none;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.20);
+}
+
+switch:checked trough,
+switch.abi-switch:checked trough,
+.abi-switch:checked > trough {
+    background-image: none;
+    background-color: #34c759;
+}
+
+
+/* About */
+
+.about-container {
+    min-width: 440px;
+}
+
+.about-icon {
+    min-width: 56px;
+    min-height: 56px;
+    padding: 0 12px;
+    border-radius: 14px;
+    background-color: @accent_blue;
+    color: white;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.about-header {
+    margin-bottom: 4px;
+}
+
+.version-title {
+    color: @text_primary;
+    font-size: 25px;
+    font-weight: 700;
+    min-width: 0;
+    margin-bottom: 4px;
+}
+
+.version-info-card {
+    padding: 16px 18px;
+    border: 1px solid @border_soft;
+    border-radius: 12px;
+    background-color: @surface_soft;
+}
+
+.version-info-row {
+    min-height: 30px;
+}
+
+.version-info-name,
+.version-info-value,
+.version-info-link {
+    font-size: 25px;
+}
+
+.version-info-name {
+    color: @text_secondary;
+    font-weight: 600;
+}
+
+.version-info-value {
+    color: @text_primary;
+    font-family: monospace;
+}
+
+.version-info-link {
+    color: @accent_blue;
+}
+
+.about-close-button {
+    min-height: 40px;
+    min-width: 96px;
+    border: 1px solid #c7cbd1;
+    border-radius: 10px;
+    background-color: @surface_soft;
+    color: @text_primary;
+    font-size: 25px;
+    font-weight: 600;
+}
+
+.about-close-button:hover {
+    background-color: #eef0f3;
+}
+
+
+/* Error */
+
+.error-result {
+    padding: 14px 16px;
+    border: 1px solid @error_border;
+    border-radius: 12px;
+    background-color: @error_bg;
+    color: @error_text;
+    font-family: monospace;
+    font-size: 25px;
+}
+
+
+scrollbar {
+    background-color: transparent;
+}
+
+scrollbar slider {
+    min-width: 6px;
+    min-height: 6px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.18);
+}
+
+*:focus-visible {
+    outline: none;
+}
+
+button:disabled,
+entry:disabled {
+    opacity: 0.45;
 }
 
 .version-title {
