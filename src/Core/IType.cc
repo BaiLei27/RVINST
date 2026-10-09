@@ -1,8 +1,54 @@
-#include <print>
-
 #include "Core/IType.hh"
 #include "ISA/Regs.hpp"
 #include "Util/InputParse.hpp"
+
+namespace {
+
+constexpr uint8_t G_FENCE_IORW= 0xFU; // I|O|R|W
+
+[[nodiscard]] std::string formatFenceSet(uint16_t mask)
+{
+    std::string s;
+    // NOLINTBEGIN
+
+    if(mask & 0x8U) s+= 'i';
+    if(mask & 0x4U) s+= 'o';
+    if(mask & 0x2U) s+= 'r';
+    if(mask & 0x1U) s+= 'w';
+
+    // NOLINTEND
+    return s.empty() ? "0" : s;
+}
+
+[[nodiscard]] std::optional<uint16_t> parseFenceSet(std::string_view tok)
+{
+    if(tok.empty()) return std::nullopt;
+
+    uint16_t num {};
+    if(util::ParseInt(tok, num)) {
+        if(num > 15U) return std::nullopt;
+        return num;
+    }
+
+    uint16_t mask {};
+    for(unsigned char c: tok) {
+        switch(std::tolower(c)) {
+        case 'i': mask|= 0x8U; break;
+        case 'o': mask|= 0x4U; break;
+        case 'r': mask|= 0x2U; break;
+        case 'w': mask|= 0x1U; break;
+        default:  return std::nullopt;
+        }
+    }
+    return mask;
+}
+
+[[nodiscard]] constexpr uint16_t PACK_FENCE_IMM(uint16_t fm, uint16_t pred, uint16_t succ) noexcept
+{
+    return (fm & 0xFU) << 8 | (pred & 0xFU) << 4 | (succ & 0xFU);
+}
+
+} // namespace
 
 IType::IType(uint32_t inst, InstFormat format, bool hasSetABI)
     : IBaseInstType(inst, format, hasSetABI)
@@ -18,15 +64,27 @@ IType::IType(std::vector<std::string> instAssembly, InstFormat format, bool hasS
 
 void IType::Parse()
 {
-    InstBitsField_.push_back(Layout_.I.opc);
-    InstBitsField_.push_back(Layout_.I.rd);
-    InstBitsField_.push_back(Layout_.I.fct3);
-    InstBitsField_.push_back(Layout_.I.rs1);
-    InstBitsField_.push_back(Layout_.I.imm0tB);
-
+    const auto IMM= Layout_.I.imm0tB;
+    switch(DetectIImmShape(Layout_.I.opc, Layout_.I.fct3)) {
+    case ItypeImmShape::SHIFT:
+        setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x1FU, IMM >> 5 });
+        break;
+    case ItypeImmShape::FENCE:
+        setBitsField({ Layout_.I.opc,
+                       Layout_.I.rd,
+                       Layout_.I.fct3,
+                       Layout_.I.rs1,
+                       IMM & 0xFU,
+                       IMM >> 4 & 0xFU,
+                       IMM >> 8 & 0xFU });
+        break;
+    default:
+        setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM });
+        break;
+    }
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nrs1: {}\nrd: {}\nimm: {}",
-                 Opcode_,
+                 GetInstOpcode(),
                  Layout_.entity_,
                  +Layout_.I.fct3,
                  +Layout_.I.rs1,
@@ -37,129 +95,107 @@ void IType::Parse()
 
 void IType::mnemonicHelper()
 {
-    uint32_t opc= Layout_.I.opc;
-    if(opc == 0x73) {
-        if(InstAssembly_.size() > 1) {
-            InstAssembly_.resize(1);
+    const uint32_t OPC= Layout_.I.opc;
+    const auto SHAPE  = DetectIImmShape(OPC, Layout_.I.fct3);
+
+    if(OpcMap::SYSTEM == OPC) {
+        if(InstAssembly_.size() > 1) InstAssembly_.resize(1);
+        return;
+    }
+
+    if(ItypeImmShape::FENCE == SHAPE) {
+        if(1 == Layout_.I.fct3) { // fence.i
+            if(InstAssembly_.size() > 1) InstAssembly_.resize(1);
+            return;
         }
+        const auto PRED= formatFenceSet(Layout_.I.imm0tB >> 4 & 0xFU);
+        const auto SUCC= formatFenceSet(Layout_.I.imm0tB & 0xFU);
+        appendOperands({ " ", PRED, ",", SUCC });
         return;
     }
 
+    auto rd           = isa::LOOKUP_REG_NAME(Layout_.I.rd, HasSetABI_);
+    auto rs1          = isa::LOOKUP_REG_NAME(Layout_.I.rs1, HasSetABI_);
     std::string immStr= std::to_string(Layout_.I.imm0tB);
-
-    if(opc == 0x0F) {
-        auto z= isa::LOOKUP_REG_NAME(0, HasSetABI_);
-        appendOperands({ " ", z, ",", z, ",", immStr });
-        return;
-    }
-
-    auto rd = isa::LOOKUP_REG_NAME(Layout_.I.rd, HasSetABI_);
-    auto rs1= isa::LOOKUP_REG_NAME(Layout_.I.rs1, HasSetABI_);
     appendOperands({ " ", rd, ",", rs1, ",", immStr });
-}
-
-const std::vector<std::string> &IType::Disassembly()
-{
-    if(!InstTable_) {
-        InstTable_= buildTable();
-    }
-
-    if(InstAssembly_.empty()) {
-        const auto &info= LookupNameAndInfo();
-        InstAssembly_.emplace_back(info.name_);
-        mnemonicHelper();
-    }
-
-    return InstAssembly_;
 }
 
 const InstLayout &IType::Assembly()
 {
-    const auto &info= LookupIdxAndInfo();
+    const auto &info  = LookupIdxAndInfo();
+    const auto PAYLOAD= KEY_PAYLOAD(info.keyID_);
+    const uint16_t OPC= Layout_.I.opc= info.opcode_;
 
-    Layout_.I.opc= Opcode_= info.opcode_;
-    uint16_t key          = info.funct_;
-
-    if(info.opcode_ == 0x13) {
-        Layout_.I.fct3  = key & 7;
-        Layout_.I.imm0tB= (key << 2) & 0xFE0;
-    } else if(info.opcode_ == 0x73) {
+    if(OpcMap::SYSTEM == OPC) {
         Layout_.I.rd    = 0;
         Layout_.I.rs1   = 0;
         Layout_.I.fct3  = 0;
-        Layout_.I.imm0tB= key & 0xFFF;
-    } else {
-        Layout_.I.fct3  = key & 7;
-        Layout_.I.imm0tB= 0;
+        Layout_.I.imm0tB= PAYLOAD;
+        mnemonicHelper();
+        return Layout_;
     }
 
-    if(!InstAssembly_.empty() && InstAssembly_.size() >= 4) {
-        if(auto rdOpt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
-            Layout_.I.rd= *rdOpt;
+    if(ItypeImmShape::FENCE == DetectIImmShape(OPC, PAYLOAD)) {
+        Layout_.I.rd  = 0;
+        Layout_.I.rs1 = 0;
+        Layout_.I.fct3= PAYLOAD; // 0=fence, 1=fence.i
+
+        if(1 == Layout_.I.fct3) {
+            Layout_.I.imm0tB= 0;
+        } else if(InstAssembly_.size() >= 3) {
+            const auto PRED= parseFenceSet(InstAssembly_.at(1));
+            const auto SUCC= parseFenceSet(InstAssembly_.at(2));
+            if(!PRED || !SUCC) {
+                throw std::invalid_argument("fence expects pred,succ (e.g. rw,rw or iorw,iorw)");
+            }
+            Layout_.I.imm0tB= PACK_FENCE_IMM(0, *PRED, *SUCC);
+        } else if(1 == InstAssembly_.size()) {
+            Layout_.I.imm0tB= PACK_FENCE_IMM(0, G_FENCE_IORW, G_FENCE_IORW); // bare `fence` => iorw,iorw
+        } else {
+            throw std::invalid_argument("fence expects `fence` or `fence pred, succ`");
         }
-        if(auto rs1Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(2))) {
-            Layout_.I.rs1= *rs1Opt;
-        }
+
+        mnemonicHelper();
+        return Layout_;
+    }
+
+    Layout_.I.fct3  = PAYLOAD;
+    const auto SHAPE= DetectIImmShape(OPC, Layout_.I.fct3);
+    Layout_.I.imm0tB= ItypeImmShape::SHIFT == SHAPE ? PAYLOAD >> 3 << 5 : 0;
+
+    if(InstAssembly_.size() >= 4) {
+        if(auto rd= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) Layout_.I.rd= *rd;
+        if(auto rs1= isa::LOOKUP_REG_IDX(InstAssembly_.at(2))) Layout_.I.rs1= *rs1;
+
         int32_t imm {};
         if(util::ParseInt(InstAssembly_.at(3), imm)) {
-            if(info.opcode_ == 0x13) {
-                if(Layout_.I.fct3 == 1 || Layout_.I.fct3 == 5) {
-                    Layout_.I.imm0tB= (Layout_.I.imm0tB & 0xFE0U) | (imm & 0x1F);
-                } else {
-                    Layout_.I.imm0tB= imm & 0xFFF;
-                }
-            } else if(info.opcode_ != 0x73) {
-                Layout_.I.imm0tB= imm & 0xFFF;
-            }
+            Layout_.I.imm0tB= ItypeImmShape::SHIFT == SHAPE
+                                ? Layout_.I.imm0tB & 0xFE0U | imm & 0x1FU
+                                : imm;
         }
     }
 
     mnemonicHelper();
-
     return Layout_;
 }
 
-IBaseInstType::KeyT IType::calculateFunctKey()
+auto IType::calculateKeyID() -> KeyT
 {
     switch(Layout_.I.opc) {
-    case 0x13:
-        FunctKey_= ((Layout_.I.imm0tB >> 5) << 3) | Layout_.I.fct3;
-        break;
-    case 0x73:
-        FunctKey_= (0x73U << 8) | (Layout_.I.imm0tB & 0xFFFU);
-        break;
-    default:
-        FunctKey_= (Layout_.I.opc << 8) | Layout_.I.fct3;
-        break;
+    case OpcMap::OP_IMM: {
+        const uint8_t IMM7=
+            ItypeImmShape::SHIFT == DetectIImmShape(Layout_.I.opc, Layout_.I.fct3) ? Layout_.I.imm0tB >> 5 : 0;
+        Key_= OP_IMM_K(IMM7, Layout_.I.fct3, Layout_.I.opc);
+    } break;
+    case OpcMap::SYSTEM: Key_= SYSTEM_K(Layout_.I.imm0tB, Layout_.I.opc); break;
+    default:             Key_= OP_K(Layout_.I.fct3, Layout_.I.opc); break;
     }
-    return FunctKey_;
+
+    return Key_;
 }
 
-IBaseInstType::pBiTable_u IType::buildTable()
+auto IType::buildTable() -> const BiLookupTable<KeyT> *
 {
-    static auto s_instTable= [](const std::string &baseURL) -> pBiTable_u {
-        BiLookupTable<KeyT>::intMapName_u code2info;
-        BiLookupTable<KeyT>::strMapIndex_u name2info;
-
-        for(const auto &entry: G_INST_TABLE) {
-            if(0x00 == entry.opcode_ || entry.XLEN_.empty() || entry.name_.empty()) {
-                continue;
-            }
-            auto manualURL= baseURL + std::string(entry.name_);
-
-            code2info.emplace(entry.funct_,
-                              BiLookupTable<KeyT>::NameInfo { .manual_= manualURL,
-                                                              .XLEN_  = entry.XLEN_,
-                                                              .name_  = entry.name_ });
-            name2info.emplace(entry.name_,
-                              BiLookupTable<KeyT>::IndexInfo { .manual_= manualURL,
-                                                               .XLEN_  = entry.XLEN_,
-                                                               .funct_ = entry.funct_,
-                                                               .opcode_= entry.opcode_ });
-        }
-
-        return std::make_shared<const BiLookupTable<KeyT>>(std::move(code2info), std::move(name2info));
-    }(BaseURL_);
-
-    return s_instTable;
+    static const auto *s_TABLE= makeLookupTable(G_INST_TABLE, G_ManualBaseURL);
+    return s_TABLE;
 }

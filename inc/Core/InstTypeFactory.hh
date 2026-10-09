@@ -1,6 +1,7 @@
 #pragma once
 
-#include <string_view>
+#include <memory>
+#include <unordered_map>
 #include <utility>
 
 #include "Core/IBaseInstType.hh"
@@ -30,8 +31,6 @@ public:
     static std::unique_ptr<IBaseInstType> CreateType(std::vector<std::string> instAssembly, bool hasSetABI= false);
 
 private:
-    template <typename T>
-    static std::unique_ptr<IBaseInstType> createHelper(T key, bool hasSetABI= false);
     [[nodiscard]] static std::optional<std::pair<InstFormat, uint16_t>> matchInstName(std::string_view instName);
     static const name2FormatOpcode_u &getName2FormatOpcode();
 };

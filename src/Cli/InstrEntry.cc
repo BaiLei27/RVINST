@@ -17,7 +17,7 @@ std::vector<InstrEntry> getAllInstructions(std::optional<InstFormat> filter)
     auto addTable= [&](const auto &table, InstFormat fmt) {
         for(const auto &e: table) {
             if(0 == e.opcode_ || e.name_.empty()) continue;
-            out.emplace_back(e.name_, e.XLEN_, e.funct_, e.opcode_, fmt);
+            out.emplace_back(e.name_, e.XLEN_, e.keyID_, e.opcode_, fmt);
         }
     };
 

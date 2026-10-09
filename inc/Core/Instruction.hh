@@ -1,7 +1,7 @@
 #pragma once
 #include <bitset>
 #include <sstream>
-#include <string_view>
+#include <memory>
 
 #include "Core/IBaseInstType.hh"
 
@@ -9,7 +9,7 @@ class Instruction {
 private:
     std::unique_ptr<IBaseInstType> Type_;
     std::stringstream Disassembly_ { "unimp" };
-    std::string Format_ { "UNKNOW" }, XLEN_ { "UNDEF" }, Manual_ { "Not available" };
+    std::string Format_ { "UNKNOW" }, XLEN_ { "UNDEF" }, Manual_ { "Not available" }, Name_ { "unimp" };
     std::bitset<32> BitField_; // 32-bit bit field storage
 
 public:
@@ -34,6 +34,7 @@ public:
     [[nodiscard]] std::string GetBinStr() const;
     [[nodiscard]] std::string_view GetXLEN() const;
     [[nodiscard]] std::string_view GetManual() const;
+    [[nodiscard]] std::string_view GetName() const;
     [[nodiscard]] std::string_view GetFormat() const noexcept;
 
     bool Decode();

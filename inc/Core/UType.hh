@@ -5,24 +5,23 @@
 
 class UType: public IBaseInstType {
 public:
-    // funct_ is opcode (0x17 / 0x37): U-type has no funct3/funct7; keys must be unique in the table.
     constexpr static std::array<InstInfo, 2> G_INST_TABLE= {
-        { { .name_= "auipc", .XLEN_= "RV32I", .funct_= 0x17, .opcode_= 0x17 },
-         { .name_= "lui", .XLEN_= "RV32I", .funct_= 0x37, .opcode_= 0x37 } }
+        {
+         { .name_= "auipc", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::AUIPC), .opcode_= OpcMap::AUIPC },
+         { .name_= "lui", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::LUI), .opcode_= OpcMap::LUI },
+         }
     };
 
-public:
     UType(uint32_t inst, InstFormat format, bool hasSetABI= false);
     UType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI= false);
 
-public:
     void Parse() override;
-
-    [[nodiscard]] const std::vector<std::string> &Disassembly() override;
     [[nodiscard]] const InstLayout &Assembly() override;
 
 private:
-    KeyT calculateFunctKey() override;
+    KeyT calculateKeyID() override;
     void mnemonicHelper() override;
-    [[nodiscard]] pBiTable_u buildTable() override;
+    [[nodiscard]] const BiLookupTable<KeyT> *buildTable() override;
+
+    [[nodiscard]] static constexpr KeyT OP_K(uint8_t opc) noexcept { return PACK_KEY(0, opc); }
 };

@@ -322,7 +322,7 @@ void OutputFormatter::PrintInstructionList(const std::vector<InstrEntry> &entrie
                    bold(padRight("Format", FMT_W)),
                    bold(padRight("XLEN", XLEN_W)),
                    bold(padRight("Opcode", OPC_W)),
-                   bold("FunctKey"),
+                   bold("KeyID"),
                    std::string(SEP_W, '-'));
 
     for(const auto &e: entries) {

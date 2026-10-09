@@ -1,4 +1,5 @@
 #include <array>
+
 #include "ISA/InstFormat.hh"
 
 InstLayout::InstLayout(uint32_t instruction): entity_(instruction) { }
@@ -42,6 +43,29 @@ constexpr std::array<InstField, 6> G_R_FIELDS {
 constexpr std::array<InstField, 5> G_I_FIELDS {
     {
      { .name_= "imm11_0"sv, .startBit_= 20, .endBit_= 31, .desc_= "imm[11:0]"sv },
+     { .name_= "rs1"sv, .startBit_= 15, .endBit_= 19, .desc_= "rs1"sv },
+     { .name_= "funct3"sv, .startBit_= 12, .endBit_= 14, .desc_= "funct3"sv },
+     { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 6, .desc_= "opcode"sv },
+     }
+};
+
+constexpr std::array<InstField, 6> G_I_FIELDS_SHIFT {
+    {
+     { .name_= "imm7"sv, .startBit_= 25, .endBit_= 31, .desc_= "imm7"sv },
+     { .name_= "shamt"sv, .startBit_= 20, .endBit_= 24, .desc_= "shamt"sv },
+     { .name_= "rs1"sv, .startBit_= 15, .endBit_= 19, .desc_= "rs1"sv },
+     { .name_= "funct3"sv, .startBit_= 12, .endBit_= 14, .desc_= "funct3"sv },
+     { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 6, .desc_= "opcode"sv },
+     }
+};
+
+constexpr std::array<InstField, 7> G_I_FIELDS_FENCE {
+    {
+     { .name_= "fm"sv, .startBit_= 28, .endBit_= 31, .desc_= "fm"sv },
+     { .name_= "pred"sv, .startBit_= 24, .endBit_= 27, .desc_= "pred"sv },
+     { .name_= "succ"sv, .startBit_= 20, .endBit_= 23, .desc_= "succ"sv },
      { .name_= "rs1"sv, .startBit_= 15, .endBit_= 19, .desc_= "rs1"sv },
      { .name_= "funct3"sv, .startBit_= 12, .endBit_= 14, .desc_= "funct3"sv },
      { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd"sv },
@@ -102,5 +126,21 @@ std::span<const InstField> GetInstFields(InstFormat fmt)
     case InstFormat::U: return G_U_FIELDS;
     case InstFormat::J: return G_J_FIELDS;
     default:            return {};
+    }
+}
+
+ItypeImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept
+{
+    if(OpcMap::MISC_MEM == opc) return ItypeImmShape::FENCE;
+    if(OpcMap::OP_IMM == opc && (1 == f3 || 5 == f3)) return ItypeImmShape::SHIFT;
+    return ItypeImmShape::IMM12;
+}
+
+std::span<const InstField> GetIInstFields(ItypeImmShape shape) noexcept
+{
+    switch(shape) {
+    case ItypeImmShape::SHIFT: return G_I_FIELDS_SHIFT;
+    case ItypeImmShape::FENCE: return G_I_FIELDS_FENCE;
+    default:                   return G_I_FIELDS;
     }
 }

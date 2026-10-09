@@ -3,37 +3,29 @@
 
 #include "IBaseInstType.hh"
 
-namespace BTypeKey {
-// BRANCH (opcode 0x63): lookup key (opcode<<8)|funct3.
-constexpr uint16_t OPC_F3(uint8_t f3)
-{
-    return (0x63U << 8) | (f3 & 7U);
-}
-} // namespace BTypeKey
-
 class BType: public IBaseInstType {
 public:
     constexpr static std::array<InstInfo, 6> G_INST_TABLE= {
-        { { .name_= "beq", .XLEN_= "RV32I", .funct_= BTypeKey::OPC_F3(0), .opcode_= 0x63 },
-         { .name_= "bne", .XLEN_= "RV32I", .funct_= BTypeKey::OPC_F3(1), .opcode_= 0x63 },
-         { .name_= "blt", .XLEN_= "RV32I", .funct_= BTypeKey::OPC_F3(4), .opcode_= 0x63 },
-         { .name_= "bge", .XLEN_= "RV32I", .funct_= BTypeKey::OPC_F3(5), .opcode_= 0x63 },
-         { .name_= "bltu", .XLEN_= "RV32I", .funct_= BTypeKey::OPC_F3(6), .opcode_= 0x63 },
-         { .name_= "bgeu", .XLEN_= "RV32I", .funct_= BTypeKey::OPC_F3(7), .opcode_= 0x63 } }
+        {
+         { .name_= "beq", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "bne", .XLEN_= "RV32I", .keyID_= PACK_KEY(1, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "blt", .XLEN_= "RV32I", .keyID_= PACK_KEY(4, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "bge", .XLEN_= "RV32I", .keyID_= PACK_KEY(5, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "bltu", .XLEN_= "RV32I", .keyID_= PACK_KEY(6, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "bgeu", .XLEN_= "RV32I", .keyID_= PACK_KEY(7, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         }
     };
 
-public:
     BType(uint32_t inst, InstFormat format, bool hasSetABI= false);
     BType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI= false);
 
-public:
     void Parse() override;
-
-    [[nodiscard]] const std::vector<std::string> &Disassembly() override;
     [[nodiscard]] const InstLayout &Assembly() override;
 
 private:
-    KeyT calculateFunctKey() override;
+    KeyT calculateKeyID() override;
     void mnemonicHelper() override;
-    [[nodiscard]] pBiTable_u buildTable() override;
+    [[nodiscard]] const BiLookupTable<KeyT> *buildTable() override;
+
+    [[nodiscard]] static constexpr KeyT OP_K(uint8_t f3, uint8_t opc) noexcept { return PACK_KEY(f3, opc); }
 };

@@ -11,11 +11,11 @@ Instruction::Instruction(uint32_t inst, bool hasSetABI)
       BitField_(inst)
 {
     if(Type_) {
-        const auto &[MAN_URL, XLEN, _1]= Type_->LookupNameAndInfo();
-
-        XLEN_  = XLEN;
-        Manual_= MAN_URL;
-        Format_= GetFormat();
+        const auto &info= Type_->LookupNameAndInfo();
+        XLEN_           = info.XLEN_;
+        Manual_         = info.manual_;
+        Name_           = info.name_;
+        Format_         = GetFormat();
     }
 }
 
@@ -33,39 +33,48 @@ Instruction::Instruction(std::string_view assembly, bool hasSetABI)
     Type_= InstTypeFactory::CreateType(std::move(parts), hasSetABI);
 
     if(Type_) {
-        const auto &[MAN_URL, XLEN, _1, opc]= Type_->LookupIdxAndInfo();
+        const auto INFO= Type_->LookupIdxAndInfo();
+        XLEN_          = INFO.XLEN_;
+        Manual_        = INFO.manual_;
+        Format_        = GetFormat();
 
-        XLEN_  = XLEN;
-        Manual_= MAN_URL;
-        Format_= GetFormat();
+        const auto &asms= Type_->GetInstAssembly();
+        if(!asms.empty()) Name_= asms.front();
     }
 }
 
 Instruction::Instruction(Instruction &&that) noexcept
     : Type_(std::move(that.Type_)),
       Disassembly_(std::move(that.Disassembly_)),
-      XLEN_(that.XLEN_),
-      Manual_(that.Manual_),
-      Format_(that.Format_),
-      BitField_(that.BitField_)
+      Format_(std::move(that.Format_)),
+      XLEN_(std::move(that.XLEN_)),
+      Manual_(std::move(that.Manual_)),
+      Name_(std::move(that.Name_)),
+      BitField_(std::move(that.BitField_))
 {
-    that.XLEN_  = "UNDEF";
     that.Format_= "UNKNOW";
+    that.XLEN_  = "UNDEF";
     that.Manual_= "Not available";
+    that.Name_  = "unimp";
+    that.BitField_.reset();
 }
 
 Instruction &Instruction::operator= (Instruction &&that) noexcept
 {
-    if(&that != this) {
+    if(this != &that) {
         Type_       = std::move(that.Type_);
         Disassembly_= std::move(that.Disassembly_);
-        XLEN_       = that.XLEN_;
-        Manual_     = that.Manual_;
-        BitField_   = that.BitField_;
+        Format_     = std::move(that.Format_);
+        XLEN_       = std::move(that.XLEN_);
+        Manual_     = std::move(that.Manual_);
+        Name_       = std::move(that.Name_);
+        BitField_   = std::move(that.BitField_);
 
-        that.XLEN_  = "UNDEF";
         that.Format_= "UNKNOW";
+        that.XLEN_  = "UNDEF";
         that.Manual_= "Not available";
+        that.Name_  = "unimp";
+        that.BitField_.reset();
     }
     return *this;
 }
@@ -91,6 +100,8 @@ std::string_view Instruction::GetXLEN() const { return XLEN_; }
 
 std::string_view Instruction::GetManual() const { return Manual_; }
 
+std::string_view Instruction::GetName() const { return Name_; }
+
 std::string_view Instruction::GetFormat() const noexcept
 {
     if(!Type_) return "UNKNOW";
@@ -107,7 +118,7 @@ bool Instruction::Decode()
             resetStream();
 
         } else {
-            Type_->Disassembly();
+            std::ignore= Type_->Disassembly();
         }
         Type_->Parse();
 

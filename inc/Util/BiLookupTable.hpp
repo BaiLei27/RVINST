@@ -5,7 +5,6 @@
 #include <iterator>
 #include <optional>
 #include <print>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 
@@ -21,7 +20,7 @@ public:
     struct IndexInfo {
         std::string manual_;
         std::string_view XLEN_; // NOLINT
-        KeyT funct_ {};
+        KeyT keyID_ {};
         uint16_t opcode_ {};
     };
 
@@ -105,12 +104,12 @@ public:
                            "--------------------------------------------------------------------------------------------\n"
                            "  Instruction Name: {}\n"
                            "  XLEN Architecture: {}\n"
-                           "  FunctKey: 0x{:04X}\n"
+                           "  KeyID: 0x{:04X}\n"
                            "  Opcode: 0x{:02X}\n"
                            "  Manual URL: {}\n",
                            name,
                            index_info.XLEN_,
-                           index_info.funct_,
+                           index_info.keyID_,
                            index_info.opcode_,
                            index_info.manual_);
         }
