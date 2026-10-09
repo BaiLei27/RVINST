@@ -9,27 +9,28 @@ namespace {
 
 int32_t decodeSImm12(const InstLayout &l)
 {
-    int32_t u= (l.S.imm5tB << 5) | l.S.imm0t4;
-
-    return (u << 20) >> 20;
+    const int32_t S_IMM= (l.S.imm5tB << 5) | l.S.imm0t4;
+    return (S_IMM << 20) >> 20;
 }
 
 void encodeSImm12(InstLayout &l, int32_t imm)
 {
-    uint32_t u= imm & 0xFFFU;
-    l.S.imm0t4= u;
-    l.S.imm5tB= u >> 5;
+    const uint32_t S_IMM= imm & 0xFFFU;
+
+    l.S.imm0t4= S_IMM;
+    l.S.imm5tB= S_IMM >> 5;
 }
 
 bool parseStoreAddr(std::string_view token, int32_t &immOut, std::string &regStrOut)
 {
-    auto lParen= token.find('(');
-    auto rParen= token.find(')');
-    if(lParen == std::string_view::npos || rParen == std::string_view::npos || rParen <= lParen + 1U) {
+    const auto L_PAREN= token.find('(');
+    const auto R_PAREN= token.find(')');
+    if(std::string_view::npos == L_PAREN || std::string_view::npos == R_PAREN
+       || R_PAREN <= L_PAREN + 1U) {
         return false;
     }
-    std::string immPart(token.substr(0, lParen));
-    regStrOut.assign(token.substr(lParen + 1, rParen - lParen - 1));
+    std::string immPart(token.substr(0, L_PAREN));
+    regStrOut.assign(token.substr(L_PAREN + 1, R_PAREN - L_PAREN - 1));
     return util::ParseInt(immPart, immOut);
 }
 
@@ -49,16 +50,15 @@ SType::SType(std::vector<std::string> instAssembly, InstFormat format, bool hasS
 
 void SType::Parse()
 {
-    InstBitsField_.push_back(Layout_.S.opc);
-    InstBitsField_.push_back(Layout_.S.imm0t4);
-    InstBitsField_.push_back(Layout_.S.fct3);
-    InstBitsField_.push_back(Layout_.S.rs1);
-    InstBitsField_.push_back(Layout_.S.rs2);
-    InstBitsField_.push_back(Layout_.S.imm5tB);
-
+    setBitsField({ Layout_.S.opc,
+                   Layout_.S.imm0t4,
+                   Layout_.S.fct3,
+                   Layout_.S.rs1,
+                   Layout_.S.rs2,
+                   Layout_.S.imm5tB });
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nrs1: {}\nrs2: {}\nimm: {}",
-                 Opcode_,
+                 GetInstOpcode(),
                  Layout_.entity_,
                  +Layout_.S.fct3,
                  +Layout_.S.rs1,
@@ -75,26 +75,11 @@ void SType::mnemonicHelper()
     appendOperands({ " ", rs2, ",", immStr, "(", rs1, ")" });
 }
 
-const std::vector<std::string> &SType::Disassembly()
-{
-    if(!InstTable_) {
-        InstTable_= buildTable();
-    }
-
-    if(InstAssembly_.empty()) {
-        const auto &info= LookupNameAndInfo();
-        InstAssembly_.emplace_back(info.name_);
-        mnemonicHelper();
-    }
-
-    return InstAssembly_;
-}
-
 const InstLayout &SType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
-    Layout_.S.opc= Opcode_= info.opcode_;
+    Layout_.S.opc= info.opcode_;
     Layout_.S.fct3        = info.funct_ & 7U;
 
     if(InstAssembly_.size() >= 4U) {
@@ -123,41 +108,17 @@ const InstLayout &SType::Assembly()
     }
 
     mnemonicHelper();
-
     return Layout_;
 }
 
 IBaseInstType::KeyT SType::calculateFunctKey()
 {
-    FunctKey_= (Opcode_ << 8) | (Layout_.S.fct3 & 7U);
+    FunctKey_= static_cast<KeyT>((Layout_.S.opc << 8) | (Layout_.S.fct3 & 7U));
     return FunctKey_;
 }
 
-IBaseInstType::pBiTable_u SType::buildTable()
+const BiLookupTable<IBaseInstType::KeyT> *SType::buildTable()
 {
-    static auto s_instTable= [](const std::string &baseURL) -> pBiTable_u {
-        BiLookupTable<KeyT>::intMapName_u code2info;
-        BiLookupTable<KeyT>::strMapIndex_u name2info;
-
-        for(const auto &entry: G_INST_TABLE) {
-            if(0U == entry.opcode_ || entry.XLEN_.empty() || entry.name_.empty()) {
-                continue;
-            }
-            auto manualURL= baseURL + std::string(entry.name_);
-
-            code2info.emplace(entry.funct_,
-                              BiLookupTable<KeyT>::NameInfo { .manual_= manualURL,
-                                                              .XLEN_  = entry.XLEN_,
-                                                              .name_  = entry.name_ });
-            name2info.emplace(entry.name_,
-                              BiLookupTable<KeyT>::IndexInfo { .manual_= manualURL,
-                                                               .XLEN_  = entry.XLEN_,
-                                                               .funct_ = entry.funct_,
-                                                               .opcode_= entry.opcode_ });
-        }
-
-        return std::make_shared<const BiLookupTable<KeyT>>(std::move(code2info), std::move(name2info));
-    }(BaseURL_);
-
-    return s_instTable;
+    static const auto *s_TABLE= makeLookupTable(G_INST_TABLE, G_ManualBaseURL);
+    return s_TABLE;
 }

@@ -17,12 +17,10 @@ public:
 
 public:
     void Parse() override;
-
-    [[nodiscard]] const std::vector<std::string> &Disassembly() override;
     [[nodiscard]] const InstLayout &Assembly() override;
 
 private:
     KeyT calculateFunctKey() override;
     void mnemonicHelper() override;
-    [[nodiscard]] pBiTable_u buildTable() override;
+    [[nodiscard]] const BiLookupTable<KeyT> *buildTable() override;
 };

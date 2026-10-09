@@ -1,22 +1,13 @@
 #include <print>
+
 #include "Core/RType.hh"
 #include "ISA/Regs.hpp"
-
-// #include "Log/Logger.hpp"
 
 RType::RType(uint32_t inst, InstFormat format, bool hasSetABI)
     : IBaseInstType(inst, format, hasSetABI)
 {
     init();
 }
-
-// RType::RType(KeyT opcode, InstFormat format, bool hasSetABI)
-//     : IBaseInstType(opcode, format, hasSetABI)
-// {
-//     // FunctKey_     = Layout_.R.fct7 << 3 | Layout_.R.fct3;
-//     // instTable_= BuildTable();
-//     init();
-// }
 
 RType::RType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI)
     : IBaseInstType(std::move(instAssembly), format, hasSetABI)
@@ -26,15 +17,15 @@ RType::RType(std::vector<std::string> instAssembly, InstFormat format, bool hasS
 
 void RType::Parse()
 {
-    InstBitsField_.push_back(Layout_.R.opc);
-    InstBitsField_.push_back(Layout_.R.rd);
-    InstBitsField_.push_back(Layout_.R.fct3);
-    InstBitsField_.push_back(Layout_.R.rs1);
-    InstBitsField_.push_back(Layout_.R.rs2);
-    InstBitsField_.push_back(Layout_.R.fct7);
+    setBitsField({ Layout_.R.opc,
+                   Layout_.R.rd,
+                   Layout_.R.fct3,
+                   Layout_.R.rs1,
+                   Layout_.R.rs2,
+                   Layout_.R.fct7 });
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nfunct7: {}\nrs1: {}\nrs2: {}\nrd: {}",
-                 Opcode_,
+                 GetInstOpcode(),
                  Layout_.entity_,
                  +Layout_.R.fct3,
                  +Layout_.R.fct7,
@@ -49,32 +40,16 @@ void RType::mnemonicHelper()
     auto rd = isa::LOOKUP_REG_NAME(Layout_.R.rd, HasSetABI_); // actually reg mnemonic only 5b (max: 31),never overflow
     auto rs1= isa::LOOKUP_REG_NAME(Layout_.R.rs1, HasSetABI_);
     auto rs2= isa::LOOKUP_REG_NAME(Layout_.R.rs2, HasSetABI_);
-
     appendOperands({ " ", rd, ",", rs1, ",", rs2 });
-}
-
-const std::vector<std::string> &RType::Disassembly()
-{
-    if(!InstTable_) {
-        InstTable_= buildTable();
-    }
-
-    if(InstAssembly_.empty()) {
-        const auto &[_1, _2, instName]= LookupNameAndInfo();
-        InstAssembly_.emplace_back(instName);
-        mnemonicHelper();
-    }
-
-    return InstAssembly_;
 }
 
 const InstLayout &RType::Assembly()
 {
-    const auto &[_1, _2, functKey, opc]= LookupIdxAndInfo();
+    const auto &info= LookupIdxAndInfo();
 
-    Layout_.R.opc= Opcode_= opc;
-    Layout_.R.fct7        = functKey >> 3;
-    Layout_.R.fct3        = functKey & 7;
+    Layout_.R.opc= info.opcode_;
+    Layout_.R.fct7        = info.funct_ >> 3;
+    Layout_.R.fct3        = info.funct_ & 7;
 
     if(InstAssembly_.size() >= 4U) {
         auto rdOpt = isa::LOOKUP_REG_IDX(InstAssembly_.at(1));
@@ -88,7 +63,6 @@ const InstLayout &RType::Assembly()
     }
 
     mnemonicHelper();
-
     return Layout_;
 }
 
@@ -98,40 +72,8 @@ IBaseInstType::KeyT RType::calculateFunctKey()
     return FunctKey_;
 }
 
-IBaseInstType::pBiTable_u RType::buildTable()
+const BiLookupTable<IBaseInstType::KeyT> *RType::buildTable()
 {
-    static auto s_instTable= [](const std::string &baseURL) -> pBiTable_u {
-        BiLookupTable<KeyT>::intMapName_u code2info;
-        BiLookupTable<KeyT>::strMapIndex_u name2info;
-
-        for(const auto &entry: G_INST_TABLE) {
-            // LOG_DEBUG("DEBUG");
-            if(0x00 == entry.opcode_ || entry.XLEN_.empty() || entry.name_.empty()) {
-                continue;
-            }
-            // LOG_INFO("INFO");
-
-            auto manualURL= baseURL + std::string(entry.name_); // temp string
-
-            // std::println("opcode:   0x{:02X}", entry.opcode_);
-            // std::println("functKey: 0x{:04X}", entry.funct_);
-            // std::println("name:     {}", entry.name_);
-            // std::println("XLEN:     {}", entry.XLEN_);
-            // std::println("BaseURL:  {}", baseURL);
-
-            code2info.emplace(entry.funct_,
-                              BiLookupTable<KeyT>::NameInfo { .manual_= manualURL,
-                                                              .XLEN_  = entry.XLEN_,
-                                                              .name_  = entry.name_ });
-            name2info.emplace(entry.name_,
-                              BiLookupTable<KeyT>::IndexInfo { .manual_= manualURL,
-                                                               .XLEN_  = entry.XLEN_,
-                                                               .funct_ = entry.funct_,
-                                                               .opcode_= entry.opcode_ });
-        }
-
-        return std::make_shared<const BiLookupTable<KeyT>>(std::move(code2info), std::move(name2info));
-    }(BaseURL_);
-
-    return s_instTable;
+    static const auto *s_TABLE= makeLookupTable(G_INST_TABLE, G_ManualBaseURL);
+    return s_TABLE;
 }

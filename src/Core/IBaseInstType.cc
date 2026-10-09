@@ -1,17 +1,10 @@
-#include <string>
+#include <utility>
+
 #include "Core/IBaseInstType.hh"
 
-// #include <iostream>
-
-// IBaseInstType::IBaseInstType(uint16_t opcode, bool hasSetABI)
-//     : Opcode_(opcode), HasSetABI_(hasSetABI) { }
-
-IBaseInstType::IBaseInstType(uint32_t inst,
-                             InstFormat format,
-                             bool hasSetABI)
-    : Layout_(inst),
-      Format_(format),
-      Opcode_(inst & 0x7F),
+IBaseInstType::IBaseInstType(uint32_t inst, InstFormat format, bool hasSetABI)
+    : Format_(format),
+      Layout_(inst),
       HasSetABI_(hasSetABI) { }
 
 IBaseInstType::IBaseInstType(std::vector<std::string> instAssembly,
@@ -27,7 +20,7 @@ const std::vector<std::string> &IBaseInstType::GetInstAssembly() const noexcept 
 
 const std::vector<uint32_t> &IBaseInstType::GetInstBitsField() const noexcept { return InstBitsField_; }
 
-uint16_t IBaseInstType::GetInstOpcode() const noexcept { return Opcode_; }
+uint16_t IBaseInstType::GetInstOpcode() const noexcept { return Layout_.entity_ & 0x7FU; }
 
 uint16_t IBaseInstType::GetInstFunctKey() const noexcept { return FunctKey_; }
 
@@ -41,32 +34,46 @@ void IBaseInstType::SetFormat(InstFormat format) noexcept { Format_= format; }
 void IBaseInstType::init()
 {
     InstTable_= buildTable();
+    if(!InstTable_) return;
 
-    if(InstTable_) {
-        if(InstAssembly_.empty()) {
-            calculateFunctKey();
-            NameAndXlenCache_= InstTable_->Find(FunctKey_);
-        } else {
-            FunctOpcAndXlenCache_= InstTable_->Find(InstAssembly_.at(0));
-        }
+    if(InstAssembly_.empty()) {
+        calculateFunctKey();
+        NameAndXlenCache_= InstTable_->Find(FunctKey_);
+    } else {
+        FunctOpcAndXlenCache_= InstTable_->Find(InstAssembly_.at(0));
     }
 }
 
-BiLookupTable<IBaseInstType::KeyT>::NameInfo IBaseInstType::LookupNameAndInfo()
+const BiLookupTable<IBaseInstType::KeyT>::NameInfo &IBaseInstType::LookupNameAndInfo() const
 {
-    if(NameAndXlenCache_) {
-        return *NameAndXlenCache_;
-    }
-    return { .manual_= "inst Not available", .XLEN_= "INST UNDEF", .name_= "inst unimp" };
+    if(NameAndXlenCache_) return *NameAndXlenCache_;
+
+    static const BiLookupTable<KeyT>::NameInfo K_UNDEF {
+        .manual_= "Not available",
+        .XLEN_  = "UNDEF",
+        .name_  = "unimp",
+    };
+    return K_UNDEF;
 }
 
-BiLookupTable<IBaseInstType::KeyT>::IndexInfo IBaseInstType::LookupIdxAndInfo()
+BiLookupTable<IBaseInstType::KeyT>::IndexInfo IBaseInstType::LookupIdxAndInfo() const
 {
-    if(FunctOpcAndXlenCache_) {
-        return *FunctOpcAndXlenCache_;
-    }
+    if(FunctOpcAndXlenCache_) return *FunctOpcAndXlenCache_;
+    return { .manual_= "Not available",
+             .XLEN_  = "UNDEF",
+             .funct_ = FunctKey_,
+             .opcode_= GetInstOpcode() };
+}
 
-    return { .manual_= "inst Not available", .XLEN_= "INST UNDEF", .funct_= FunctKey_, .opcode_= Opcode_ };
+const std::vector<std::string> &IBaseInstType::Disassembly()
+{
+    if(!InstTable_) InstTable_= buildTable();
+
+    if(InstAssembly_.empty()) {
+        InstAssembly_.emplace_back(LookupNameAndInfo().name_);
+        mnemonicHelper();
+    }
+    return InstAssembly_;
 }
 
 void IBaseInstType::appendOperands(std::initializer_list<std::string_view> regMnemonic)
@@ -80,7 +87,6 @@ void IBaseInstType::appendOperands(std::initializer_list<std::string_view> regMn
     // }
 
     size_t writeIdx= 1;
-
     for(const auto &r: regMnemonic) {
         if(writeIdx >= InstAssembly_.size()) {
             InstAssembly_.emplace_back(r);
@@ -89,28 +95,48 @@ void IBaseInstType::appendOperands(std::initializer_list<std::string_view> regMn
         }
         ++writeIdx;
     }
-
     if(InstAssembly_.size() > writeIdx) {
         InstAssembly_.resize(writeIdx);
     }
 }
 
-template <size_t N>
-consteval auto FILTER_VALID_ENTRIES(const std::array<IBaseInstType::infoTup_u, N> &arr)
+void IBaseInstType::setBitsField(std::initializer_list<uint32_t> bits)
 {
-    std::array<IBaseInstType::infoTup_u, N> validArr {};
-    size_t validCnt= 0;
+    InstBitsField_.assign(bits);
+}
 
-    for(const auto &entry: arr) {
-        const uint16_t OP          = std::get<1>(entry);
-        const std::string_view NAME= std::get<2>(entry);
+void IBaseInstType::setBitsField(std::span<const uint32_t> bits)
+{
+    InstBitsField_.assign(bits.begin(), bits.end());
+}
 
-        if(OP == 0x00 || NAME.empty()) {
-            continue;
-        }
-        validArr[validCnt++]= entry;
+const BiLookupTable<IBaseInstType::KeyT> *
+    IBaseInstType::makeLookupTable(std::span<const InstInfo> entries, std::string_view baseURL)
+{
+    BiLookupTable<KeyT>::intMapName_u code2info;
+    BiLookupTable<KeyT>::strMapIndex_u name2info;
+    code2info.reserve(entries.size());
+    name2info.reserve(entries.size());
+
+    for(const auto &entry: entries) {
+        if(0U == entry.opcode_ || entry.XLEN_.empty() || entry.name_.empty()) continue;
+
+        std::string manualURL;
+        manualURL.reserve(baseURL.size() + entry.name_.size());
+        manualURL.append(baseURL);
+        manualURL.append(entry.name_);
+
+        name2info.emplace(entry.name_,
+                          BiLookupTable<KeyT>::IndexInfo { .manual_= manualURL,
+                                                           .XLEN_  = entry.XLEN_,
+                                                           .funct_ = entry.funct_,
+                                                           .opcode_= entry.opcode_ });
+        code2info.emplace(entry.funct_,
+                          BiLookupTable<KeyT>::NameInfo { .manual_= std::move(manualURL),
+                                                          .XLEN_  = entry.XLEN_,
+                                                          .name_  = entry.name_ });
     }
 
-    return std::make_pair(validArr, validCnt);
-    // return std::span(validArr.data(), validCnt);
+    // Immortal per-format table; ownership kept by the call-site static holder.
+    return new BiLookupTable<KeyT>(std::move(code2info), std::move(name2info));
 }

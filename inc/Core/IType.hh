@@ -3,51 +3,53 @@
 
 #include "IBaseInstType.hh"
 
-namespace ITypeKey {
+namespace {
 
-// OP-IMM (0x13): table key funct_ is only (imm[11:5] << 3) | funct3 (matches decode calculateFunctKey).
-
-constexpr uint16_t OP_IMM(uint8_t imm7, uint8_t f3)
+// OpcMap::OP_IMM: table key funct_ is only (imm[11:5] << 3) | funct3 (matches decode calculateFunctKey).
+constexpr uint16_t OP_IMM_FK(uint8_t imm7, uint8_t f3)
 {
     return (imm7 << 3) | (f3 & 7);
 }
 
-// Other I-type opcodes: lookup key (opcode<<8)|funct3 to avoid collisions with OP-IMM funct_ keys.
-
-constexpr uint16_t OPC_F3(uint8_t opc, uint8_t f3)
+// SYSTEM: tag 0x7000 | funct12. Do not use (SYSTEM<<8)|imm — bits[11:8] overlap.
+constexpr uint16_t SYSTEM_FK(uint16_t funct12)
 {
-    return (opc << 8) | (f3 & 7);
+    return 0x7000U | (funct12 & 0xFFFU);
 }
 
-} // namespace ITypeKey
+constexpr uint16_t OP_FK(uint8_t opc, uint8_t f3)
+{
+}
+} // namespace
 
 class IType: public IBaseInstType {
 public:
-    // RV32I / Zifencei: OP-IMM rows use funct_ = (imm[11:5]<<3)|funct3; other opcodes use (opcode<<8)|funct3.
-    constexpr static std::array<InstInfo, 19> G_INST_TABLE= {
-        { { .name_= "lb", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x03, 0), .opcode_= 0x03 },
-         { .name_= "lh", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x03, 1), .opcode_= 0x03 },
-         { .name_= "lw", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x03, 2), .opcode_= 0x03 },
-         { .name_= "lbu", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x03, 4), .opcode_= 0x03 },
-         { .name_= "lhu", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x03, 5), .opcode_= 0x03 },
+    // RV32I / Zifencei: OPIMM = (imm[11:5]<<3)|funct3; SYSTEM = 0x7000|imm12; else (opcode<<8)|funct3.
+    constexpr static std::array<InstInfo, 20> G_INST_TABLE= {
+        { { .name_= "lb", .XLEN_= "RV32I", .funct_= 0, .opcode_= OpcMap::LOAD },
+         { .name_= "lh", .XLEN_= "RV32I", .funct_= 1, .opcode_= OpcMap::LOAD },
+         { .name_= "lw", .XLEN_= "RV32I", .funct_= 2, .opcode_= OpcMap::LOAD },
+         { .name_= "ld", .XLEN_= "RV32I", .funct_= 3, .opcode_= OpcMap::LOAD },
+         { .name_= "lbu", .XLEN_= "RV32I", .funct_= 4, .opcode_= OpcMap::LOAD },
+         { .name_= "lhu", .XLEN_= "RV32I", .funct_= 5, .opcode_= OpcMap::LOAD },
 
-         { .name_= "jalr", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x67, 0), .opcode_= 0x67 },
+         { .name_= "jalr", .XLEN_= "RV32I", .funct_= 0, .opcode_= JALR },
 
-         { .name_= "addi", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0, 0), .opcode_= 0x13 },
-         { .name_= "slli", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0, 1), .opcode_= 0x13 },
-         { .name_= "slti", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0, 2), .opcode_= 0x13 },
-         { .name_= "sltiu", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0, 3), .opcode_= 0x13 },
-         { .name_= "xori", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0, 4), .opcode_= 0x13 },
-         { .name_= "srli", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0, 5), .opcode_= 0x13 },
-         { .name_= "srai", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0x20, 5), .opcode_= 0x13 },
-         { .name_= "ori", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0, 6), .opcode_= 0x13 },
-         { .name_= "andi", .XLEN_= "RV32I", .funct_= ITypeKey::OP_IMM(0, 7), .opcode_= 0x13 },
+         { .name_= "addi", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0, 0), .opcode_= OpcMap::OP_IMM },
+         { .name_= "slli", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0, 1), .opcode_= OpcMap::OP_IMM },
+         { .name_= "slti", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0, 2), .opcode_= OpcMap::OP_IMM },
+         { .name_= "sltiu", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0, 3), .opcode_= OpcMap::OP_IMM },
+         { .name_= "xori", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0, 4), .opcode_= OpcMap::OP_IMM },
+         { .name_= "srli", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0, 5), .opcode_= OpcMap::OP_IMM },
+         { .name_= "srai", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0x20, 5), .opcode_= OpcMap::OP_IMM },
+         { .name_= "ori", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0, 6), .opcode_= OpcMap::OP_IMM },
+         { .name_= "andi", .XLEN_= "RV32I", .funct_= OP_IMM_FK(0, 7), .opcode_= OpcMap::OP_IMM },
 
-         { .name_= "fence", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x0F, 0), .opcode_= 0x0F },
-         { .name_= "fence.i", .XLEN_= "Zifencei", .funct_= ITypeKey::OPC_F3(0x0F, 1), .opcode_= 0x0F },
+         { .name_= "fence", .XLEN_= "RV32I", .funct_= 0, .opcode_= OpcMap::MISC_MEM },
+         { .name_= "fence.i", .XLEN_= "Zifencei", .funct_= 1, .opcode_= OpcMap::MISC_MEM },
 
-         { .name_= "ecall", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x73, 0), .opcode_= 0x73 },
-         { .name_= "ebreak", .XLEN_= "RV32I", .funct_= ITypeKey::OPC_F3(0x73, 1), .opcode_= 0x73 } }
+         { .name_= "ecall", .XLEN_= "RV32I", .funct_= SYSTEM_FK(0), .opcode_= OpcMap::SYSTEM },
+         { .name_= "ebreak", .XLEN_= "RV32I", .funct_= SYSTEM_FK(1), .opcode_= OpcMap::SYSTEM } }
     };
 
 public:
@@ -56,12 +58,10 @@ public:
 
 public:
     void Parse() override;
-
-    [[nodiscard]] const std::vector<std::string> &Disassembly() override;
     [[nodiscard]] const InstLayout &Assembly() override;
 
 private:
     KeyT calculateFunctKey() override;
     void mnemonicHelper() override;
-    [[nodiscard]] pBiTable_u buildTable() override;
+    [[nodiscard]] const BiLookupTable<KeyT> *buildTable() override;
 };
