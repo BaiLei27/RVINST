@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(RVINST
     VERSION "0.0.3"
+    DESCRIPTION "Copyright (c) 2026 Swan BaiLei27"
     HOMEPAGE_URL "https://github.com/Baiyi27/RVINST.git"
     LANGUAGES CXX
 )
@@ -30,12 +31,12 @@ set(customModulesPath ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules CACHE PATH "custom
 list(APPEND CMAKE_MODULE_PATH "${customModulesPath}")
 
 find_package(Git QUIET)
-set(RVINST_VERSION ${PROJECT_VERSION})
+set(COMMIT_HASH ${PROJECT_VERSION})
 
 if(GIT_FOUND)
     execute_process(
         COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-        OUTPUT_VARIABLE RVINST_VERSION
+        OUTPUT_VARIABLE COMMIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
     )

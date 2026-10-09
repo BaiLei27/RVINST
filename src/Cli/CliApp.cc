@@ -9,11 +9,11 @@
 #include <string_view>
 #include <vector>
 
-#include "config.hpp"
 #include "Cli/Commands.hh"
 #include "Cli/InstrEntry.hh"
 #include "Cli/OutputTable.hh"
 #include "ISA/InstFormat.hh"
+#include "config.hpp"
 
 namespace cli {
 
@@ -46,7 +46,10 @@ int CliApp::Run(int argc, char *pArgv[])
             return 0;
         }
         if(arg == "-v" || arg == "--version") {
-            std::println("rvinst {}", util::G_RVINST_VERSION);
+            std::println("Version:  {}", util::info::G_PROJECT_VERSION);
+            std::println("Commit:   {}", util::info::G_COMMIT_HASH);
+            std::println("URL:      {}", util::info::G_HOMEPAGE_URL);
+            std::println("Copyright:{}", util::info::G_COPYRIGHT);
             return 0;
         }
 

@@ -25,6 +25,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${projectIncDir}
+    ${CMAKE_BINARY_DIR}/gen
 )
 
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE

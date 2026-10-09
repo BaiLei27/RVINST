@@ -98,3 +98,12 @@
 .input-history-list row:hover {
     background-color: alpha(@theme_selected_bg_color, 0.25);
 }
+
+.version-title {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.version-info {
+    font-family: monospace;
+}
