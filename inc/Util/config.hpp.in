@@ -1,5 +1,6 @@
 #pragma once
 #include <string_view>
+
 namespace util::info {
 using namespace std::string_view_literals;
 /** Short git commit hash from CMake configure_file (see CMakeLists.txt). */
@@ -12,6 +13,5 @@ constexpr std::string_view G_PROJECT_VERSION= "@PROJECT_VERSION@"sv;
 constexpr std::string_view G_HOMEPAGE_URL= "@PROJECT_HOMEPAGE_URL@"sv;
 
 constexpr std::string_view G_COPYRIGHT= "@PROJECT_DESCRIPTION@"sv;
-
 
 } // namespace util::info

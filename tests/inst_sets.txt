@@ -1,0 +1,128 @@
+# RVINST CLI — full RV32I instruction vectors (+ fence.i / Zifencei)
+# Columns (pipe-separated):
+#   kind | input | expect_hex | expect_asm | expect_format | expect_manual_tail | status
+#
+# kind:   decode | encode
+# status: impl = must pass; todo = listed for coverage, failure counts as TODO (not FAIL)
+#
+# Convention for sample operands (unless noted):
+#   rd=x1, rs1=x2, rs2=x3, imm=3 (I-imm) / 4 (mem) / 8 (branch/jal), uimm=1 (U)
+
+# =============================================================================
+# R-Type  (10)
+# =============================================================================
+decode|0x003100b3|003100B3|add x1,x2,x3|R-Type|add|impl
+encode|add x1, x2, x3|003100B3|add x1,x2,x3|R-Type|add|impl
+decode|0x403100b3|403100B3|sub x1,x2,x3|R-Type|sub|impl
+encode|sub x1, x2, x3|403100B3|sub x1,x2,x3|R-Type|sub|impl
+decode|0x003110b3|003110B3|sll x1,x2,x3|R-Type|sll|impl
+encode|sll x1, x2, x3|003110B3|sll x1,x2,x3|R-Type|sll|impl
+decode|0x003120b3|003120B3|slt x1,x2,x3|R-Type|slt|impl
+encode|slt x1, x2, x3|003120B3|slt x1,x2,x3|R-Type|slt|impl
+decode|0x003130b3|003130B3|sltu x1,x2,x3|R-Type|sltu|impl
+encode|sltu x1, x2, x3|003130B3|sltu x1,x2,x3|R-Type|sltu|impl
+decode|0x003140b3|003140B3|xor x1,x2,x3|R-Type|xor|impl
+encode|xor x1, x2, x3|003140B3|xor x1,x2,x3|R-Type|xor|impl
+decode|0x003150b3|003150B3|srl x1,x2,x3|R-Type|srl|impl
+encode|srl x1, x2, x3|003150B3|srl x1,x2,x3|R-Type|srl|impl
+decode|0x403150b3|403150B3|sra x1,x2,x3|R-Type|sra|impl
+encode|sra x1, x2, x3|403150B3|sra x1,x2,x3|R-Type|sra|impl
+decode|0x003160b3|003160B3|or x1,x2,x3|R-Type|or|impl
+encode|or x1, x2, x3|003160B3|or x1,x2,x3|R-Type|or|impl
+decode|0x003170b3|003170B3|and x1,x2,x3|R-Type|and|impl
+encode|and x1, x2, x3|003170B3|and x1,x2,x3|R-Type|and|impl
+
+# =============================================================================
+# I-Type OP-IMM  (9)
+# =============================================================================
+decode|0x00310093|00310093|addi x1,x2,3|I-Type|addi|impl
+encode|addi x1, x2, 3|00310093|addi x1,x2,3|I-Type|addi|impl
+decode|0x00311093|00311093|slli x1,x2,3|I-Type|slli|impl
+encode|slli x1, x2, 3|00311093|slli x1,x2,3|I-Type|slli|impl
+decode|0x00312093|00312093|slti x1,x2,3|I-Type|slti|impl
+encode|slti x1, x2, 3|00312093|slti x1,x2,3|I-Type|slti|impl
+decode|0x00313093|00313093|sltiu x1,x2,3|I-Type|sltiu|impl
+encode|sltiu x1, x2, 3|00313093|sltiu x1,x2,3|I-Type|sltiu|impl
+decode|0x00314093|00314093|xori x1,x2,3|I-Type|xori|impl
+encode|xori x1, x2, 3|00314093|xori x1,x2,3|I-Type|xori|impl
+decode|0x00315093|00315093|srli x1,x2,3|I-Type|srli|impl
+encode|srli x1, x2, 3|00315093|srli x1,x2,3|I-Type|srli|impl
+# srai: imm decode/display currently wrong (shows 1027); keep architectural expect
+decode|0x40315093|40315093|srai x1,x2,3|I-Type|srai|todo
+encode|srai x1, x2, 3|40315093|srai x1,x2,3|I-Type|srai|todo
+decode|0x00316093|00316093|ori x1,x2,3|I-Type|ori|impl
+encode|ori x1, x2, 3|00316093|ori x1,x2,3|I-Type|ori|impl
+decode|0x00317093|00317093|andi x1,x2,3|I-Type|andi|impl
+encode|andi x1, x2, 3|00317093|andi x1,x2,3|I-Type|andi|impl
+
+# =============================================================================
+# I-Type LOAD  (5)  — decode OK (asm as rd,rs1,imm); encode of "rd, imm, rs1" broken
+# =============================================================================
+decode|0x00410083|00410083|lb x1,x2,4|I-Type|lb|impl
+encode|lb x1, 4, x2|00410083|lb x1,x2,4|I-Type|lb|todo
+decode|0x00411083|00411083|lh x1,x2,4|I-Type|lh|impl
+encode|lh x1, 4, x2|00411083|lh x1,x2,4|I-Type|lh|todo
+decode|0x00412083|00412083|lw x1,x2,4|I-Type|lw|impl
+encode|lw x1, 4, x2|00412083|lw x1,x2,4|I-Type|lw|todo
+decode|0x00414083|00414083|lbu x1,x2,4|I-Type|lbu|impl
+encode|lbu x1, 4, x2|00414083|lbu x1,x2,4|I-Type|lbu|todo
+decode|0x00415083|00415083|lhu x1,x2,4|I-Type|lhu|impl
+encode|lhu x1, 4, x2|00415083|lhu x1,x2,4|I-Type|lhu|todo
+
+# =============================================================================
+# I-Type JALR / SYSTEM / FENCE
+# =============================================================================
+decode|0x000100e7|000100E7|jalr x1,x2,0|I-Type|jalr|impl
+encode|jalr x1, x2, 0|000100E7|jalr x1,x2,0|I-Type|jalr|impl
+decode|0x0ff0000f|0FF0000F|fence x0,x0,255|I-Type|fence|impl
+encode|fence|0FF0000F|fence x0,x0,255|I-Type|fence|todo
+# fence.i is Zifencei (listed with RV32I environments)
+decode|0x0000100f|0000100F|fence.i x0,x0,0|I-Type|fence.i|impl
+encode|fence.i|0000100F|fence.i x0,x0,0|I-Type|fence.i|todo
+# SYSTEM: decode of architectural encodings OK; encode currently emits wrong imm/key
+decode|0x00000073|00000073|ecall|I-Type|ecall|impl
+encode|ecall|00000073|ecall|I-Type|ecall|impl
+decode|0x00100073|00100073|ebreak|I-Type|ebreak|impl
+encode|ebreak|00100073|ebreak|I-Type|ebreak|impl
+
+# =============================================================================
+# S-Type STORE  (3)  — RV32I only (sd is RV64I, listed below as todo/out-of-scope)
+# =============================================================================
+decode|0x00110223|00110223|sb x1,4(x2)|S-Type|sb|impl
+encode|sb x1, 4, x2|00110223|sb x1,4(x2)|S-Type|sb|impl
+decode|0x00111223|00111223|sh x1,4(x2)|S-Type|sh|impl
+encode|sh x1, 4, x2|00111223|sh x1,4(x2)|S-Type|sh|impl
+decode|0x00112223|00112223|sw x1,4(x2)|S-Type|sw|impl
+encode|sw x1, 4, x2|00112223|sw x1,4(x2)|S-Type|sw|impl
+
+# =============================================================================
+# B-Type BRANCH  (6)
+# =============================================================================
+decode|0x00208463|00208463|beq x1,x2,8|B-Type|beq|impl
+encode|beq x1, x2, 8|00208463|beq x1,x2,8|B-Type|beq|impl
+decode|0x00209463|00209463|bne x1,x2,8|B-Type|bne|impl
+encode|bne x1, x2, 8|00209463|bne x1,x2,8|B-Type|bne|impl
+decode|0x0020c463|0020C463|blt x1,x2,8|B-Type|blt|impl
+encode|blt x1, x2, 8|0020C463|blt x1,x2,8|B-Type|blt|impl
+decode|0x0020d463|0020D463|bge x1,x2,8|B-Type|bge|impl
+encode|bge x1, x2, 8|0020D463|bge x1,x2,8|B-Type|bge|impl
+decode|0x0020e463|0020E463|bltu x1,x2,8|B-Type|bltu|impl
+encode|bltu x1, x2, 8|0020E463|bltu x1,x2,8|B-Type|bltu|impl
+decode|0x0020f463|0020F463|bgeu x1,x2,8|B-Type|bgeu|impl
+encode|bgeu x1, x2, 8|0020F463|bgeu x1,x2,8|B-Type|bgeu|impl
+
+# =============================================================================
+# U-Type / J-Type
+# =============================================================================
+decode|0x000010b7|000010B7|lui x1,1|U-Type|lui|impl
+encode|lui x1, 1|000010B7|lui x1,1|U-Type|lui|impl
+decode|0x00001097|00001097|auipc x1,1|U-Type|auipc|impl
+encode|auipc x1, 1|00001097|auipc x1,1|U-Type|auipc|impl
+decode|0x008000ef|008000EF|jal x1,8|J-Type|jal|impl
+encode|jal x1, 8|008000EF|jal x1,8|J-Type|jal|impl
+
+# =============================================================================
+# RV64I store (present in SType table; not part of RV32I base, but implemented)
+# =============================================================================
+decode|0x00113223|00113223|sd x1,4(x2)|S-Type|sd|impl
+encode|sd x1, 4, x2|00113223|sd x1,4(x2)|S-Type|sd|impl

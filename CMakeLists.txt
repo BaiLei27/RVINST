@@ -148,18 +148,8 @@ add_subdirectory(src/Cli)
 add_subdirectory(src/Gui)
 
 if(enableTests)
-    add_executable(tests_inst
-        tests/INST.cc
-    )
-
-    target_link_libraries(tests_inst PRIVATE
-        ${backend}
-        Logger
-    )
-
-    set_target_properties(tests_inst PROPERTIES
-        SUFFIX ".exe"
-    )
+    include(CTest)
+    add_subdirectory(tests)
 endif()
 
 SetupCodeChecks(${PROJECT_NAME}_cli ${backend} ${PROJECT_NAME}_gui)
