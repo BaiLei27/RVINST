@@ -3,6 +3,7 @@
 #include <array>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <gtkmm.h>
@@ -20,6 +21,7 @@ public:
     Gtk::TextView *insTextView_ {};
     Gtk::Button *pSettingsBtn_ {};
     Gtk::Popover *pSettingsPopover_ {};
+    Gtk::Button *pVersionBtn_ {};
     Gtk::Popover *pHistoryPopover_ {};
     Gtk::ScrolledWindow *pHistoryScroll_ {};
     Gtk::ListBox *pHistoryList_ {};
@@ -27,34 +29,45 @@ public:
     Gtk::Switch *pAbiSwitch_ {};
     Gtk::MenuButton *pIsaMenuBtn_ {};
 
+    std::unique_ptr<Gtk::Window> pVersionWindow_;
     std::unique_ptr<Instruction> inst_;
     std::array<InstFormatUI *, 6> formatUi_ {};
     std::deque<std::string> inputHistory_;
     std::string historyDraft_;
-    int historyBrowseIndex_ { -1 };
+    std::optional<size_t> historyBrowseIndex_;
 
-    bool hasSetABI_ {};
     int selectedIsaIndex_ {};
+    bool historyDirty_ { true };
+    bool hasSetABI_ {};
 
 public:
     RISCVInstructionWindow();
+    ~RISCVInstructionWindow() override;
 
 private:
+    // Instruction parsing & result display
     void onInsButtonParseClicked();
     void showInsResult(Instruction &inst);
     void showError(const std::string &message);
+    void refreshAssemblyForAbiChange();
 
+    // Format UI panels
     void initInstFormatUI();
     void hideAllTypeUI();
+
+    // Settings & version info
     void setupSettingsPopover();
+    void showVersionWindow();
+
+    // Input history
     void setupInputHistory();
     void popupInputHistory();
     void pushInputHistory(std::string_view text);
     void rebuildHistoryList();
-    void applyHistoryAt(int index);
+    void applyHistoryAt(size_t index);
     void browseHistory(int delta);
-    void refreshAssemblyForAbiChange();
-    [[nodiscard]] InstFormatUI *uiFor(InstFormat fmt) const noexcept;
+
+    // Misc
     static void loadCSSFromFile();
 };
 
