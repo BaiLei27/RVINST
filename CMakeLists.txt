@@ -8,7 +8,7 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(RVINST
-    VERSION "0.0.3"
+    VERSION "0.1.3"
     DESCRIPTION "Copyright (c) 2026 Swan BaiLei27"
     HOMEPAGE_URL "https://github.com/BaiLei27/RVINST.git"
     LANGUAGES CXX

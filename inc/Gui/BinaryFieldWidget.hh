@@ -17,12 +17,15 @@ public:
     std::vector<Gtk::Label *> controlLabels_;
     std::vector<BinaryFieldWidget *> relatedBinary_;
     std::vector<AsmMnemonicWidget *> relatedAsm_;
+    util::FieldTone tone_ { util::FieldTone::KEY };
 
 public:
-    BinaryFieldWidget(const InstField &field, int &nibbleIndex);
+    BinaryFieldWidget(const InstField &field, util::FieldTone tone);
 
 public:
     [[nodiscard]] const std::vector<Gtk::Label *> &GetLabels() const noexcept { return controlLabels_; }
+
+    [[nodiscard]] util::FieldTone GetTone() const noexcept { return tone_; }
 
     void SetupHover(std::string_view name,
                     const util::InstFormatView &view,

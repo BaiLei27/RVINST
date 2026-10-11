@@ -10,7 +10,6 @@
 
 #include "Core/Instruction.hh"
 #include "Gui/InstFormatUI.hh"
-#include "ISA/InstFormat.hh"
 
 class RISCVInstructionWindow: public Gtk::Window {
 public:
@@ -18,7 +17,8 @@ public:
     Gtk::Box *pEntryRow_ {};
     Gtk::Entry *insEntry_ {};
     Gtk::Button *insButtonParse_ {};
-    Gtk::TextView *insTextView_ {};
+    Gtk::Label *pErrorLabel_ {};
+    Gtk::Box *pErrorCard_ {};
     Gtk::Button *pSettingsBtn_ {};
     Gtk::Popover *pSettingsPopover_ {};
     Gtk::Button *pVersionBtn_ {};
@@ -27,7 +27,7 @@ public:
     Gtk::ListBox *pHistoryList_ {};
     Gtk::Stack *pFormatStack_ {};
     Gtk::Switch *pAbiSwitch_ {};
-    Gtk::MenuButton *pIsaMenuBtn_ {};
+    Gtk::DropDown *pIsaDrop_ {};
 
     std::unique_ptr<Gtk::Window> pVersionWindow_;
     std::unique_ptr<Instruction> inst_;

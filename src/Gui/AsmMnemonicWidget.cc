@@ -13,7 +13,7 @@ AsmMnemonicWidget::AsmMnemonicWidget(std::string_view token, Gtk::Box *pParentAs
     if(token == "mnemonic") {
         pLabel_->set_margin_end(8);
         pLabel_->add_css_class("instruction-label");
-    } else if(token != ",") {
+    } else if(token != "," && token != "(" && token != ")") {
         pLabel_->add_css_class("register-label");
     }
     pBox->append(*pLabel_);
@@ -32,5 +32,8 @@ void AsmMnemonicWidget::SetupHover(std::string_view name,
                                    InstCommST::BinaryFieldWidgetMap_u &binaryFieldWidgets)
 {
     IHoverWidget::CollectRelated(binaryFieldWidgets, util::FIND_FIELD_REL(view.asmRel_, name), relatedBinary_);
+    if(pLabel_) {
+        pLabel_->add_css_class(util::FIELD_TONE_CLASS(util::ASM_TOKEN_TONE(name)));
+    }
     attachMotion();
 }

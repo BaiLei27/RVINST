@@ -31,7 +31,7 @@ Gtk::Widget *IHoverWidget::GetRoot() const noexcept
 
 void IHoverWidget::attachMotion()
 {
-    if(!PRoot_) return;
+    if(!PRoot_ || PMotion_) return;
 
     PMotion_= Gtk::EventControllerMotion::create();
     PMotion_->set_propagation_phase(Gtk::PropagationPhase::CAPTURE);
