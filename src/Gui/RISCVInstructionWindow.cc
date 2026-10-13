@@ -1,27 +1,22 @@
 #include <algorithm>
-#include <array>
 #include <format>
 #include <print>
 
-#include "Gui/BinaryFieldWidget.hh"
 #include "Gui/RISCVInstructionWindow.hh"
 #include "Util/InputParse.hh"
 #include "config.hpp"
 
 namespace {
 
-constexpr std::array G_kFormatOrder {
-    InstFormat::R,
-    InstFormat::I,
-    InstFormat::S,
-    InstFormat::B,
-    InstFormat::U,
-    InstFormat::J,
-};
+constexpr int G_MaxInputHistory   = 32;
+constexpr int G_HistoryVisibleRows= 8;
+constexpr int G_HistoryRowHeight  = 40;
 
-constexpr int G_kMaxInputHistory   = 32;
-constexpr int G_kHistoryVisibleRows= 8;
-constexpr int G_kHistoryRowHeight  = 40;
+// string_view -> Glib::ustring (safe for NUL-free ISA strings)
+[[nodiscard]] Glib::ustring toGlibUstring(std::string_view sv)
+{
+    return { sv.data(), sv.size() };
+}
 
 } // namespace
 
@@ -29,9 +24,10 @@ RISCVInstructionWindow::RISCVInstructionWindow()
     : insEntry_(Gtk::make_managed<Gtk::Entry>()),
       insButtonParse_(Gtk::make_managed<Gtk::Button>("Parse Instruction")),
       pErrorLabel_(Gtk::make_managed<Gtk::Label>()),
-      pSettingsBtn_(Gtk::make_managed<Gtk::Button>()),
+      pSettingsBtn_(Gtk::make_managed<Gtk::MenuButton>()),
       pVersionBtn_(Gtk::make_managed<Gtk::Button>()),
-      uiContainer_(Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 14))
+      uiContainer_(Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 14)),
+      history_(G_MaxInputHistory)
 {
     set_title("RISC-V Instruction Encoder/Decoder");
     set_default_size(680, 720);
@@ -39,6 +35,12 @@ RISCVInstructionWindow::RISCVInstructionWindow()
 
     uiContainer_->set_margin(12);
     uiContainer_->add_css_class("main-container");
+#if defined(_WIN32)
+    std::println("Windows");
+    uiContainer_->add_css_class("standard"); // Windows users historically get the larger 25px-equivalent type scale.
+#else
+    uiContainer_->add_css_class("compact"); // Compact 16px baseline keeps the 32-bit bit diagram narrow on Linux/Wayland.
+#endif
 
     insEntry_->set_placeholder_text("Hex (0x33), binary (0b110011), or assembly (add x0,x0,x0)");
     insEntry_->set_hexpand(true);
@@ -58,6 +60,7 @@ RISCVInstructionWindow::RISCVInstructionWindow()
 
     pSettingsBtn_->set_icon_name("emblem-system-symbolic");
     pSettingsBtn_->set_tooltip_text("ABI / ISA settings");
+    pSettingsBtn_->set_always_show_arrow(false);
     pSettingsBtn_->add_css_class("icon-button");
     setupSettingsPopover();
     pEntryRow_->append(*pSettingsBtn_);
@@ -93,7 +96,6 @@ RISCVInstructionWindow::RISCVInstructionWindow()
 RISCVInstructionWindow::~RISCVInstructionWindow()
 {
     if(pHistoryPopover_) pHistoryPopover_->unparent();
-    if(pSettingsPopover_) pSettingsPopover_->unparent();
 }
 
 void RISCVInstructionWindow::initInstFormatUI()
@@ -106,33 +108,30 @@ void RISCVInstructionWindow::initInstFormatUI()
     pFormatStack_->set_vexpand(true);
     pFormatStack_->add_css_class("format-stack");
 
-    const auto PUT_TO_ENTRY= [this](const std::string &content) {
+    // Single panel doubles as the pre-parse default view (was a disabled R-Type
+    // InstFormatUI placeholder). Keep it visible at startup; only grey it out
+    // until the first successful parse.
+    pFormatUi_= Gtk::make_managed<InstFormatUI>(InstFormat::R);
+    pFormatUi_->set_sensitive(false);
+    pFormatUi_->add_css_class("format-placeholder");
+    pFormatUi_->signalOutput_.connect([this](const std::string &content) {
         if(insEntry_ && insEntry_->get_buffer()) {
             insEntry_->get_buffer()->set_text(content);
             insEntry_->grab_focus();
             insEntry_->set_position(-1);
         }
-    };
-
-    for(const auto &fmt: G_kFormatOrder) {
-        auto *pUi= Gtk::make_managed<InstFormatUI>(fmt);
-        pUi->signalOutput_.connect(PUT_TO_ENTRY);
-        formatUi_[static_cast<size_t>(fmt)]= pUi;
-        const auto NAME                    = InstFormatName(fmt);
-        pFormatStack_->add(*pUi, Glib::ustring(NAME.data(), NAME.size()));
-    }
-
-    // Keep same height as format panels before the first parse.
-    auto *pPlaceholder= Gtk::make_managed<InstFormatUI>(InstFormat::R);
-    pPlaceholder->set_sensitive(false);
-    pPlaceholder->add_css_class("format-placeholder");
-    pFormatStack_->add(*pPlaceholder, "empty");
-    pFormatStack_->set_visible_child("empty");
+    });
+    pFormatStack_->add(*pFormatUi_, "result");
+    pFormatStack_->set_visible_child(*pFormatUi_);
 }
 
-void RISCVInstructionWindow::hideAllTypeUI()
+void RISCVInstructionWindow::hideFormatUI()
 {
-    if(pFormatStack_) pFormatStack_->set_visible_child("empty");
+    // Match the old "empty" placeholder: keep the diagram visible, disable input.
+    if(pFormatUi_) {
+        pFormatUi_->set_sensitive(false);
+        pFormatUi_->add_css_class("format-placeholder");
+    }
 }
 
 void RISCVInstructionWindow::onInsButtonParseClicked()
@@ -164,7 +163,6 @@ void RISCVInstructionWindow::onInsButtonParseClicked()
 
     if(const auto DECODED= inst_->Decode(); !DECODED) {
         showError(std::format("invalid input: {}", DECODED.error().Msg()));
-        inst_.reset();
         insEntry_->grab_focus();
         return;
     }
@@ -177,54 +175,41 @@ void RISCVInstructionWindow::onInsButtonParseClicked()
 void RISCVInstructionWindow::showInsResult(Instruction &inst)
 {
     const auto *pType= inst.GetTypePtr();
-    InstFormatUI *pCurrUi {};
-
-    if(pType) {
-        const int IDX= static_cast<int>(pType->GetInstFormat());
-        if(IDX >= 0 && IDX < static_cast<int>(formatUi_.size())) {
-            pCurrUi= formatUi_[static_cast<size_t>(IDX)];
-        }
+    if(!pType || !pFormatUi_ || !pFormatStack_) {
+        showError("invalid input: unsupported instruction format");
+        return;
     }
 
-    if(!pCurrUi || !pFormatStack_) {
+    if(pType->GetInstFormat() == InstFormat::UNKNOWN) {
         showError("invalid input: unsupported instruction format");
         return;
     }
 
     if(pErrorCard_) pErrorCard_->set_visible(false);
-    pFormatStack_->set_visible_child(*pCurrUi);
-    pCurrUi->UpdateDisplay(inst);
+    pFormatUi_->remove_css_class("format-placeholder");
+    pFormatUi_->set_sensitive(true);
+    pFormatStack_->set_visible_child(*pFormatUi_);
+    pFormatUi_->UpdateDisplay(inst);
 
-    Glib::signal_idle().connect_once([this, pCurrUi] {
-        if(!pCurrUi || !pCurrUi->pBitsRow_) return;
-
-        // Temporarily unexpand fields to measure intrinsic bit-diagram width.
-        for(auto &pField: pCurrUi->binaryOwned_) {
-            if(pField && pField->GetRoot()) pField->GetRoot()->set_hexpand(false);
-        }
-        pCurrUi->pBitsRow_->set_hexpand(false);
-
-        int minW= 0, natW= 0, minBase= -1, natBase= -1;
-        pCurrUi->pBitsRow_->measure(Gtk::Orientation::HORIZONTAL, -1, minW, natW, minBase, natBase);
+    Glib::signal_idle().connect_once([this] {
+        if(!pFormatUi_ || !pFormatUi_->FitToContent()) return;
 
         const int PAD   = uiContainer_ ? (uiContainer_->get_margin_start() + uiContainer_->get_margin_end()) : 24;
-        const int WIDTH = std::max(natW + PAD + 28, 560);
-        const int HEIGHT= std::max(get_height(), 720);
-
-        set_size_request(WIDTH, -1);
-        set_default_size(WIDTH, HEIGHT);
-
-        for(auto &pField: pCurrUi->binaryOwned_) {
-            if(pField && pField->GetRoot()) pField->GetRoot()->set_hexpand(true);
+        const int NEED_W= std::max(pFormatUi_->MeasureWidth() + PAD + 28, 560);
+        set_size_request(NEED_W, -1); // content min width only; never force-shrink
+        const int CUR_W= get_width();
+        const int CUR_H= get_height();
+        if(NEED_W > CUR_W || CUR_H < 720) {
+            set_default_size(std::max(NEED_W, CUR_W), std::max(CUR_H, 720));
         }
-        pCurrUi->pBitsRow_->set_hexpand(true);
-        pCurrUi->pBitsRow_->queue_resize();
+
+        pFormatUi_->RestoreHexPand();
     });
 }
 
 void RISCVInstructionWindow::showError(const std::string &message)
 {
-    hideAllTypeUI();
+    hideFormatUI();
     inst_.reset();
     if(pErrorLabel_) pErrorLabel_->set_text("[Error]: " + message);
     if(pErrorCard_) pErrorCard_->set_visible(true);
@@ -300,37 +285,29 @@ void RISCVInstructionWindow::setupInputHistory()
     insEntry_->add_controller(keyCtrl);
 
     insEntry_->signal_changed().connect([this] {
-        if(!historyBrowseIndex_ || *historyBrowseIndex_ >= inputHistory_.size()) {
-            historyBrowseIndex_.reset();
-            return;
-        }
-        if(insEntry_->get_text().raw() != inputHistory_[*historyBrowseIndex_]) {
-            historyBrowseIndex_.reset();
-            historyDraft_.clear();
+        if(!history_.IsBrowsing()) return;
+
+        if(insEntry_->get_text().raw() != history_.At(history_.CursorIndex())) {
+            history_.CancelBrowse();
         }
     });
 }
 
 void RISCVInstructionWindow::popupInputHistory()
 {
-    if(inputHistory_.empty() || !pHistoryPopover_ || !insEntry_) return;
+    if(history_.IsEmpty() || !pHistoryPopover_ || !insEntry_) return;
 
-    if(historyDirty_) {
-        rebuildHistoryList();
-        historyDirty_= false;
-    }
+    rebuildHistoryList();
 
-    const int ENTRY_W= std::max(
-        { insEntry_->get_width(), insEntry_->get_allocated_width(), 260 });
-    const int VISIBLE=
-        static_cast<int>(std::min(inputHistory_.size(), static_cast<size_t>(G_kHistoryVisibleRows)));
-    const int LIST_H      = VISIBLE * G_kHistoryRowHeight;
-    const bool NEED_SCROLL= inputHistory_.size() > static_cast<size_t>(G_kHistoryVisibleRows);
+    const int ENTRY_W= std::max({ insEntry_->get_width(), insEntry_->get_allocated_width(), 260 });
+    const int VISIBLE= static_cast<int>(std::min(history_.Size(), static_cast<size_t>(G_HistoryVisibleRows)));
+    const int LIST_H = VISIBLE * G_HistoryRowHeight;
+
+    bool needScroll= history_.Size() > static_cast<size_t>(G_HistoryVisibleRows);
 
     pHistoryScroll_->set_propagate_natural_width(false);
     pHistoryScroll_->set_propagate_natural_height(false);
-    pHistoryScroll_->set_policy(Gtk::PolicyType::NEVER,
-                                NEED_SCROLL ? Gtk::PolicyType::AUTOMATIC : Gtk::PolicyType::NEVER);
+    pHistoryScroll_->set_policy(Gtk::PolicyType::NEVER, needScroll ? Gtk::PolicyType::AUTOMATIC : Gtk::PolicyType::NEVER);
 
     // Reset first: setting min while a smaller max remains triggers Gtk-CRITICAL.
     pHistoryScroll_->set_min_content_width(-1);
@@ -349,36 +326,20 @@ void RISCVInstructionWindow::popupInputHistory()
 
 void RISCVInstructionWindow::pushInputHistory(std::string_view text)
 {
-    if(text.empty()) return;
-
-    const std::string ENTRY { text };
-    std::erase(inputHistory_, ENTRY);
-    inputHistory_.push_front(ENTRY);
-
-    while(inputHistory_.size() > G_kMaxInputHistory) {
-        inputHistory_.pop_back();
-    }
-
-    historyBrowseIndex_.reset();
-    historyDraft_.clear();
-
-    if(pHistoryPopover_ && pHistoryPopover_->get_visible()) {
-        rebuildHistoryList();
-    } else {
-        historyDirty_= true;
-    }
+    history_.Push(text);
+    rebuildHistoryList();
 }
 
 void RISCVInstructionWindow::rebuildHistoryList()
 {
     if(!pHistoryList_) return;
 
-    size_t i= 0;
-    for(const auto &item: inputHistory_) {
-        auto *pRow= pHistoryList_->get_row_at_index(static_cast<int>(i));
+    int i= 0;
+    for(const auto &item: history_.GetEntries()) {
+        auto *pRow= pHistoryList_->get_row_at_index(i);
         if(!pRow) {
             pRow= Gtk::make_managed<Gtk::ListBoxRow>();
-            pRow->set_size_request(-1, G_kHistoryRowHeight);
+            pRow->set_size_request(-1, G_HistoryRowHeight);
             pRow->add_css_class("input-history-row");
 
             auto *pLabel= Gtk::make_managed<Gtk::Label>();
@@ -400,54 +361,40 @@ void RISCVInstructionWindow::rebuildHistoryList()
         ++i;
     }
 
-    while(auto *pRow= pHistoryList_->get_row_at_index(static_cast<int>(i))) {
+    while(auto *pRow= pHistoryList_->get_row_at_index(i)) {
         pHistoryList_->remove(*pRow);
     }
 }
 
 void RISCVInstructionWindow::applyHistoryAt(size_t index)
 {
-    if(index >= inputHistory_.size()) return;
-    historyBrowseIndex_= index;
-    insEntry_->set_text(inputHistory_[index]);
+    history_.JumpTo(index);
+    if(!history_.IsBrowsing()) return;
+    insEntry_->set_text(toGlibUstring(history_.At(history_.CursorIndex())));
     insEntry_->set_position(-1);
 }
 
 void RISCVInstructionWindow::browseHistory(int delta)
 {
-    if(inputHistory_.empty()) return;
+    if(history_.IsEmpty()) return;
 
-    if(!historyBrowseIndex_) {
-        historyDraft_= insEntry_->get_text();
-        if(delta < 0) return;
-        historyBrowseIndex_= 0;
-    } else {
-        const size_t CUR= *historyBrowseIndex_;
-        if(delta < 0) {
-            if(CUR == 0) {
-                historyBrowseIndex_.reset();
-                insEntry_->set_text(historyDraft_);
-                insEntry_->set_position(-1);
-                return;
-            }
-            historyBrowseIndex_= CUR - 1;
-        } else {
-            historyBrowseIndex_= CUR + static_cast<size_t>(delta);
-        }
+    if(!history_.IsBrowsing()) {
+        history_.SetDraft(insEntry_->get_text().raw());
     }
+    const auto STEP= history_.Step(delta);
+    if(!STEP) return;
 
-    if(*historyBrowseIndex_ >= inputHistory_.size()) {
-        historyBrowseIndex_= inputHistory_.size() - 1;
-    }
-    applyHistoryAt(*historyBrowseIndex_);
+    insEntry_->set_text(toGlibUstring(*STEP));
+    insEntry_->set_position(-1);
 }
 
 void RISCVInstructionWindow::setupSettingsPopover()
 {
-    pSettingsPopover_= Gtk::make_managed<Gtk::Popover>();
-    pSettingsPopover_->set_has_arrow(true);
-    pSettingsPopover_->set_parent(*pSettingsBtn_);
-    pSettingsPopover_->add_css_class("settings-popover");
+    // MenuButton owns the popover; avoids Button+set_parent press-state bleed
+    // into the settings icon when clicking ABI/ISA controls inside the popover.
+    auto *pPopover= Gtk::make_managed<Gtk::Popover>();
+    pPopover->set_has_arrow(true);
+    pPopover->add_css_class("settings-popover");
 
     auto *pPopoverBox= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 12);
     pPopoverBox->set_margin(14);
@@ -475,6 +422,33 @@ void RISCVInstructionWindow::setupSettingsPopover()
     pAbiRow->append(*pAbiSwitch_);
     pPopoverBox->append(*pAbiRow);
 
+    auto *pFontRow= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
+    pFontRow->set_halign(Gtk::Align::START);
+    pFontRow->add_css_class("settings-row");
+
+    auto *pFontLabel= Gtk::make_managed<Gtk::Label>("Compact");
+    pFontLabel->set_halign(Gtk::Align::START);
+    pFontLabel->set_hexpand(false);
+    pFontLabel->add_css_class("settings-label");
+    pFontRow->append(*pFontLabel);
+
+    pFontSizeSwitch_= Gtk::make_managed<Gtk::Switch>();
+    pFontSizeSwitch_->set_active(uiContainer_->has_css_class("compact"));
+    pFontSizeSwitch_->set_halign(Gtk::Align::START);
+    pFontSizeSwitch_->set_valign(Gtk::Align::CENTER);
+    pFontSizeSwitch_->add_css_class("font-size-switch");
+    pFontSizeSwitch_->property_active().signal_changed().connect([this] {
+        if(pFontSizeSwitch_->get_active()) {
+            uiContainer_->remove_css_class("standard");
+            uiContainer_->add_css_class("compact");
+        } else {
+            uiContainer_->remove_css_class("compact");
+            uiContainer_->add_css_class("standard");
+        }
+    });
+    pFontRow->append(*pFontSizeSwitch_);
+    pPopoverBox->append(*pFontRow);
+
     auto *pIsaRow= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
     pIsaRow->set_halign(Gtk::Align::START);
     pIsaRow->add_css_class("settings-row");
@@ -488,20 +462,16 @@ void RISCVInstructionWindow::setupSettingsPopover()
 
     auto isaList= Gtk::StringList::create({ "AUTO", "RV32I", "RV64I", "RV128I" });
     pIsaDrop_   = Gtk::make_managed<Gtk::DropDown>(isaList);
-    pIsaDrop_->set_selected(static_cast<guint>(selectedIsaIndex_));
+    pIsaDrop_->set_selected(0); // AUTO
     pIsaDrop_->set_hexpand(false);
     pIsaDrop_->set_halign(Gtk::Align::START);
     pIsaDrop_->set_size_request(86, -1);
     pIsaDrop_->add_css_class("isa-dropdown");
-    pIsaDrop_->property_selected().signal_changed().connect([this] {
-        if(!pIsaDrop_) return;
-        selectedIsaIndex_= static_cast<int>(pIsaDrop_->get_selected());
-    });
     pIsaRow->append(*pIsaDrop_);
     pPopoverBox->append(*pIsaRow);
 
-    pSettingsPopover_->set_child(*pPopoverBox);
-    pSettingsBtn_->signal_clicked().connect([this] { pSettingsPopover_->popup(); });
+    pPopover->set_child(*pPopoverBox);
+    pSettingsBtn_->set_popover(*pPopover);
 }
 
 void RISCVInstructionWindow::showVersionWindow()
@@ -536,16 +506,14 @@ void RISCVInstructionWindow::showVersionWindow()
             pRow->set_halign(Gtk::Align::FILL);
             pRow->add_css_class("version-info-row");
 
-            auto *pName= Gtk::make_managed<Gtk::Label>(
-                Glib::ustring(name.data(), name.size()));
+            auto *pName= Gtk::make_managed<Gtk::Label>(toGlibUstring(name));
             pName->set_halign(Gtk::Align::START);
             pName->set_valign(Gtk::Align::CENTER);
             pName->set_xalign(0.0F);
             pName->set_width_chars(10);
             pName->add_css_class("version-info-name");
 
-            auto *pValue= Gtk::make_managed<Gtk::Label>(
-                Glib::ustring(value.data(), value.size()));
+            auto *pValue= Gtk::make_managed<Gtk::Label>(toGlibUstring(value));
             pValue->set_halign(Gtk::Align::START);
             pValue->set_valign(Gtk::Align::CENTER);
             pValue->set_hexpand(true);
@@ -588,8 +556,7 @@ void RISCVInstructionWindow::loadCSSFromFile()
         auto cssProvider= Gtk::CssProvider::create();
         cssProvider->load_from_file(Gio::File::create_for_path(CSS_FILE_PATH));
         if(auto display= Gdk::Display::get_default()) {
-            Gtk::StyleContext::add_provider_for_display(
-                display, cssProvider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+            Gtk::StyleContext::add_provider_for_display(display, cssProvider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         }
     } catch(const Glib::Error &ex) {
         // std::println(stderr, "CSS error: {}", ex.what());

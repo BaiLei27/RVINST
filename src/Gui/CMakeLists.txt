@@ -40,14 +40,17 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
 
 # file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/resource)
 
+# Single type-scale stylesheet: font size is em-relative and switched at
+# runtime via the 'compact'/'standard' class on the .main-container root
+# (see RISCVInstructionWindow). No per-platform CSS files are needed.
 configure_file(
-    InstStyle.css
-    ${CMAKE_BINARY_DIR}/gen/resources/InstStyle.css
+    CSS/InstStyle.css
+    ${CMAKE_BINARY_DIR}/gen/css/InstStyle.css
     COPYONLY
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC
-    CSS_FILE_PATH="${CMAKE_BINARY_DIR}/gen/resources/InstStyle.css"
+    CSS_FILE_PATH="${CMAKE_BINARY_DIR}/gen/css/InstStyle.css"
 )
 
 target_sources(${PROJECT_NAME} PRIVATE
@@ -63,6 +66,9 @@ target_sources(${PROJECT_NAME} PRIVATE
 
     ${projectIncDir}/Gui/InstFormatUI.hh
     ${projectScrDir}/InstFormatUI.cc
+
+    ${projectIncDir}/Gui/InputHistoryController.hh
+    ${projectScrDir}/InputHistoryController.cc
 
     ${projectIncDir}/Gui/RISCVInstructionWindow.hh
     ${projectScrDir}/RISCVInstructionWindow.cc
