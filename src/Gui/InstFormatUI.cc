@@ -64,7 +64,8 @@ void InstFormatUI::appendResultRow(const char *pTitle,
 
 InstFormatUI::InstFormatUI(InstFormat fmt)
     : Gtk::Box(Gtk::Orientation::VERTICAL, 14),
-      pView_(&util::GetInstFormatView(fmt))
+      pView_(&util::GetInstFormatView(fmt)),
+      fmt_(fmt)
 {
     add_css_class("format-panel");
     setupResultCard();
@@ -253,7 +254,7 @@ void InstFormatUI::rebuildAssemblyDisplay(const util::InstFormatView &view)
     }
 }
 
-void InstFormatUI::applyIFormatView(const util::InstFormatView &view)
+void InstFormatUI::applyView(const util::InstFormatView &view)
 {
     pView_= &view;
     rebuildBitDiagram(view);
@@ -273,13 +274,21 @@ void InstFormatUI::setupHover()
 
 void InstFormatUI::UpdateDisplay(const Instruction &inst)
 {
-    if(const auto *pType= inst.GetTypePtr(); pType && InstFormat::I == pType->GetInstFormat()) {
-        const auto &L   = pType->GetInstLayout();
-        const auto SHAPE= DetectIImmShape(L.I.opc, L.I.fct3);
-        if(SHAPE != iShape_) {
-            iShape_= SHAPE;
-            applyIFormatView(util::GetIInstFormatView(SHAPE));
-        }
+    const auto *pType= inst.GetTypePtr();
+    if(!pType) return;
+
+    const auto FMT= pType->GetInstFormat();
+    auto shape    = ItypeImmShape::IMM12;
+    if(InstFormat::I == FMT) {
+        const auto &L= pType->GetInstLayout();
+        shape        = DetectIImmShape(L.I.opc, L.I.fct3);
+    }
+
+    if(FMT != fmt_ || (InstFormat::I == FMT && shape != iShape_)) {
+        fmt_   = FMT;
+        iShape_= shape;
+        applyView(InstFormat::I == FMT ? util::GetIInstFormatView(shape)
+                                       : util::GetInstFormatView(FMT));
     }
 
     updateHeader(inst);
@@ -409,4 +418,36 @@ std::string InstFormatUI::GetBinaryContent() const
 std::string InstFormatUI::GetHexContent() const
 {
     return pHexLabel_ ? std::string(pHexLabel_->get_text().raw()) : std::string {};
+}
+
+bool InstFormatUI::FitToContent()
+{
+    if(!pBitsRow_) return false;
+
+    // Temporarily unexpand fields to measure intrinsic bit-diagram width.
+    for(auto &pField: binaryOwned_) {
+        if(pField && pField->GetRoot()) pField->GetRoot()->set_hexpand(false);
+    }
+    pBitsRow_->set_hexpand(false);
+    return true;
+}
+
+int InstFormatUI::MeasureWidth() const
+{
+    if(!pBitsRow_) return 0;
+
+    int minW= 0, natW= 0, minBase= -1, natBase= -1;
+    pBitsRow_->measure(Gtk::Orientation::HORIZONTAL, -1, minW, natW, minBase, natBase);
+    return natW;
+}
+
+void InstFormatUI::RestoreHexPand()
+{
+    if(!pBitsRow_) return;
+
+    for(auto &pField: binaryOwned_) {
+        if(pField && pField->GetRoot()) pField->GetRoot()->set_hexpand(true);
+    }
+    pBitsRow_->set_hexpand(true);
+    pBitsRow_->queue_resize();
 }
