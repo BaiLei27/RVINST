@@ -73,22 +73,22 @@ cmake --build build -t tidy   # clang-tidy
 RVINST <command> [options] [args]
 ```
 
-| Command | Description |
-|---------|-------------|
-| `decode <input>` | Decode hex / binary to assembly |
-| `encode <input>` | Encode assembly to hex / binary |
-| `repl` | Enter interactive REPL mode |
-| `reg <query>` | Look up register info (name or index) |
+| Command           | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| `decode <input>`  | Decode hex / binary to assembly                                          |
+| `encode <input>`  | Encode assembly to hex / binary                                          |
+| `repl`            | Enter interactive REPL mode                                              |
+| `reg <query>`     | Look up register info (name or index)                                    |
 | `list [--type T]` | List supported instructions, optionally filtered by format (R/I/S/B/U/J) |
 
 Global options:
 
-| Option | Description |
-|--------|-------------|
+| Option               | Description                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
 | `--abi` / `--no-abi` | Use ABI register names (zero/ra/sp...) or architectural names (x0/x1...); architectural is the default |
-| `--json` | Output in JSON format |
-| `-h, --help` | Show help message |
-| `-v, --version` | Show version information |
+| `--json`             | Output in JSON format                                                                                  |
+| `-h, --help`         | Show help message                                                                                      |
+| `-v, --version`      | Show version information                                                                               |
 
 Examples:
 
@@ -138,49 +138,54 @@ RVINST/
 ## Architecture
 
 ```mermaid
+---
+config:
+  layout: elk
+  theme: redux-color
+---
 flowchart TB
-    subgraph Frontends["Frontends"]
-        CLI["CLI (src/Cli)<br/>parse / table / JSON"]
-        GUI["GUI (src/Gui, gtkmm4)<br/>window / panels / hover"]
-    end
-
-    subgraph Lib["libRVINST_backend (shared library)"]
-        direction TB
-
-        subgraph Core["Core layer"]
-            Inst["Instruction"]
-            Base["IBaseInstType"]
-            Impl["R/I/S/B/U/J Type"]
-            Factory["InstTypeFactory"]
-        end
-
-        subgraph ISA["ISA layer"]
-            Fmt["InstFormat"]
-            Regs["Regs"]
-        end
-
-        subgraph Util["Util layer"]
-            Parse["InputParse"]
-            Table["BiLookupTable"]
-            View["InstFormatView"]
-        end
-
-        Inst --> Factory
-        Factory --> Impl
-        Impl --> Base
-        Base --> Fmt
-        Base --> Table
-        Base --> Regs
-        View --> Fmt
-    end
-
+ subgraph Frontends["Frontends"]
+        CLI["CLI src/Cli"]
+        GUI["GUI src/Gui gtkmm4"]
+  end
+ subgraph Core["Core layer"]
+        Inst["Instruction"]
+        Base["IBaseInstType"]
+        Impl["R/I/S/B/U/J Type"]
+        Factory["InstTypeFactory"]
+  end
+ subgraph ISA["ISA layer"]
+        Fmt["InstFormat"]
+        Regs["Regs"]
+  end
+ subgraph Util["Util layer"]
+        Parse["InputParse"]
+        Table["BiLookupTable"]
+        View["InstFormatView"]
+  end
+ subgraph Lib["libRVINST_backend"]
+        Core
+        ISA
+        Util
+  end
+    Inst --> Factory
+    Factory --> Impl
+    Impl --> Base
+    Base --> Fmt & Table & Regs
+    View --> Fmt
     CLI --> Inst
-    GUI --> Inst
-    GUI --> View
+    GUI --> Inst & View
     Parse --> Inst
 ```
 
-Core decoding flow: `Instruction` builds the appropriate `IBaseInstType` subclass through `InstTypeFactory` from the input (machine code or assembly); the instruction name is matched via `BiLookupTable` using `functKey = (funct7 << 3) | funct3` (for R-type, etc.); then `Parse()` / `Disassembly()` perform field parsing and assembly output.
+### Interactive diagram
+
+Self-contained interactive architecture diagram (EN/ZH toggle in the toolbar):
+
+- [Interactive architecture diagram](https://bailei27.github.io/RVINST/architecture/rvinst-architecture.html) — GitHub Pages
+- [Interactive architecture diagram (repo file)](docs/architecture/rvinst-architecture.html) — open locally if Pages is unavailable
+
+[![Interactive architecture diagram](docs/architecture/rvinst-architecture.en.preview.png)](https://bailei27.github.io/RVINST/architecture/rvinst-architecture.html)
 
 ## Links
 
