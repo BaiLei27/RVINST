@@ -1,11 +1,8 @@
 #include <algorithm>
-#include <array>
-#include <format>
-#include <print>
 
 #include "Gui/BinaryFieldWidget.hh"
 #include "Gui/RISCVInstructionWindow.hh"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 #include "config.hpp"
 
 namespace {
@@ -144,30 +141,33 @@ void RISCVInstructionWindow::onInsButtonParseClicked()
     }
 
     std::string inputStr(TEXT);
-    try {
-        inst_.reset();
-        const auto PARSED= util::ClassifyInstInput(inputStr);
+    inst_.reset();
 
-        if(PARSED.kind_ == util::InputKind::ASSEMBLY) {
-            inst_= std::make_unique<Instruction>(inputStr, hasSetABI_);
-        } else {
-            inst_= std::make_unique<Instruction>(PARSED.word_, hasSetABI_);
-        }
-
-        if(!inst_->Decode()) throw std::invalid_argument("Failed to decode instruction");
-
-        pushInputHistory(inputStr);
-        showInsResult(*inst_);
-    } catch(const std::invalid_argument &e) {
-        showError(std::string("invalid input: ") + e.what());
-    } catch(const std::out_of_range &) {
-        showError("invalid input: value must fit in 32 bits");
-    } catch(const std::exception &e) {
-        showError(std::string("invalid input: ") + e.what());
-    } catch(...) {
-        showError("invalid input: unknown error");
+    const auto PARSED= util::ClassifyInstInput(inputStr);
+    if(!PARSED) {
+        const auto &err= PARSED.error();
+        showError(err.Code() == util::EC::OUT_OF_RANGE
+                      ? "invalid input: value must less than 32 bits"
+                      : std::format("invalid input: {}", err.Msg()));
+        insEntry_->grab_focus();
+        return;
     }
 
+    if(PARSED->kind_ == util::InputKind::ASSEMBLY) {
+        inst_= std::make_unique<Instruction>(inputStr, hasSetABI_);
+    } else {
+        inst_= std::make_unique<Instruction>(PARSED->word_, hasSetABI_);
+    }
+
+    if(const auto DECODED= inst_->Decode(); !DECODED) {
+        showError(std::format("invalid input: {}", DECODED.error().Msg()));
+        inst_.reset();
+        insEntry_->grab_focus();
+        return;
+    }
+
+    pushInputHistory(inputStr);
+    showInsResult(*inst_);
     insEntry_->grab_focus();
 }
 
@@ -223,9 +223,11 @@ void RISCVInstructionWindow::showError(const std::string &message)
 {
     hideAllTypeUI();
     inst_.reset();
-    if(pErrorLabel_) pErrorLabel_->set_text("Error: " + message);
+    if(pErrorLabel_) pErrorLabel_->set_text("[Error]: " + message);
     if(pErrorCard_) pErrorCard_->set_visible(true);
-    std::println(stderr, "Error: {}", message);
+    // Safe under WIN32_EXECUTABLE after Main::InitGuiStdio (NUL or parent console).
+    // std::println(stderr, "Error: {}", message);
+    // std::println("Error: {}", message);
 }
 
 void RISCVInstructionWindow::refreshAssemblyForAbiChange()
@@ -234,10 +236,10 @@ void RISCVInstructionWindow::refreshAssemblyForAbiChange()
 
     const auto VAL= static_cast<uint32_t>(*inst_);
     inst_         = std::make_unique<Instruction>(VAL, hasSetABI_);
-    if(inst_->Decode()) {
+    if(const auto DECODED= inst_->Decode(); DECODED) {
         showInsResult(*inst_);
     } else {
-        showError("invalid input: failed to decode after ABI change");
+        showError(std::format("invalid input: {}", DECODED.error().Msg()));
     }
 }
 
@@ -587,6 +589,7 @@ void RISCVInstructionWindow::loadCSSFromFile()
                 display, cssProvider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         }
     } catch(const Glib::Error &ex) {
-        std::println(stderr, "CSS error: {}", ex.what());
+        // std::println(stderr, "CSS error: {}", ex.what());
+        std::println("CSS error: {}", ex.what());
     }
 }

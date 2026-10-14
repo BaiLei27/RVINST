@@ -1,9 +1,6 @@
-#include <print>
-#include <string>
-
 #include "Core/SType.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace {
 
@@ -75,7 +72,7 @@ void SType::mnemonicHelper()
     appendOperands({ " ", rs2, ",", immStr, "(", rs1, ")" });
 }
 
-const InstLayout &SType::Assembly()
+util::Expected_u<const InstLayout *> SType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -108,7 +105,7 @@ const InstLayout &SType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto SType::calculateKeyID() -> KeyT

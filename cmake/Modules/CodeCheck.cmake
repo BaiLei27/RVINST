@@ -10,6 +10,26 @@ set(excludeExtsBase .ld .s)
 function(_srcFilesParse target propertyName exclude)
     if(TARGET ${target})
         get_target_property(fmtFiles ${target} SOURCES)
+        if(NOT fmtFiles)
+            set(fmtFiles)
+        endif()
+
+        # PUBLIC/PRIVATE FILE_SET files live in HEADER_SET*, not SOURCES.
+        # The default set is named HEADERS and stored in HEADER_SET.
+        get_target_property(headerSets ${target} HEADER_SETS)
+        if(headerSets)
+            foreach(setName IN LISTS headerSets)
+                set(prop "HEADER_SET_${setName}")
+                if(setName STREQUAL "HEADERS")
+                    set(prop HEADER_SET)
+                endif()
+                get_target_property(hdrs ${target} ${prop})
+                if(hdrs)
+                    list(APPEND fmtFiles ${hdrs})
+                endif()
+            endforeach()
+        endif()
+
         get_property(allParseFiles GLOBAL PROPERTY ${propertyName})
 
         foreach(f ${fmtFiles})

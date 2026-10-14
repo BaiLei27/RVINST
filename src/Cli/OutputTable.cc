@@ -1,19 +1,13 @@
-#include "Cli/OutputTable.hh"
-
 #include <algorithm>
 #include <cstdio>
-#include <format>
 #include <iostream>
-#include <iterator>
-#include <print>
-#include <streambuf>
-#include <string>
 #include <unistd.h>
 
 #include "Core/IBaseInstType.hh"
 #include "Core/Instruction.hh"
 #include "ISA/InstFormat.hh"
 #include "ISA/Regs.hpp"
+#include "Cli/OutputTable.hh"
 
 namespace cli {
 
@@ -38,6 +32,33 @@ namespace {
     std::string padRight(std::string_view s, size_t width)
     {
         return s.size() >= width ? std::string(s) : std::string(s) + std::string(width - s.size(), ' ');
+    }
+
+    struct ResolvedFields {
+        std::span<const uint32_t> bits_;
+        std::span<const InstField> meta_;
+    };
+
+    // bits_ views Instruction storage; meta_ views static format tables.
+    ResolvedFields resolveFields(const Instruction &inst)
+    {
+        const auto *pType= inst.GetTypePtr();
+        if(!pType) return {};
+
+        const auto FMT= pType->GetInstFormat();
+
+        std::span<const InstField> meta= GetInstFields(FMT);
+        if(InstFormat::I == FMT) {
+            const auto &l= pType->GetInstLayout();
+            meta         = GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
+        }
+        return { .bits_= pType->GetInstBitsField(), .meta_= meta };
+    }
+
+    uint32_t fieldValue(std::span<const uint32_t> bits, size_t total, size_t index)
+    {
+        const size_t SRC= total - 1 - index; // MSB field is stored last
+        return SRC < bits.size() ? bits[SRC] : 0U;
     }
 
 } // namespace
@@ -115,16 +136,10 @@ void OutputFormatter::PrintInstruction(const Instruction &inst, std::string_view
 
 void OutputFormatter::printFieldTable(const Instruction &inst)
 {
-    const auto *pTypePtr= inst.GetTypePtr();
-    if(!pTypePtr) return;
+    const auto FIELDS= resolveFields(inst);
+    if(FIELDS.bits_.empty() || FIELDS.meta_.empty()) return;
 
-    const auto &bitsField= pTypePtr->GetInstBitsField();
-    if(bitsField.empty()) return;
-
-    InstFormat fmt  = pTypePtr->GetInstFormat();
-    const auto &meta= GetInstFields(fmt);
-    if(meta.empty()) return;
-
+    const auto &meta       = FIELDS.meta_;
     const size_t TOTAL     = meta.size();
     constexpr size_t NAME_W= 12, BITS_W= 12, VAL_W= 10, DETAIL_W= 10;
     const size_t SEP_W= NAME_W + BITS_W + VAL_W + DETAIL_W + 2;
@@ -143,9 +158,8 @@ void OutputFormatter::printFieldTable(const Instruction &inst)
                    std::string(SEP_W, '-'));
 
     for(size_t i= 0; i < TOTAL; ++i) {
-        const auto &fm     = meta[i];
-        const size_t BF_IDX= TOTAL - 1 - i;
-        const uint32_t VAL = (BF_IDX < bitsField.size()) ? bitsField[BF_IDX] : 0;
+        const auto &fm    = meta[i];
+        const uint32_t VAL= fieldValue(FIELDS.bits_, TOTAL, i);
 
         auto bitsStr= std::format("[{}:{}]", fm.endBit_, fm.startBit_);
         auto valStr = std::format("0x{:02X}", VAL);
@@ -170,24 +184,18 @@ void OutputFormatter::printFieldTable(const Instruction &inst)
 
 void OutputFormatter::printBitFieldDiagram(const Instruction &inst)
 {
-    const auto *pTypePtr= inst.GetTypePtr();
-    if(!pTypePtr) return;
+    const auto FIELDS= resolveFields(inst);
+    if(FIELDS.bits_.empty() || FIELDS.meta_.empty()) return;
 
-    const auto &bitsField= pTypePtr->GetInstBitsField();
-    if(bitsField.empty()) return;
-
-    InstFormat fmt = pTypePtr->GetInstFormat();
-    const auto META= GetInstFields(fmt);
-    if(META.empty()) return;
-
-    const size_t TOTAL= META.size();
+    const auto &meta  = FIELDS.meta_;
+    const size_t TOTAL= meta.size();
 
     std::array<size_t, 16> colWidths {};
     if(TOTAL > colWidths.size()) return;
 
     for(size_t i= 0; i < TOTAL; ++i) {
-        int bitW    = META[i].endBit_ - META[i].startBit_ + 1;
-        colWidths[i]= std::max(static_cast<size_t>(bitW), META[i].name_.size()) + 2;
+        int bitW    = meta[i].endBit_ - meta[i].startBit_ + 1;
+        colWidths[i]= std::max(static_cast<size_t>(bitW), meta[i].name_.size()) + 2;
     }
 
     std::string buf;
@@ -220,8 +228,8 @@ void OutputFormatter::printBitFieldDiagram(const Instruction &inst)
     std::format_to(out, "\n  ");
     for(size_t i= 0; i < TOTAL; ++i) {
         std::format_to(out, " ");
-        auto endStr  = std::to_string(META[i].endBit_);
-        auto startStr= std::to_string(META[i].startBit_);
+        auto endStr  = std::to_string(meta[i].endBit_);
+        auto startStr= std::to_string(meta[i].startBit_);
         size_t w     = colWidths[i];
         size_t mid   = w - endStr.size() - startStr.size();
         std::format_to(out, "{}", endStr);
@@ -241,14 +249,13 @@ void OutputFormatter::printBitFieldDiagram(const Instruction &inst)
 
     // Line 4: Binary values (centered within each column)
     for(size_t i= 0; i < TOTAL; ++i) {
-        size_t bfIdx= TOTAL - 1 - i;
-        uint32_t val= (bfIdx < bitsField.size()) ? bitsField[bfIdx] : 0;
-        int bitW    = META[i].endBit_ - META[i].startBit_ + 1;
+        const uint32_t VAL= fieldValue(FIELDS.bits_, TOTAL, i);
+        int bitW          = meta[i].endBit_ - meta[i].startBit_ + 1;
 
         std::string binStr;
         binStr.resize(bitW);
         for(int b= 0; b < bitW; ++b) {
-            binStr[bitW - 1 - b]= (((val >> b) & 1U) != 0U) ? '1' : '0';
+            binStr[bitW - 1 - b]= (((VAL >> b) & 1U) != 0U) ? '1' : '0';
         }
 
         std::format_to(out, "|");
@@ -266,7 +273,7 @@ void OutputFormatter::printBitFieldDiagram(const Instruction &inst)
     // Line 6: Field names (left-aligned, aligned to '-' after each '+')
     for(size_t i= 0; i < TOTAL; ++i) {
         std::format_to(out, " ");
-        std::string_view name= META[i].name_;
+        std::string_view name= meta[i].name_;
         if(OutputMode::COLORED == Mode_) {
             std::format_to(out, "{}{}{}", G_C_YELLOW, name, G_C_RESET);
         } else {
@@ -407,10 +414,8 @@ std::string OutputFormatter::jsonEscape(std::string_view s)
 
 void OutputFormatter::printInstructionJSON(const Instruction &inst, std::string_view input)
 {
-    const auto *pTp   = inst.GetTypePtr();
-    const auto &bits  = pTp ? pTp->GetInstBitsField() : std::vector<uint32_t> {};
-    InstFormat fmt    = pTp ? pTp->GetInstFormat() : InstFormat::UNKNOWN;
-    const auto &meta  = GetInstFields(fmt);
+    const auto FIELDS = resolveFields(inst);
+    const auto &meta  = FIELDS.meta_;
     const size_t TOTAL= meta.size();
 
     std::string buf;
@@ -443,9 +448,8 @@ void OutputFormatter::printInstructionJSON(const Instruction &inst, std::string_
                         "\n");
 
     for(size_t i= 0; i < TOTAL; ++i) {
-        const auto &fm     = meta[i];
-        const size_t BF_IDX= TOTAL - 1 - i;
-        const uint32_t VAL = (BF_IDX < bits.size()) ? bits[BF_IDX] : 0;
+        const auto &fm    = meta[i];
+        const uint32_t VAL= fieldValue(FIELDS.bits_, TOTAL, i);
 
         std::format_to(out,
                        R"(    {{"name":"{}","bits":"[{}:{}]","value":"0x{:02X}")",

@@ -11,7 +11,7 @@ public:
     JType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI= false);
 
     void Parse() override;
-    [[nodiscard]] const InstLayout &Assembly() override;
+    [[nodiscard]] util::Expected_u<const InstLayout *> Assembly() override;
 
 private:
     [[nodiscard]] static constexpr KeyT OP_K(uint8_t opc) noexcept { return PACK_KEY(0, opc); }

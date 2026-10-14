@@ -1,13 +1,9 @@
 
 #pragma once
 
-#include <gtkmm.h>
-#include <string_view>
-#include <vector>
-
 #include "Gui/IHoverWidget.hh"
 #include "Gui/InstCommST.hh"
-#include "Util/InstFormatView.hpp"
+#include "Util/InstFormatView.hh"
 
 class BinaryFieldWidget;
 

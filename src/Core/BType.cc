@@ -1,8 +1,6 @@
-#include <print>
-
 #include "Core/BType.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace {
 
@@ -65,7 +63,7 @@ void BType::mnemonicHelper()
     appendOperands({ " ", rs1, ",", rs2, ",", immStr });
 }
 
-const InstLayout &BType::Assembly()
+util::Expected_u<const InstLayout *> BType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -86,7 +84,7 @@ const InstLayout &BType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto BType::calculateKeyID() -> KeyT
