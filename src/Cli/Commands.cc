@@ -13,7 +13,7 @@
 #include "Core/Instruction.hh"
 #include "ISA/InstFormat.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace cli {
 
@@ -22,20 +22,28 @@ Commands::Commands(const GlobalOptions &opts): Opts_(opts), Fmt_(opts.outputMode
 int Commands::Decode(std::string_view input)
 {
     const auto PARSED= util::ClassifyInstInput(input);
+    if(!PARSED) {
+        Fmt_.PrintError(std::string(PARSED.error().Msg()));
+        return 1;
+    }
 
-    if(util::InputKind::ASSEMBLY == PARSED.kind_) {
+    if(util::InputKind::ASSEMBLY == PARSED->kind_) {
         Fmt_.PrintError("decode expects hex or binary input, got assembly. Use 'encode' instead.");
         return 1;
     }
 
-    return processInstruction(PARSED.word_);
+    return processInstruction(PARSED->word_);
 }
 
 int Commands::Encode(std::string_view input)
 {
     const auto PARSED= util::ClassifyInstInput(input);
+    if(!PARSED) {
+        Fmt_.PrintError(std::string(PARSED.error().Msg()));
+        return 1;
+    }
 
-    if(PARSED.kind_ != util::InputKind::ASSEMBLY) {
+    if(PARSED->kind_ != util::InputKind::ASSEMBLY) {
         Fmt_.PrintError("encode expects assembly input, got hex/binary. Use 'decode' instead.");
         return 1;
     }
@@ -78,67 +86,51 @@ int Commands::List(std::optional<InstFormat> filter)
 
 int Commands::processInstruction(uint32_t hexVal)
 {
-    try {
-        Instruction inst(hexVal, Opts_.hasABI_);
+    Instruction inst(hexVal, Opts_.hasABI_);
 
-        if(!inst.GetTypePtr()) {
-            Fmt_.PrintError(std::format("unsupported instruction: 0x{:08X}", hexVal));
-            return 1;
-        }
-
-        bool ok= false;
-        {
-            CoutSuppressor suppress;
-            ok= inst.Decode();
-        }
-        if(!ok) {
-            Fmt_.PrintError(std::format("failed to decode instruction: 0x{:08X}", hexVal));
-            return 1;
-        }
-        Fmt_.PrintInstruction(inst, std::format("0x{:08X}", hexVal));
-
-        return 0;
-
-    } catch(const std::exception &e) {
-        Fmt_.PrintError(e.what());
-        return 1;
-    } catch(...) {
-        Fmt_.PrintError("unknown error during instruction processing");
+    if(!inst.GetTypePtr()) {
+        Fmt_.PrintError(std::format("unsupported instruction: {:#10x}", hexVal));
         return 1;
     }
+
+    util::Expected_u<void> decoded;
+    {
+        CoutSuppressor suppress;
+        decoded= inst.Decode();
+    }
+    if(!decoded) {
+        Fmt_.PrintError(std::format("failed to decode instruction: {:#10x} ({})",
+                                    hexVal,
+                                    decoded.error().Msg()));
+        return 1;
+    }
+    Fmt_.PrintInstruction(inst, std::format("{:#10x}", hexVal));
+    return 0;
 }
 
 int Commands::processInstruction(std::string_view assembly)
 {
-    try {
-        Instruction inst(assembly, Opts_.hasABI_);
+    Instruction inst(assembly, Opts_.hasABI_);
 
-        if(!inst.GetTypePtr()) {
-            Fmt_.PrintError(std::format("unsupported instruction: {}", assembly));
-            return 1;
-        }
-
-        bool ok= false;
-        {
-            CoutSuppressor suppress;
-            ok= inst.Decode();
-        }
-        if(!ok) {
-            Fmt_.PrintError(std::format("failed to encode instruction: {}", assembly));
-            return 1;
-        }
-
-        Fmt_.PrintInstruction(inst, assembly);
-
-        return 0;
-
-    } catch(const std::exception &e) {
-        Fmt_.PrintError(e.what());
-        return 1;
-    } catch(...) {
-        Fmt_.PrintError("unknown error during instruction processing");
+    if(!inst.GetTypePtr()) {
+        Fmt_.PrintError(std::format("unsupported instruction: {}", assembly));
         return 1;
     }
+
+    util::Expected_u<void> decoded;
+    {
+        CoutSuppressor suppress;
+        decoded= inst.Decode();
+    }
+    if(!decoded) {
+        Fmt_.PrintError(std::format("failed to encode instruction: {} ({})",
+                                    assembly,
+                                    decoded.error().Msg()));
+        return 1;
+    }
+
+    Fmt_.PrintInstruction(inst, assembly);
+    return 0;
 }
 
 void Commands::replBanner()
@@ -247,8 +239,12 @@ int Commands::replLoop()
         }
         // Auto-detect and process
         auto parsed= util::ClassifyInstInput(trimmed);
-        if(util::InputKind::HEX == parsed.kind_ || util::InputKind::BINARY == parsed.kind_) {
-            processInstruction(parsed.word_);
+        if(!parsed) {
+            Fmt_.PrintError(std::string(parsed.error().Msg()));
+            continue;
+        }
+        if(util::InputKind::HEX == parsed->kind_ || util::InputKind::BINARY == parsed->kind_) {
+            processInstruction(parsed->word_);
         } else {
             processInstruction(trimmed);
         }

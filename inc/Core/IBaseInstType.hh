@@ -5,6 +5,7 @@
 
 #include "ISA/InstFormat.hh"
 #include "Util/BiLookupTable.hpp"
+#include "Util/ErrorHandle.hh"
 
 class IBaseInstType {
 public:
@@ -69,8 +70,8 @@ public:
 
     [[nodiscard]] static constexpr KeyT KEY_PAYLOAD(KeyT key) noexcept { return key >> 7; }
 
-    virtual void Parse()                = 0;
-    virtual const InstLayout &Assembly()= 0;
+    virtual void Parse()                                                 = 0;
+    [[nodiscard]] virtual util::Expected_u<const InstLayout *> Assembly()= 0;
 
 protected:
     virtual const BiLookupTable<KeyT> *buildTable()= 0;

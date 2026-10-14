@@ -20,6 +20,12 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     SUFFIX ".exe"
 )
 
+if(noExceptions)
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+    )
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${projectIncDir}
     ${CMAKE_BINARY_DIR}/gen

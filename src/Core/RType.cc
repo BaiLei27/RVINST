@@ -31,7 +31,7 @@ void RType::Parse()
                  +Layout_.R.fct7,
                  +Layout_.R.rs1,
                  +Layout_.R.rs2,
-                 +Layout_.R.rd); //s.x <==> static_cast<int>(s.x)
+                 +Layout_.R.rd); // s.x <==> static_cast<int>(s.x)
 #endif
 }
 
@@ -43,7 +43,7 @@ void RType::mnemonicHelper()
     appendOperands({ " ", rd, ",", rs1, ",", rs2 });
 }
 
-const InstLayout &RType::Assembly()
+util::Expected_u<const InstLayout *> RType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -64,7 +64,7 @@ const InstLayout &RType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto RType::calculateKeyID() -> KeyT

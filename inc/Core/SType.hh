@@ -18,7 +18,7 @@ public:
     SType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI= false);
 
     void Parse() override;
-    [[nodiscard]] const InstLayout &Assembly() override;
+    [[nodiscard]] util::Expected_u<const InstLayout *> Assembly() override;
 
 private:
     KeyT calculateKeyID() override;

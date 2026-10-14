@@ -121,8 +121,12 @@ void OutputFormatter::printFieldTable(const Instruction &inst)
     const auto &bitsField= pTypePtr->GetInstBitsField();
     if(bitsField.empty()) return;
 
-    InstFormat fmt  = pTypePtr->GetInstFormat();
-    const auto &meta= GetInstFields(fmt);
+    InstFormat fmt                 = pTypePtr->GetInstFormat();
+    std::span<const InstField> meta= GetInstFields(fmt);
+    if(InstFormat::I == fmt) {
+        const auto &l= pTypePtr->GetInstLayout();
+        meta         = GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
+    }
     if(meta.empty()) return;
 
     const size_t TOTAL     = meta.size();
@@ -176,18 +180,22 @@ void OutputFormatter::printBitFieldDiagram(const Instruction &inst)
     const auto &bitsField= pTypePtr->GetInstBitsField();
     if(bitsField.empty()) return;
 
-    InstFormat fmt = pTypePtr->GetInstFormat();
-    const auto META= GetInstFields(fmt);
-    if(META.empty()) return;
+    InstFormat fmt                 = pTypePtr->GetInstFormat();
+    std::span<const InstField> meta= GetInstFields(fmt);
+    if(InstFormat::I == fmt) {
+        const auto &l= pTypePtr->GetInstLayout();
+        meta         = GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
+    }
+    if(meta.empty()) return;
 
-    const size_t TOTAL= META.size();
+    const size_t TOTAL= meta.size();
 
     std::array<size_t, 16> colWidths {};
     if(TOTAL > colWidths.size()) return;
 
     for(size_t i= 0; i < TOTAL; ++i) {
-        int bitW    = META[i].endBit_ - META[i].startBit_ + 1;
-        colWidths[i]= std::max(static_cast<size_t>(bitW), META[i].name_.size()) + 2;
+        int bitW    = meta[i].endBit_ - meta[i].startBit_ + 1;
+        colWidths[i]= std::max(static_cast<size_t>(bitW), meta[i].name_.size()) + 2;
     }
 
     std::string buf;
@@ -220,8 +228,8 @@ void OutputFormatter::printBitFieldDiagram(const Instruction &inst)
     std::format_to(out, "\n  ");
     for(size_t i= 0; i < TOTAL; ++i) {
         std::format_to(out, " ");
-        auto endStr  = std::to_string(META[i].endBit_);
-        auto startStr= std::to_string(META[i].startBit_);
+        auto endStr  = std::to_string(meta[i].endBit_);
+        auto startStr= std::to_string(meta[i].startBit_);
         size_t w     = colWidths[i];
         size_t mid   = w - endStr.size() - startStr.size();
         std::format_to(out, "{}", endStr);
@@ -243,7 +251,7 @@ void OutputFormatter::printBitFieldDiagram(const Instruction &inst)
     for(size_t i= 0; i < TOTAL; ++i) {
         size_t bfIdx= TOTAL - 1 - i;
         uint32_t val= (bfIdx < bitsField.size()) ? bitsField[bfIdx] : 0;
-        int bitW    = META[i].endBit_ - META[i].startBit_ + 1;
+        int bitW    = meta[i].endBit_ - meta[i].startBit_ + 1;
 
         std::string binStr;
         binStr.resize(bitW);
@@ -266,7 +274,7 @@ void OutputFormatter::printBitFieldDiagram(const Instruction &inst)
     // Line 6: Field names (left-aligned, aligned to '-' after each '+')
     for(size_t i= 0; i < TOTAL; ++i) {
         std::format_to(out, " ");
-        std::string_view name= META[i].name_;
+        std::string_view name= meta[i].name_;
         if(OutputMode::COLORED == Mode_) {
             std::format_to(out, "{}{}{}", G_C_YELLOW, name, G_C_RESET);
         } else {
@@ -407,10 +415,15 @@ std::string OutputFormatter::jsonEscape(std::string_view s)
 
 void OutputFormatter::printInstructionJSON(const Instruction &inst, std::string_view input)
 {
-    const auto *pTp   = inst.GetTypePtr();
-    const auto &bits  = pTp ? pTp->GetInstBitsField() : std::vector<uint32_t> {};
-    InstFormat fmt    = pTp ? pTp->GetInstFormat() : InstFormat::UNKNOWN;
-    const auto &meta  = GetInstFields(fmt);
+    const auto *pTp = inst.GetTypePtr();
+    const auto &bits= pTp ? pTp->GetInstBitsField() : std::vector<uint32_t> {};
+    InstFormat fmt  = pTp ? pTp->GetInstFormat() : InstFormat::UNKNOWN;
+
+    std::span<const InstField> meta= GetInstFields(fmt);
+    if(pTp && InstFormat::I == fmt) {
+        const auto &L= pTp->GetInstLayout();
+        meta         = GetIInstFields(DetectIImmShape(L.I.opc, L.I.fct3));
+    }
     const size_t TOTAL= meta.size();
 
     std::string buf;
