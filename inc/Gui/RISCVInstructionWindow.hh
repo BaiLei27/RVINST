@@ -2,11 +2,6 @@
 
 #include <array>
 #include <deque>
-#include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <gtkmm.h>
 
 #include "Core/Instruction.hh"
 #include "Gui/InstFormatUI.hh"

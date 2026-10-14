@@ -23,6 +23,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     SUFFIX ".exe"
 )
 
+# Directory COMPILE_OPTIONS already passed -fno-exceptions. This later flag wins for Gui only.
+target_compile_options(${PROJECT_NAME} PRIVATE -fexceptions)
+
+if(WIN32)
+    # No console window on Explorer launch. Main.cc must init stdio first
+    # (AttachConsole / NUL) so println(stderr) never hits an invalid FILE*.
+    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${projectIncDir}
     ${CMAKE_BINARY_DIR}/gen

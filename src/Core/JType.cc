@@ -1,8 +1,6 @@
-#include <print>
-
 #include "Core/JType.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace {
 
@@ -66,7 +64,7 @@ void JType::mnemonicHelper()
     appendOperands({ " ", rd, ",", immStr });
 }
 
-const InstLayout &JType::Assembly()
+util::Expected_u<const InstLayout *> JType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -83,7 +81,7 @@ const InstLayout &JType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto JType::calculateKeyID() -> KeyT
