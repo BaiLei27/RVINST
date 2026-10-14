@@ -20,6 +20,9 @@ endif()
 
 option(enableTests "Build the INST smoke test executable" ON)
 
+# Core/Cli only: Gui still needs EH for Glib::Error catch paths.
+option(noExceptions "Compile Core/Cli without C++ exceptions (-fno-exceptions)" ON)
+
 # One directory for exes and shared libs so Cli/GUI share a single backend DLL
 # (Windows/MSYS load from the executable's directory). GUI still copies GTK DLLs there.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -71,7 +74,7 @@ add_compile_options(
     -ffunction-sections
     -funroll-loops
     -fomit-frame-pointer
-    "$<$<CONFIG:Debug>:-ggdb3;-DDEBUG_>"
+    "$<$<CONFIG:Debug>:-O0;-ggdb3;-DDEBUG_>"
     $<$<CONFIG:Release,MinSizeRel>:-DNDEBUG_>
 )
 
@@ -110,9 +113,16 @@ target_sources(${backend} PRIVATE
     src/ISA/Regs.cc
 
     inc/Util/BiLookupTable.hpp
-    inc/Util/InputParse.hpp
+
+    inc/Util/ErrorHandle.hh
+    src/Util/ErrorHandle.cc
     inc/Util/config.hpp.in
-    inc/Util/InstFormatView.hpp
+
+    inc/Util/InputParse.hh
+    src/Util/InputParse.cc
+
+    inc/Util/InstFormatView.hh
+    src/Util/InstFormatView.cc
 
     inc/Core/IBaseInstType.hh
     src/Core/IBaseInstType.cc
@@ -144,6 +154,13 @@ target_sources(${backend} PRIVATE
     inc/Core/Instruction.hh
     src/Core/Instruction.cc
 )
+
+if(noExceptions)
+    target_compile_options(${backend} PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+    )
+endif()
+
 add_subdirectory(src/Cli)
 add_subdirectory(src/Gui)
 

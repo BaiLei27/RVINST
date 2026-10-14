@@ -109,30 +109,29 @@ std::string_view Instruction::GetFormat() const noexcept
     return InstFormatName(Type_->GetInstFormat());
 }
 
-bool Instruction::Decode()
+util::Expected_u<void> Instruction::Decode()
 {
-    if(Type_) {
-        if(BitField_.none()) {
-            std::bitset<32> tmp(Type_->Assembly());
-            BitField_= std::move(tmp);
-            resetStream();
-
-        } else {
-            std::ignore= Type_->Disassembly();
-        }
-        Type_->Parse();
-
-        const auto &v= Type_->GetInstAssembly();
-        for(const auto &e: v) {
-            Disassembly_ << e;
-            // std::println("{}", Disassembly_.str());
-        }
-        return true;
+    if(!Type_) {
+        return util::Unexpected(util::Error::Unsupported(
+            std::format("unimp instruction: 0x{:08X}", BitField_.to_ulong())));
     }
 
-    std::println(stderr, "unimp instruction: 0x{:08X}", BitField_.to_ulong());
+    if(BitField_.none()) {
+        const auto LAYOUT= Type_->Assembly();
+        if(!LAYOUT) return util::Unexpected(LAYOUT.error());
 
-    return false;
+        BitField_= std::bitset<32>(**LAYOUT);
+        resetStream();
+    } else {
+        std::ignore= Type_->Disassembly();
+    }
+    Type_->Parse();
+
+    const auto &v= Type_->GetInstAssembly();
+    for(const auto &e: v) {
+        Disassembly_ << e;
+    }
+    return {};
 }
 
 void Instruction::ShowInfo() const

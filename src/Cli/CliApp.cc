@@ -13,6 +13,7 @@
 #include "Cli/InstrEntry.hh"
 #include "Cli/OutputTable.hh"
 #include "ISA/InstFormat.hh"
+#include "Util/ErrorHandle.hh"
 #include "config.hpp"
 
 namespace cli {
@@ -72,14 +73,21 @@ int CliApp::Run(int argc, char *pArgv[])
     auto fail= [&mode](std::string_view msg) {
         OutputFormatter fmt(mode);
         fmt.PrintError(msg);
-        return 1;
+        return -22;
+    };
+
+    auto runCmd= [&mode](const util::Expected_u<void> &result) -> int {
+        if(result) return 0;
+        OutputFormatter fmt(mode);
+        fmt.PrintError(result.error().Msg());
+        return -22;
     };
 
     if(subcommand == "decode") {
         if(remaining.empty()) {
             return fail("decode requires an input argument");
         }
-        return cmd.Decode(remaining[0]);
+        return runCmd(cmd.Decode(remaining[0]));
     }
 
     if(subcommand == "encode") {
@@ -91,7 +99,7 @@ int CliApp::Run(int argc, char *pArgv[])
         for(size_t i= 1; i < remaining.size(); ++i) {
             input+= " " + remaining[i];
         }
-        return cmd.Encode(input);
+        return runCmd(cmd.Encode(input));
     }
 
     if(subcommand == "repl") {
@@ -102,7 +110,7 @@ int CliApp::Run(int argc, char *pArgv[])
         if(remaining.empty()) {
             return fail("reg requires a register name or index");
         }
-        return cmd.Reg(remaining[0]);
+        return runCmd(cmd.Reg(remaining[0]));
     }
 
     if(subcommand == "list") {
@@ -117,7 +125,7 @@ int CliApp::Run(int argc, char *pArgv[])
                 if(!filter) return fail(std::format("invalid type: {}", remaining[i].substr(7)));
             }
         }
-        return cmd.List(filter);
+        return runCmd(cmd.List(filter));
     }
 
     return fail(std::format("unknown command: {} (try --help)", subcommand));

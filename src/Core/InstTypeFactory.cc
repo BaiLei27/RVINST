@@ -1,5 +1,4 @@
 #include <array>
-#include <print>
 #include <algorithm>
 
 #include "Core/InstTypeFactory.hh"
@@ -29,7 +28,6 @@ std::unique_ptr<IBaseInstType> makeByFormat(InstFormat fmt, Args &&...args)
     case InstFormat::B:
         return std::make_unique<BType>(std::forward<Args>(args)...);
     default:
-        std::println(stderr, "Unsupported instruction format");
         return nullptr;
     }
 }
@@ -82,10 +80,7 @@ std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(std::vector<std::stri
                            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
     auto match= matchInstName(instName);
-    if(!match) {
-        std::println(stderr, "Unsupported instruction name: {}", instName);
-        return nullptr;
-    }
+    if(!match) return nullptr;
 
     const auto &[FMT, _1]= *match;
     return makeByFormat(FMT, std::move(instAssembly), FMT, hasSetABI);

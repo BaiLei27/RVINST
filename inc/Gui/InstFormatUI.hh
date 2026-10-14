@@ -8,7 +8,7 @@
 #include "Core/Instruction.hh"
 #include "Gui/InstCommST.hh"
 #include "ISA/InstFormat.hh"
-#include "Util/InstFormatView.hpp"
+#include "Util/InstFormatView.hh"
 
 class InstFormatUI: public Gtk::Box {
 public:
