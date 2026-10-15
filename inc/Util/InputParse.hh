@@ -21,6 +21,9 @@ struct ParsedInstInput {
 };
 
 [[nodiscard]] constexpr std::string_view STRIP_INT_PREFIX(std::string_view s) noexcept;
+
+// True when s starts with an explicit numeric prefix (0x/0X/0b/0B)
+[[nodiscard]] bool HasIntPrefix(std::string_view s) noexcept;
 [[nodiscard]] bool LooksLikeHex(std::string_view s);
 [[nodiscard]] bool LooksLikeBinary(std::string_view s);
 [[nodiscard]] Expected_u<ParsedInstInput> ClassifyInstInput(std::string_view input);

@@ -30,10 +30,12 @@ public:
     int resultRowIndex_ {};
     InstFormat fmt_ { InstFormat::UNKNOWN };
     ItypeImmShape iShape_ { ItypeImmShape::IMM12 };
+    bool hasHexImm_ {};
 
 public:
     explicit InstFormatUI(InstFormat fmt);
     void UpdateDisplay(const Instruction &inst);
+    void SetHexImm(bool on) noexcept;
 
 public:
     void RestoreHexPand();
@@ -54,6 +56,7 @@ private:
     void setupHover();
     void rebuildBitDiagram(const util::InstFormatView &view);
     void rebuildAssemblyDisplay(const util::InstFormatView &view);
+    void clearHoverLinks() noexcept;
     void applyView(const util::InstFormatView &view);
     void updateAssemblyDisplay(const Instruction &inst);
     void updateBinaryDisplay(const Instruction &inst);
