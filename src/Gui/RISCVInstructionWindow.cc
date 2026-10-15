@@ -147,10 +147,7 @@ void RISCVInstructionWindow::onInsButtonParseClicked()
 
     const auto PARSED= util::ClassifyInstInput(inputStr);
     if(!PARSED) {
-        const auto &err= PARSED.error();
-        showError(err.Code() == util::EC::OUT_OF_RANGE
-                      ? "invalid input: value must less than 32 bits"
-                      : std::format("invalid input: {}", err.Msg()));
+        showError(std::format("invalid input: {}", PARSED.error().Msg()));
         insEntry_->grab_focus();
         return;
     }
@@ -189,20 +186,39 @@ void RISCVInstructionWindow::showInsResult(Instruction &inst)
     pFormatUi_->remove_css_class("format-placeholder");
     pFormatUi_->set_sensitive(true);
     pFormatStack_->set_visible_child(*pFormatUi_);
+    pFormatUi_->SetHexImm(hasHexImm_);
     pFormatUi_->UpdateDisplay(inst);
+    fitWindowToContent(false);
+}
 
-    Glib::signal_idle().connect_once([this] {
+void RISCVInstructionWindow::fitWindowToContent(bool allowShrink)
+{
+    // Wait one idle so CSS/font changes settle before measuring the bit diagram.
+    Glib::signal_idle().connect_once([this, allowShrink] {
         if(!pFormatUi_ || !pFormatUi_->FitToContent()) return;
 
         const int PAD   = uiContainer_ ? (uiContainer_->get_margin_start() + uiContainer_->get_margin_end()) : 24;
         const int NEED_W= std::max(pFormatUi_->MeasureWidth() + PAD + 28, 560);
-        set_size_request(NEED_W, -1); // content min width only; never force-shrink
-        const int CUR_W= get_width();
-        const int CUR_H= get_height();
-        if(NEED_W > CUR_W || CUR_H < 720) {
-            set_default_size(std::max(NEED_W, CUR_W), std::max(CUR_H, 720));
+        const int CUR_H = std::max(get_height(), 720);
+
+        if(allowShrink) {
+            // Clear the previous min-width so GTK can shrink after compact font.
+            // Re-assert the min-width on a later idle: set_default_size is a request,
+            // and a same-frame set_size_request would win and block the shrink.
+            set_size_request(-1, -1);
+            set_default_size(NEED_W, CUR_H);
+            Glib::signal_idle().connect_once([this, needW= NEED_W] {
+                set_size_request(needW, -1);
+                if(pFormatUi_) pFormatUi_->RestoreHexPand();
+            });
+            return;
         }
 
+        set_size_request(NEED_W, -1);
+        const int CUR_W= get_width();
+        if(NEED_W > CUR_W || get_height() < 720) {
+            set_default_size(std::max(NEED_W, CUR_W), CUR_H);
+        }
         pFormatUi_->RestoreHexPand();
     });
 }
@@ -218,7 +234,7 @@ void RISCVInstructionWindow::showError(const std::string &message)
     // std::println("Error: {}", message);
 }
 
-void RISCVInstructionWindow::refreshAssemblyForAbiChange()
+void RISCVInstructionWindow::refreshAssemblyDisplay()
 {
     if(!inst_) return;
 
@@ -417,10 +433,34 @@ void RISCVInstructionWindow::setupSettingsPopover()
     pAbiSwitch_->add_css_class("abi-switch");
     pAbiSwitch_->property_active().signal_changed().connect([this] {
         hasSetABI_= pAbiSwitch_->get_active();
-        refreshAssemblyForAbiChange();
+        refreshAssemblyDisplay();
     });
     pAbiRow->append(*pAbiSwitch_);
     pPopoverBox->append(*pAbiRow);
+
+    auto *pHexRow= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
+    pHexRow->set_halign(Gtk::Align::START);
+    pHexRow->add_css_class("settings-row");
+
+    auto *pHexLabel= Gtk::make_managed<Gtk::Label>("Hex imm");
+    pHexLabel->set_halign(Gtk::Align::START);
+    pHexLabel->set_hexpand(false);
+    pHexLabel->add_css_class("settings-label");
+    pHexRow->append(*pHexLabel);
+
+    pHexImmSwitch_= Gtk::make_managed<Gtk::Switch>();
+    pHexImmSwitch_->set_active(hasHexImm_);
+    pHexImmSwitch_->set_halign(Gtk::Align::START);
+    pHexImmSwitch_->set_valign(Gtk::Align::CENTER);
+    pHexImmSwitch_->add_css_class("hex-imm-switch");
+    pHexImmSwitch_->property_active().signal_changed().connect([this] {
+        hasHexImm_= pHexImmSwitch_->get_active();
+        if(!inst_ || !pFormatUi_) return;
+        pFormatUi_->SetHexImm(hasHexImm_);
+        pFormatUi_->UpdateDisplay(*inst_);
+    });
+    pHexRow->append(*pHexImmSwitch_);
+    pPopoverBox->append(*pHexRow);
 
     auto *pFontRow= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
     pFontRow->set_halign(Gtk::Align::START);
@@ -438,13 +478,16 @@ void RISCVInstructionWindow::setupSettingsPopover()
     pFontSizeSwitch_->set_valign(Gtk::Align::CENTER);
     pFontSizeSwitch_->add_css_class("font-size-switch");
     pFontSizeSwitch_->property_active().signal_changed().connect([this] {
-        if(pFontSizeSwitch_->get_active()) {
+        const bool COMPACT= pFontSizeSwitch_->get_active();
+        if(COMPACT) {
             uiContainer_->remove_css_class("standard");
             uiContainer_->add_css_class("compact");
         } else {
             uiContainer_->remove_css_class("compact");
             uiContainer_->add_css_class("standard");
         }
+        // Compact -> allow shrink; Standard -> grow only.
+        fitWindowToContent(COMPACT);
     });
     pFontRow->append(*pFontSizeSwitch_);
     pPopoverBox->append(*pFontRow);

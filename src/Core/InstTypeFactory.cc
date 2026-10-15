@@ -43,6 +43,15 @@ void registerTable(Name2FmtOpcode_u &m, const std::array<IBaseInstType::InstInfo
     }
 }
 
+[[nodiscard]] std::string toLower(std::string_view s)
+{
+    std::string lower(s);
+    std::ranges::transform(lower,
+                           lower.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return lower;
+}
+
 } // namespace
 
 std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(uint32_t inst, bool hasSetABI)
@@ -72,12 +81,9 @@ std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(std::vector<std::stri
                                                            bool hasSetABI)
 {
     if(instAssembly.empty()) return nullptr;
-
     auto &instName= instAssembly[0];
 
-    std::ranges::transform(instName,
-                           instName.begin(),
-                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    instName= toLower(instName);
 
     auto match= matchInstName(instName);
     if(!match) return nullptr;
@@ -86,9 +92,15 @@ std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(std::vector<std::stri
     return makeByFormat(FMT, std::move(instAssembly), FMT, hasSetABI);
 }
 
-std::optional<std::pair<InstFormat, uint16_t>> InstTypeFactory::matchInstName(std::string_view instName)
+std::optional<std::pair<InstFormat, uint16_t>>
+    InstTypeFactory::matchInstName(std::string_view instName)
 {
     const auto &cache= getName2FormatOpcode();
     auto it          = cache.find(instName);
     return it != cache.end() ? std::make_optional(it->second) : std::nullopt;
+}
+
+bool InstTypeFactory::IsKnownMnemonic(std::string_view name) noexcept
+{
+    return matchInstName(toLower(name)).has_value();
 }

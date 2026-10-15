@@ -23,9 +23,11 @@ public:
     Gtk::Stack *pFormatStack_ {};
     Gtk::Switch *pAbiSwitch_ {};
     Gtk::Switch *pFontSizeSwitch_ {};
+    Gtk::Switch *pHexImmSwitch_ {};
     Gtk::DropDown *pIsaDrop_ {};
     InstFormatUI *pFormatUi_ {};
     bool hasSetABI_ {};
+    bool hasHexImm_ {};
 
 public:
     RISCVInstructionWindow();
@@ -36,7 +38,8 @@ private:
     void onInsButtonParseClicked();
     void showInsResult(Instruction &inst);
     void showError(const std::string &message);
-    void refreshAssemblyForAbiChange();
+    void refreshAssemblyDisplay();
+    void fitWindowToContent(bool allowShrink);
 
     // Format UI panel
     void initInstFormatUI();

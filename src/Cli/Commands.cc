@@ -76,7 +76,7 @@ util::Expected_u<void> Commands::List(std::optional<InstFormat> filter)
 
 util::Expected_u<void> Commands::processInstruction(uint32_t hexVal)
 {
-    Instruction inst(hexVal, Opts_.hasABI_);
+    Instruction inst { hexVal, Opts_.hasABI_ };
 
     if(!inst.GetTypePtr()) {
         return util::Unexpected(util::Error::Unsupported(std::format("unsupported instruction: {:#010x}", hexVal)));
@@ -99,7 +99,7 @@ util::Expected_u<void> Commands::processInstruction(uint32_t hexVal)
 
 util::Expected_u<void> Commands::processInstruction(std::string_view assembly)
 {
-    Instruction inst(assembly, Opts_.hasABI_);
+    Instruction inst { assembly, Opts_.hasABI_ };
 
     if(!inst.GetTypePtr()) {
         return util::Unexpected(util::Error::Unsupported(std::format("unsupported instruction: {}", assembly)));

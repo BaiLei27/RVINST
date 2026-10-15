@@ -113,7 +113,7 @@ util::Expected_u<void> Instruction::Decode()
 {
     if(!Type_) {
         return util::Unexpected(util::Error::Unsupported(
-            std::format("unimp instruction: 0x{:08X}", BitField_.to_ulong())));
+            std::format("unsupported instruction: 0x{:08X}", BitField_.to_ulong())));
     }
 
     if(BitField_.none()) {
