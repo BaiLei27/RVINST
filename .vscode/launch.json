@@ -8,13 +8,13 @@
             "program": "${command:cmake.launchTargetPath}",
             "args": [
                 "encode",
-                "FENCE"
+                "ADD"
             ],
             //"stopAtEntry": true,
             "cwd": "${fileDirname}",
             // "environment": [],
             // "terminal":"console"
-            "preLaunchTask": "${defaultBuildTask}"
+            // "preLaunchTask": "${defaultBuildTask}"
         }
     ]
 }

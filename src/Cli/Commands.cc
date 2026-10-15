@@ -1,7 +1,5 @@
 #include "Cli/Commands.hh"
 
-#include <algorithm>
-#include <cctype>
 #include <cstdio>
 #include <iostream>
 
@@ -82,14 +80,14 @@ util::Expected_u<void> Commands::Reg(std::string_view query)
 {
     auto idxOpt= isa::LOOKUP_REG_IDX(query);
 
-    if(!idxOpt) {
-        // Try plain numeric parse as fallback
+    if(!idxOpt) { // try parsing as a number
         std::string s(query);
-        if(std::ranges::all_of(s, [](unsigned char c) { return std::isdigit(c); })) {
-            auto v= std::stoul(s);
-            if(v < 32) idxOpt= static_cast<uint16_t>(v);
-        }
+        uint16_t v {};
+        const char *end     = s.data() + s.size(); // NOLINT
+        const auto [ptr, ec]= std::from_chars(s.data(), end, v, 10);
+        if(std::errc() == ec && ptr == end && v < 32) idxOpt= v;
     }
+
     if(!idxOpt || *idxOpt >= 32) {
         return util::Unexpected(util::Error::InvalidArg(std::format("register '{}' not found", query)));
     }

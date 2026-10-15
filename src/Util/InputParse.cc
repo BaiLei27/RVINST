@@ -2,16 +2,22 @@
 #include <algorithm>
 #include <cctype>
 
+#include "Core/InstTypeFactory.hh"
 #include "Util/InputParse.hh"
 
 namespace util {
 
+bool HasIntPrefix(std::string_view s) noexcept
+{
+    return s.starts_with("0x")
+        || s.starts_with("0X")
+        || s.starts_with("0b")
+        || s.starts_with("0B");
+}
+
 [[nodiscard]] constexpr std::string_view STRIP_INT_PREFIX(std::string_view s) noexcept
 {
-    if(s.starts_with("0x")
-       || s.starts_with("0X")
-       || s.starts_with("0b")
-       || s.starts_with("0B")) return s.substr(2);
+    if(HasIntPrefix(s)) return s.substr(2);
 
     return s;
 }
@@ -44,7 +50,7 @@ bool LooksLikeBinary(std::string_view s)
 
 Expected_u<ParsedInstInput> ClassifyInstInput(std::string_view input)
 {
-    ParsedInstInput r;
+    ParsedInstInput r {};
     // NOLINTBEGIN
     auto parseW= [](std::string_view digits, int base) -> Expected_u<uint32_t> {
         uint32_t value {};
@@ -61,10 +67,15 @@ Expected_u<ParsedInstInput> ClassifyInstInput(std::string_view input)
         if(!word) return Unexpected(word.error());
         r.word_= *word;
     } else if(LooksLikeHex(input)) {
-        r.kind_  = InputKind::HEX;
-        auto word= parseW(STRIP_INT_PREFIX(input), 16);
-        if(!word) return Unexpected(word.error());
-        r.word_= *word;
+        // A bare all-hex token that is also a known mnemonic (e.g. "add") is assembly.
+        if(!HasIntPrefix(input) && InstTypeFactory::IsKnownMnemonic(input)) {
+            r.kind_= InputKind::ASSEMBLY;
+        } else {
+            r.kind_  = InputKind::HEX;
+            auto word= parseW(STRIP_INT_PREFIX(input), 16);
+            if(!word) return Unexpected(word.error());
+            r.word_= *word;
+        }
     } else {
         r.kind_= InputKind::ASSEMBLY;
     }
