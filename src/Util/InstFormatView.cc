@@ -122,28 +122,28 @@ namespace {
     };
 
     constexpr FieldRel G_J_BIN_REL[] {
-        { .key_= "opcode",   .related_= G_MNE_ONLY     },
-        { .key_= "imm20",    .related_= G_J_BIN_IMM20  },
-        { .key_= "imm10_1",  .related_= G_J_BIN_IMM10  },
-        { .key_= "imm11",    .related_= G_J_BIN_IMM11  },
-        { .key_= "imm19_12", .related_= G_J_BIN_IMM19  },
-        { .key_= "rd",       .related_= G_SELF_RD      },
+        { .key_= "opcode",   .related_= G_MNE_ONLY    },
+        { .key_= "imm20",    .related_= G_J_BIN_IMM20 },
+        { .key_= "imm10_1",  .related_= G_J_BIN_IMM10 },
+        { .key_= "imm11",    .related_= G_J_BIN_IMM11 },
+        { .key_= "imm19_12", .related_= G_J_BIN_IMM19 },
+        { .key_= "rd",       .related_= G_SELF_RD     },
     };
     constexpr FieldRel G_J_ASM_REL[] {
-        { .key_= "mnemonic", .related_= G_MNE_ONLY   },
-        { .key_= "rd",       .related_= G_SELF_RD    },
-        { .key_= "imm",      .related_= G_J_ASM_IMM  },
+        { .key_= "mnemonic", .related_= G_MNE_ONLY  },
+        { .key_= "rd",       .related_= G_SELF_RD   },
+        { .key_= "imm",      .related_= G_J_ASM_IMM },
     };
 
     constexpr FieldRel G_U_BIN_REL[] {
-        { .key_= "opcode",   .related_= G_MNE_ONLY  },
-        { .key_= "imm31_12", .related_= G_SELF_IMM  },
-        { .key_= "rd",       .related_= G_SELF_RD   },
+        { .key_= "opcode",   .related_= G_MNE_ONLY },
+        { .key_= "imm31_12", .related_= G_SELF_IMM },
+        { .key_= "rd",       .related_= G_SELF_RD  },
     };
     constexpr FieldRel G_U_ASM_REL[] {
-        { .key_= "mnemonic", .related_= G_MNE_ONLY   },
-        { .key_= "rd",       .related_= G_SELF_RD    },
-        { .key_= "imm",      .related_= G_U_ASM_IMM  },
+        { .key_= "mnemonic", .related_= G_MNE_ONLY  },
+        { .key_= "rd",       .related_= G_SELF_RD   },
+        { .key_= "imm",      .related_= G_U_ASM_IMM },
     };
 
     constexpr FieldRel G_S_BIN_REL[] {

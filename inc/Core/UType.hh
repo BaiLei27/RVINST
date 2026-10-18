@@ -12,8 +12,8 @@ public:
          }
     };
 
-    UType(uint32_t inst, InstFormat format, bool hasSetABI= false);
-    UType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI= false);
+    UType(InstFormat format, uint32_t inst, bool hasSetABI= false);
+    UType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI= false);
 
     void Parse() override;
     [[nodiscard]] util::Expected_u<const InstLayout *> Assembly() override;

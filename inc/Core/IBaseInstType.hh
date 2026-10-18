@@ -32,7 +32,7 @@ protected:
     bool HasSetABI_ {};
 
 public:
-    IBaseInstType(uint32_t inst, InstFormat format, bool hasSetABI);
+    IBaseInstType(InstFormat format, uint32_t inst, bool hasSetABI);
     /**
      * @brief Construct a new IBaseInstType object
      * @param instAssembly , why rvalues ?
@@ -47,7 +47,7 @@ public:
      * @param format
      * @param hasSetABI
      */
-    IBaseInstType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI);
+    IBaseInstType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI);
     virtual ~IBaseInstType()= default;
 
 public:
