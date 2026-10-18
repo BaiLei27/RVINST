@@ -2,13 +2,13 @@
 
 #include "Core/IBaseInstType.hh"
 
-IBaseInstType::IBaseInstType(uint32_t inst, InstFormat format, bool hasSetABI)
+IBaseInstType::IBaseInstType(InstFormat format, uint32_t inst, bool hasSetABI)
     : Format_(format),
       Layout_(inst),
       HasSetABI_(hasSetABI) { }
 
-IBaseInstType::IBaseInstType(std::vector<std::string> instAssembly,
-                             InstFormat format,
+IBaseInstType::IBaseInstType(InstFormat format,
+                             std::vector<std::string> instAssembly,
                              bool hasSetABI)
     : InstAssembly_(std::move(instAssembly)),
       Format_(format),
