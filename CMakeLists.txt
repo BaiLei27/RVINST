@@ -115,6 +115,7 @@ include_directories(
 target_sources(${backend} PRIVATE
     src/ISA/Regs.cc
     src/Util/ErrorHandle.cc
+    src/Util/InputHistoryMgr.cc
     src/Util/InputParse.cc
     src/Util/InstFormatView.cc
     src/Core/IBaseInstType.cc
@@ -138,6 +139,7 @@ target_sources(${backend} PUBLIC
     inc/ISA/InstFormat.hh
     inc/Util/BiLookupTable.hpp
     inc/Util/ErrorHandle.hh
+    inc/Util/InputHistoryMgr.hh
     inc/Util/InputParse.hh
     inc/Util/InstFormatView.hh
     inc/Core/IBaseInstType.hh

@@ -70,9 +70,6 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${projectIncDir}/Gui/InstFormatUI.hh
     ${projectScrDir}/InstFormatUI.cc
 
-    ${projectIncDir}/Gui/InputHistoryController.hh
-    ${projectScrDir}/InputHistoryController.cc
-
     ${projectIncDir}/Gui/RISCVInstructionWindow.hh
     ${projectScrDir}/RISCVInstructionWindow.cc
 )

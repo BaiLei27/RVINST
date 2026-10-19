@@ -2,13 +2,13 @@
 
 #include "Core/Instruction.hh"
 #include "Gui/InstFormatUI.hh"
-#include "Gui/InputHistoryController.hh"
+#include "Util/InputHistoryMgr.hh"
 
 class RISCVInstructionWindow: public Gtk::Window {
 public:
     std::unique_ptr<Gtk::Window> pVersionWindow_;
     std::unique_ptr<Instruction> inst_;
-    InputHistoryController history_;
+    util::InputHistoryMgr history_;
     Gtk::Box *uiContainer_ {};
     Gtk::Box *pEntryRow_ {};
     Gtk::Entry *insEntry_ {};
@@ -49,7 +49,7 @@ private:
     void setupSettingsPopover();
     void showVersionWindow();
 
-    // Input history (model logic delegated to InputHistoryController)
+    // Input history (model logic delegated to InputHistoryMgr)
     void setupInputHistory();
     void popupInputHistory();
     void pushInputHistory(std::string_view text);

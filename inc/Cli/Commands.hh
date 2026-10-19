@@ -6,6 +6,7 @@
 #include "Cli/OutputTable.hh"
 #include "ISA/InstFormat.hh"
 #include "Util/ErrorHandle.hh"
+#include "Util/InputHistoryMgr.hh"
 
 namespace cli {
 
@@ -21,6 +22,7 @@ class Commands {
 private:
     GlobalOptions Opts_;
     OutputFormatter Fmt_;
+    util::InputHistoryMgr History_ { 32 };
 
 public:
     explicit Commands(const GlobalOptions &opts);
@@ -38,6 +40,7 @@ private:
 
     static void replBanner();
     static void replHelp();
+    void replHistory();
 };
 
 } // namespace cli
