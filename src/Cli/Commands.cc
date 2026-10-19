@@ -19,12 +19,14 @@
 #include "Core/Instruction.hh"
 #include "ISA/InstFormat.hh"
 #include "ISA/Regs.hpp"
+#include "Util/FileIo.hh"
 #include "Util/InputParse.hh"
 #include "Cli/Commands.hh"
 
 namespace cli {
 
-Commands::Commands(const GlobalOptions &opts): Opts_(opts), Fmt_(opts.outputMode_) { }
+Commands::Commands(const GlobalOptions &opts, bool saveHistory)
+    : Opts_(opts), Fmt_(opts.outputMode_), SaveHistory_(saveHistory) { }
 
 template <InstInput Input>
 util::Expected_u<void> Commands::processInstruction(Input input)
@@ -136,6 +138,7 @@ void Commands::replHelp()
         "    :json on|off       Toggle JSON output\n"
         "    :list [--type T]   List supported instructions\n"
         "    :hist              Show input history (most recent first)\n"
+        "    :file <path>       Process a file line by line into the history\n"
         "\n  Input: hex (0x...), binary (0b...), or assembly (add x1,x2,x8)\n"
         "  Auto-detects input type and decodes/encodes accordingly.\n");
 }
@@ -151,6 +154,41 @@ void Commands::replHistory()
     for(size_t idx= 0; const auto &entry: History_.GetEntries()) {
         std::println("    {:>3}: {}", idx++, entry);
     }
+}
+
+util::Expected_u<void> Commands::processFileLines(std::string_view path)
+{
+    return FileMgr_.ForEachLine(path, [this](std::string_view raw) {
+        const auto TRIMMED= util::TRIM_ASCII_WS(raw);
+        if(TRIMMED.empty()) return;
+
+        History_.Push(TRIMMED); // shared with manual input: browsable + :hist
+        auto parsed= util::ClassifyInstInput(TRIMMED);
+        if(!parsed) {
+            Fmt_.PrintError(std::string(parsed.error().Msg()));
+            return;
+        }
+        util::Expected_u<void> result;
+        if(util::InputKind::HEX == parsed->kind_ || util::InputKind::BINARY == parsed->kind_) {
+            result= processInstruction(parsed->word_);
+        } else {
+            result= processInstruction(TRIMMED);
+        }
+        if(!result) Fmt_.PrintError(std::string(result.error().Msg()));
+    });
+}
+
+void Commands::replFile(std::string_view path)
+{
+    auto result= processFileLines(path);
+    if(!result) {
+        Fmt_.PrintError(std::string(result.error().Msg()));
+    }
+}
+
+util::Expected_u<void> Commands::ProcessFile(std::string_view path)
+{
+    return processFileLines(path);
 }
 
 namespace {
@@ -341,20 +379,15 @@ int Commands::replLoop()
             break;
         }
 
-        size_t start= line.find_first_not_of(" \t\r\n");
-        if(std::string::npos == start) continue;
+        const auto TRIMMED= util::TRIM_ASCII_WS(line);
+        if(TRIMMED.empty()) continue;
 
-        size_t end  = line.find_last_not_of(" \t\r\n");
-        auto trimmed= std::string_view(line).substr(start, end - start + 1);
+        History_.Push(TRIMMED); // remember the command for Up/Down keys
 
-        if(trimmed.empty()) continue;
+        if(ifQuitRepl(TRIMMED)) return 0;
 
-        History_.Push(trimmed); // remember the command for Up/Down keys
-
-        if(ifQuitRepl(trimmed)) return 0;
-
-        if(trimmed.starts_with(':')) {
-            auto cmd            = trimmed.substr(1);
+        if(TRIMMED.starts_with(':')) {
+            auto cmd            = TRIMMED.substr(1);
             auto sp             = cmd.find(' ');
             auto verb           = cmd.substr(0, sp);
             std::string_view arg= (sp != std::string_view::npos)
@@ -382,6 +415,14 @@ int Commands::replLoop()
             }
             if(verb == "hist" || verb == "history") {
                 replHistory();
+                continue;
+            }
+            if(verb == "file") {
+                if(arg.empty()) {
+                    std::println("  usage: :file <path>");
+                    continue;
+                }
+                replFile(arg);
                 continue;
             }
             if(verb == "json") {
@@ -414,7 +455,7 @@ int Commands::replLoop()
             continue;
         }
         // Auto-detect and process
-        auto parsed= util::ClassifyInstInput(trimmed);
+        auto parsed= util::ClassifyInstInput(TRIMMED);
         if(!parsed) {
             Fmt_.PrintError(std::string(parsed.error().Msg()));
             continue;
@@ -423,7 +464,7 @@ int Commands::replLoop()
         if(util::InputKind::HEX == parsed->kind_ || util::InputKind::BINARY == parsed->kind_) {
             result= processInstruction(parsed->word_);
         } else {
-            result= processInstruction(trimmed);
+            result= processInstruction(TRIMMED);
         }
         if(!result) Fmt_.PrintError(std::string(result.error().Msg()));
     }
@@ -432,9 +473,24 @@ int Commands::replLoop()
 
 int Commands::Repl()
 {
+    if(SaveHistory_) {
+        if(auto r= FileMgr_.LoadHistory(History_); !r) {
+            std::println("  (no history loaded: {})", r.error().Msg());
+        } else if(History_.Size() > 0) {
+            std::println("  loaded {} history entries", History_.Size());
+        }
+    }
+
     replBanner();
     replHelp();
-    return replLoop();
+    const int rc= replLoop();
+
+    if(SaveHistory_) {
+        if(auto r= FileMgr_.SaveHistory(History_); !r) {
+            std::println("  (failed to save history: {})", r.error().Msg());
+        }
+    }
+    return rc;
 }
 
 } // namespace cli

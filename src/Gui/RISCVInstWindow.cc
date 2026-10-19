@@ -2,7 +2,7 @@
 #include <format>
 #include <print>
 
-#include "Gui/RISCVInstructionWindow.hh"
+#include "Gui/RISCVInstWindow.hh"
 #include "Util/InputParse.hh"
 #include "config.hpp"
 
@@ -20,7 +20,7 @@ constexpr int G_HistoryRowHeight  = 40;
 
 } // namespace
 
-RISCVInstructionWindow::RISCVInstructionWindow()
+RISCVInstWindow::RISCVInstWindow()
     : insEntry_(Gtk::make_managed<Gtk::Entry>()),
       insButtonParse_(Gtk::make_managed<Gtk::Button>("Parse Instruction")),
       pErrorLabel_(Gtk::make_managed<Gtk::Label>()),
@@ -45,7 +45,7 @@ RISCVInstructionWindow::RISCVInstructionWindow()
     insEntry_->set_placeholder_text("Hex (0x33), binary (0b110011), or assembly (add x0,x0,x0)");
     insEntry_->set_hexpand(true);
     insEntry_->add_css_class("input-entry");
-    insEntry_->signal_activate().connect(sigc::mem_fun(*this, &RISCVInstructionWindow::onInsButtonParseClicked));
+    insEntry_->signal_activate().connect(sigc::mem_fun(*this, &RISCVInstWindow::onInsButtonParseClicked));
     setupInputHistory();
 
     pEntryRow_= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 8);
@@ -58,6 +58,13 @@ RISCVInstructionWindow::RISCVInstructionWindow()
     pEntryRow_->append(*pVersionBtn_);
     pEntryRow_->append(*insEntry_);
 
+    pFileBtn_= Gtk::make_managed<Gtk::Button>();
+    pFileBtn_->set_icon_name("document-open-symbolic");
+    pFileBtn_->set_tooltip_text("Open input file");
+    pFileBtn_->add_css_class("icon-button");
+    pFileBtn_->signal_clicked().connect(sigc::mem_fun(*this, &RISCVInstWindow::onOpenFileClicked));
+    pEntryRow_->append(*pFileBtn_);
+
     pSettingsBtn_->set_icon_name("emblem-system-symbolic");
     pSettingsBtn_->set_tooltip_text("ABI / ISA settings");
     pSettingsBtn_->set_always_show_arrow(false);
@@ -67,7 +74,7 @@ RISCVInstructionWindow::RISCVInstructionWindow()
 
     insButtonParse_->add_css_class("parse-button");
     insButtonParse_->set_halign(Gtk::Align::CENTER);
-    insButtonParse_->signal_clicked().connect(sigc::mem_fun(*this, &RISCVInstructionWindow::onInsButtonParseClicked));
+    insButtonParse_->signal_clicked().connect(sigc::mem_fun(*this, &RISCVInstWindow::onInsButtonParseClicked));
 
     pErrorCard_= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 0);
     pErrorCard_->add_css_class("error-card");
@@ -93,12 +100,13 @@ RISCVInstructionWindow::RISCVInstructionWindow()
     });
 }
 
-RISCVInstructionWindow::~RISCVInstructionWindow()
+RISCVInstWindow::~RISCVInstWindow()
 {
     if(pHistoryPopover_) pHistoryPopover_->unparent();
+    if(hasSaveHist_) std::ignore= fileMgr_.SaveHistory(history_);
 }
 
-void RISCVInstructionWindow::initInstFormatUI()
+void RISCVInstWindow::initInstFormatUI()
 {
     pFormatStack_= Gtk::make_managed<Gtk::Stack>();
     pFormatStack_->set_transition_type(Gtk::StackTransitionType::NONE);
@@ -125,7 +133,7 @@ void RISCVInstructionWindow::initInstFormatUI()
     pFormatStack_->set_visible_child(*pFormatUi_);
 }
 
-void RISCVInstructionWindow::hideFormatUI()
+void RISCVInstWindow::hideFormatUI()
 {
     // Match the old "empty" placeholder: keep the diagram visible, disable input.
     if(pFormatUi_) {
@@ -134,7 +142,7 @@ void RISCVInstructionWindow::hideFormatUI()
     }
 }
 
-void RISCVInstructionWindow::onInsButtonParseClicked()
+void RISCVInstWindow::onInsButtonParseClicked()
 {
     const auto TEXT= insEntry_->get_text();
     if(TEXT.empty()) {
@@ -169,7 +177,7 @@ void RISCVInstructionWindow::onInsButtonParseClicked()
     insEntry_->grab_focus();
 }
 
-void RISCVInstructionWindow::showInsResult(Instruction &inst)
+void RISCVInstWindow::showInsResult(Instruction &inst)
 {
     const auto *pType= inst.GetTypePtr();
     if(!pType || !pFormatUi_ || !pFormatStack_) {
@@ -191,7 +199,7 @@ void RISCVInstructionWindow::showInsResult(Instruction &inst)
     fitWindowToContent(false);
 }
 
-void RISCVInstructionWindow::fitWindowToContent(bool allowShrink)
+void RISCVInstWindow::fitWindowToContent(bool allowShrink)
 {
     // Wait one idle so CSS/font changes settle before measuring the bit diagram.
     Glib::signal_idle().connect_once([this, allowShrink] {
@@ -223,7 +231,7 @@ void RISCVInstructionWindow::fitWindowToContent(bool allowShrink)
     });
 }
 
-void RISCVInstructionWindow::showError(const std::string &message)
+void RISCVInstWindow::showError(const std::string &message)
 {
     hideFormatUI();
     inst_.reset();
@@ -234,7 +242,7 @@ void RISCVInstructionWindow::showError(const std::string &message)
     // std::println("Error: {}", message);
 }
 
-void RISCVInstructionWindow::refreshAssemblyDisplay()
+void RISCVInstWindow::refreshAssemblyDisplay()
 {
     if(!inst_) return;
 
@@ -247,7 +255,7 @@ void RISCVInstructionWindow::refreshAssemblyDisplay()
     }
 }
 
-void RISCVInstructionWindow::setupInputHistory()
+void RISCVInstWindow::setupInputHistory()
 {
     insEntry_->set_icon_from_icon_name("pan-down-symbolic", Gtk::Entry::IconPosition::SECONDARY);
     insEntry_->set_icon_activatable(true, Gtk::Entry::IconPosition::SECONDARY);
@@ -309,7 +317,7 @@ void RISCVInstructionWindow::setupInputHistory()
     });
 }
 
-void RISCVInstructionWindow::popupInputHistory()
+void RISCVInstWindow::popupInputHistory()
 {
     if(history_.IsEmpty() || !pHistoryPopover_ || !insEntry_) return;
 
@@ -340,13 +348,13 @@ void RISCVInstructionWindow::popupInputHistory()
     pHistoryPopover_->popup();
 }
 
-void RISCVInstructionWindow::pushInputHistory(std::string_view text)
+void RISCVInstWindow::pushInputHistory(std::string_view text)
 {
     history_.Push(text);
     rebuildHistoryList();
 }
 
-void RISCVInstructionWindow::rebuildHistoryList()
+void RISCVInstWindow::rebuildHistoryList()
 {
     if(!pHistoryList_) return;
 
@@ -382,7 +390,7 @@ void RISCVInstructionWindow::rebuildHistoryList()
     }
 }
 
-void RISCVInstructionWindow::applyHistoryAt(size_t index)
+void RISCVInstWindow::applyHistoryAt(size_t index)
 {
     history_.JumpTo(index);
     if(!history_.IsBrowsing()) return;
@@ -390,7 +398,7 @@ void RISCVInstructionWindow::applyHistoryAt(size_t index)
     insEntry_->set_position(-1);
 }
 
-void RISCVInstructionWindow::browseHistory(int delta)
+void RISCVInstWindow::browseHistory(int delta)
 {
     if(history_.IsEmpty()) return;
 
@@ -404,7 +412,81 @@ void RISCVInstructionWindow::browseHistory(int delta)
     insEntry_->set_position(-1);
 }
 
-void RISCVInstructionWindow::setupSettingsPopover()
+void RISCVInstWindow::onOpenFileClicked()
+{
+    // Keep the dialog alive for the async callback: a plain local would be
+    // destroyed when this handler returns. Reuse the member if one is open.
+    if(!pFileDialog_) {
+        pFileDialog_= Gtk::FileDialog::create();
+        pFileDialog_->set_title("Open input file");
+
+        auto pFilter= Gtk::FileFilter::create();
+        pFilter->set_name("Text and data files");
+        pFilter->add_pattern("*.txt");
+        pFilter->add_pattern("*.log");
+        pFilter->add_pattern("*.data");
+        pFilter->add_pattern("*");
+        auto pFilters= Gio::ListStore<Gtk::FileFilter>::create();
+        pFilters->append(pFilter);
+        pFileDialog_->set_filters(pFilters);
+    }
+
+    pFileDialog_->open(*this, [this](const Glib::RefPtr<Gio::AsyncResult> &result) {
+        try {
+            auto file= pFileDialog_->open_finish(result);
+            if(file) processFileLines(file->get_path());
+        } catch(const Gtk::DialogError &err) {
+            if(Gtk::DialogError::Code::DISMISSED != err.code()) {
+                showError(std::format("file open failed: {}", err.what()));
+            }
+        } catch(const Glib::Error &err) {
+            showError(std::format("file open failed: {}", err.what()));
+        }
+        pFileDialog_.reset(); // release after the callback runs
+    });
+}
+
+void RISCVInstWindow::processFileLines(std::string_view path)
+{
+    Instruction *pLastInst= nullptr;
+    auto streamed         = fileMgr_.ForEachLine(path, [this, &pLastInst](std::string_view raw) {
+        const auto TRIMMED= util::TRIM_ASCII_WS(raw);
+        if(TRIMMED.empty()) return;
+
+        auto parsed= util::ClassifyInstInput(TRIMMED);
+        if(!parsed) {
+            showError(std::format("invalid input: {}", parsed.error().Msg()));
+            return;
+        }
+
+        std::unique_ptr<Instruction> inst;
+        if(util::InputKind::ASSEMBLY == parsed->kind_) {
+            inst= std::make_unique<Instruction>(TRIMMED, hasSetABI_);
+        } else {
+            inst= std::make_unique<Instruction>(parsed->word_, hasSetABI_);
+        }
+        if(!inst->Decode()) {
+            return; // skip invalid lines silently in batch mode
+        }
+
+        pushInputHistory(TRIMMED); // merge into shared history (browsable + :hist)
+        pLastInst= inst.get();
+        inst_    = std::move(inst);
+    });
+    if(!streamed) {
+        showError(std::format("file read failed: {}", streamed.error().Msg()));
+        return;
+    }
+
+    if(pLastInst) {
+        showInsResult(*pLastInst);
+        insEntry_->grab_focus();
+    } else {
+        showError("no valid instructions found in file");
+    }
+}
+
+void RISCVInstWindow::setupSettingsPopover()
 {
     // MenuButton owns the popover; avoids Button+set_parent press-state bleed
     // into the settings icon when clicking ABI/ISA controls inside the popover.
@@ -462,6 +544,30 @@ void RISCVInstructionWindow::setupSettingsPopover()
     pHexRow->append(*pHexImmSwitch_);
     pPopoverBox->append(*pHexRow);
 
+    auto *pSaveHistRow= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
+    pSaveHistRow->set_halign(Gtk::Align::START);
+    pSaveHistRow->add_css_class("settings-row");
+
+    auto *pSaveHistLabel= Gtk::make_managed<Gtk::Label>("Save history");
+    pSaveHistLabel->set_halign(Gtk::Align::START);
+    pSaveHistLabel->set_hexpand(false);
+    pSaveHistLabel->add_css_class("settings-label");
+    pSaveHistRow->append(*pSaveHistLabel);
+
+    pSaveHistSwitch_= Gtk::make_managed<Gtk::Switch>();
+    pSaveHistSwitch_->set_active(hasSaveHist_);
+    pSaveHistSwitch_->set_halign(Gtk::Align::START);
+    pSaveHistSwitch_->set_valign(Gtk::Align::CENTER);
+    pSaveHistSwitch_->add_css_class("save-hist-switch");
+    pSaveHistSwitch_->property_active().signal_changed().connect([this] {
+        hasSaveHist_= pSaveHistSwitch_->get_active();
+        // Enabling loads the previous session's history; disabling only stops
+        // future writes (the in-memory history stays browsable).
+        if(hasSaveHist_) std::ignore= fileMgr_.LoadHistory(history_);
+    });
+    pSaveHistRow->append(*pSaveHistSwitch_);
+    pPopoverBox->append(*pSaveHistRow);
+
     auto *pFontRow= Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
     pFontRow->set_halign(Gtk::Align::START);
     pFontRow->add_css_class("settings-row");
@@ -517,7 +623,7 @@ void RISCVInstructionWindow::setupSettingsPopover()
     pSettingsBtn_->set_popover(*pPopover);
 }
 
-void RISCVInstructionWindow::showVersionWindow()
+void RISCVInstWindow::showVersionWindow()
 {
     if(!pVersionWindow_) {
         pVersionWindow_= std::make_unique<Gtk::Window>();
@@ -593,7 +699,7 @@ void RISCVInstructionWindow::showVersionWindow()
     pVersionWindow_->present();
 }
 
-void RISCVInstructionWindow::loadCSSFromFile()
+void RISCVInstWindow::loadCSSFromFile()
 {
     auto cssProvider= Gtk::CssProvider::create();
     cssProvider->load_from_file(Gio::File::create_for_path(CSS_FILE_PATH));

@@ -14,4 +14,7 @@ constexpr std::string_view G_HOMEPAGE_URL= "@PROJECT_HOMEPAGE_URL@"sv;
 
 constexpr std::string_view G_COPYRIGHT= "@PROJECT_DESCRIPTION@"sv;
 
+/** Install-time data dir ${CMAKE_BINARY_DIR}/gen/data (see CMakeLists.txt). */
+constexpr std::string_view G_DATA_DIR= "@G_DATA_DIR@"sv;
+
 } // namespace util::info

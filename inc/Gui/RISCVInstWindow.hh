@@ -3,16 +3,19 @@
 #include "Core/Instruction.hh"
 #include "Gui/InstFormatUI.hh"
 #include "Util/InputHistoryMgr.hh"
+#include "Util/FileIo.hh"
 
-class RISCVInstructionWindow: public Gtk::Window {
+class RISCVInstWindow: public Gtk::Window {
 public:
     std::unique_ptr<Gtk::Window> pVersionWindow_;
     std::unique_ptr<Instruction> inst_;
     util::InputHistoryMgr history_;
+    util::FileIo fileMgr_;
     Gtk::Box *uiContainer_ {};
     Gtk::Box *pEntryRow_ {};
     Gtk::Entry *insEntry_ {};
     Gtk::Button *insButtonParse_ {};
+    Gtk::Button *pFileBtn_ {};
     Gtk::Label *pErrorLabel_ {};
     Gtk::Box *pErrorCard_ {};
     Gtk::MenuButton *pSettingsBtn_ {};
@@ -24,14 +27,17 @@ public:
     Gtk::Switch *pAbiSwitch_ {};
     Gtk::Switch *pFontSizeSwitch_ {};
     Gtk::Switch *pHexImmSwitch_ {};
+    Gtk::Switch *pSaveHistSwitch_ {};
     Gtk::DropDown *pIsaDrop_ {};
     InstFormatUI *pFormatUi_ {};
+    Glib::RefPtr<Gtk::FileDialog> pFileDialog_ {};
     bool hasSetABI_ {};
     bool hasHexImm_ {};
+    bool hasSaveHist_ {};
 
 public:
-    RISCVInstructionWindow();
-    ~RISCVInstructionWindow() override;
+    RISCVInstWindow();
+    ~RISCVInstWindow() override;
 
 private:
     // Instruction parsing & result display
@@ -56,6 +62,10 @@ private:
     void rebuildHistoryList();
     void applyHistoryAt(size_t index);
     void browseHistory(int delta);
+
+    // File batch IO (FileIo)
+    void onOpenFileClicked();
+    void processFileLines(std::string_view path);
 
     // Misc
     static void loadCSSFromFile();

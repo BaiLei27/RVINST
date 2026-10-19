@@ -362,12 +362,14 @@ void OutputFormatter::PrintHelp()
         "  {} <input>    Decode hex/binary to assembly\n"
         "  {} <input>    Encode assembly to hex/binary\n"
         "  {}            Interactive REPL mode\n"
+        "  {} <path>     Process a file of inputs line by line\n"
         "  {} <query>    Look up register info\n"
         "  {} [--type T] List supported instructions\n\n"
         "{}\n"
         "  --abi             Use ABI register names (zero, ra, sp, ...)\n"
         "  --no-abi          Use architectural names (x0, x1, ...) [default]\n"
         "  --json            Output in JSON format\n"
+        "  --save-history    Persist REPL input history to inputHist.log\n"
         "  -h, --help        Show this help message\n"
         "  -v, --version     Show version information\n\n"
         "{}\n"
@@ -388,6 +390,7 @@ void OutputFormatter::PrintHelp()
         cyan("decode"),
         cyan("encode"),
         cyan("repl"),
+        cyan("file"),
         cyan("reg"),
         cyan("list"),
         bold("Global options"),

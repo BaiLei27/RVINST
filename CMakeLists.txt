@@ -26,8 +26,18 @@ option(noExceptions "Compile C++ without exceptions (-fno-exceptions)" ON)
 # One directory for exes and shared libs so Cli/GUI share a single backend DLL
 # (Windows/MSYS load from the executable's directory). GUI still copies GTK DLLs there.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+if(WIN32)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+else()
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+endif()
+
+# Install-time data dir: ${CMAKE_BINARY_DIR}/gen/data, sibling of gen/css
+# (created early so FileIo can write inputHist.log without racing the build).
+set(G_DATA_DIR ${CMAKE_BINARY_DIR}/gen/data)
+file(MAKE_DIRECTORY ${G_DATA_DIR})
 
 set(backend ${PROJECT_NAME}_backend)
 set(customModulesPath ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules CACHE PATH "custom modules directory")
@@ -110,11 +120,13 @@ set_target_properties(${backend} PROPERTIES
 include_directories(
     inc
     Logger
+    ${CMAKE_BINARY_DIR}/gen
 )
 
 target_sources(${backend} PRIVATE
     src/ISA/Regs.cc
     src/Util/ErrorHandle.cc
+    src/Util/FileIo.cc
     src/Util/InputHistoryMgr.cc
     src/Util/InputParse.cc
     src/Util/InstFormatView.cc
@@ -139,6 +151,7 @@ target_sources(${backend} PUBLIC
     inc/ISA/InstFormat.hh
     inc/Util/BiLookupTable.hpp
     inc/Util/ErrorHandle.hh
+    inc/Util/FileIo.hh
     inc/Util/InputHistoryMgr.hh
     inc/Util/InputParse.hh
     inc/Util/InstFormatView.hh

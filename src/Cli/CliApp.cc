@@ -13,8 +13,9 @@ namespace cli {
 
 int CliApp::Run(int argc, char *pArgv[])
 {
-    bool hasABI   = false;
-    bool forceJson= false;
+    bool hasABI     = false;
+    bool forceJson  = false;
+    bool saveHistory= false;
     std::string subcommand;
     std::vector<std::string> remaining;
 
@@ -32,6 +33,10 @@ int CliApp::Run(int argc, char *pArgv[])
         }
         if(arg == "--json") {
             forceJson= true;
+            continue;
+        }
+        if(arg == "--save-history") {
+            saveHistory= true;
             continue;
         }
         if(arg == "-h" || arg == "--help") {
@@ -61,7 +66,7 @@ int CliApp::Run(int argc, char *pArgv[])
     }
 
     OutputMode mode= detectOutputMode(forceJson);
-    Commands cmd({ .hasABI_= hasABI, .outputMode_= mode });
+    Commands cmd({ .hasABI_= hasABI, .outputMode_= mode }, saveHistory);
 
     auto fail= [&mode](std::string_view msg) {
         OutputFormatter fmt(mode);
@@ -97,6 +102,13 @@ int CliApp::Run(int argc, char *pArgv[])
 
     if(subcommand == "repl") {
         return cmd.Repl();
+    }
+
+    if(subcommand == "file") {
+        if(remaining.empty()) {
+            return fail("file requires an input file path");
+        }
+        return runCmd(cmd.ProcessFile(remaining[0]));
     }
 
     if(subcommand == "reg") {

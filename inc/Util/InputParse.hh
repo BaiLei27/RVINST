@@ -20,6 +20,7 @@ struct ParsedInstInput {
     uint32_t word_ {};
 };
 
+[[nodiscard]] std::string_view TRIM_ASCII_WS(std::string_view s) noexcept;
 [[nodiscard]] constexpr std::string_view STRIP_INT_PREFIX(std::string_view s) noexcept;
 
 // True when s starts with an explicit numeric prefix (0x/0X/0b/0B)

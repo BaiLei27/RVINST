@@ -33,3 +33,31 @@ add_custom_target(test_cli
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "ctest: cli_inst_suite"
 )
+
+# Unit tests for the shared Util/FileIo module (links the backend).
+add_executable(tests_inputfile
+    FileIo_test.cc
+)
+set_target_properties(tests_inputfile PROPERTIES
+    SUFFIX ".exe"
+)
+target_link_libraries(tests_inputfile PRIVATE
+    ${backend}
+)
+target_include_directories(tests_inputfile PRIVATE
+    ${CMAKE_SOURCE_DIR}/inc
+)
+add_test(
+    NAME inputfile_suite
+    COMMAND tests_inputfile
+)
+set_tests_properties(inputfile_suite PROPERTIES
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:${cli_target}>
+    TIMEOUT 60
+)
+add_custom_target(test_inputfile
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R inputfile_suite
+    DEPENDS tests_inputfile
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "ctest: inputfile_suite"
+)
