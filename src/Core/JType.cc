@@ -1,8 +1,6 @@
-#include <print>
-
 #include "Core/JType.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace {
 
@@ -30,14 +28,14 @@ void encodeJImm(InstLayout &l, int32_t imm)
 
 } // namespace
 
-JType::JType(uint32_t inst, InstFormat format, bool hasSetABI)
-    : IBaseInstType(inst, format, hasSetABI)
+JType::JType(InstFormat format, uint32_t inst, bool hasSetABI)
+    : IBaseInstType(format, inst, hasSetABI)
 {
     init();
 }
 
-JType::JType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI)
-    : IBaseInstType(std::move(instAssembly), format, hasSetABI)
+JType::JType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI)
+    : IBaseInstType(format, std::move(instAssembly), hasSetABI)
 {
     init();
 }
@@ -66,7 +64,7 @@ void JType::mnemonicHelper()
     appendOperands({ " ", rd, ",", immStr });
 }
 
-const InstLayout &JType::Assembly()
+util::Expected_u<const InstLayout *> JType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -83,7 +81,7 @@ const InstLayout &JType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto JType::calculateKeyID() -> KeyT

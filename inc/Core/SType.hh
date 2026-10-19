@@ -14,11 +14,11 @@ public:
          }
     };
 
-    SType(uint32_t inst, InstFormat format, bool hasSetABI= false);
-    SType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI= false);
+    SType(InstFormat format, uint32_t inst, bool hasSetABI= false);
+    SType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI= false);
 
     void Parse() override;
-    [[nodiscard]] const InstLayout &Assembly() override;
+    [[nodiscard]] util::Expected_u<const InstLayout *> Assembly() override;
 
 private:
     KeyT calculateKeyID() override;

@@ -1,12 +1,16 @@
 #pragma once
 
-#include <optional>
-#include <string_view>
+#include <concepts>
+#include <type_traits>
 
 #include "Cli/OutputTable.hh"
 #include "ISA/InstFormat.hh"
+#include "Util/ErrorHandle.hh"
 
 namespace cli {
+
+template <typename T>
+concept InstInput= std::same_as<std::remove_cvref_t<T>, uint32_t> || std::same_as<std::remove_cvref_t<T>, std::string_view>;
 
 struct GlobalOptions {
     bool hasABI_ { false };
@@ -22,15 +26,14 @@ public:
     explicit Commands(const GlobalOptions &opts);
 
 public:
-    int Decode(std::string_view input);
-    int Encode(std::string_view input);
+    [[nodiscard]] util::Expected_u<void> Decode(std::string_view input);
+    [[nodiscard]] util::Expected_u<void> Encode(std::string_view input);
     int Repl();
-    int Reg(std::string_view query);
-    int List(std::optional<InstFormat> filter= std::nullopt);
+    [[nodiscard]] util::Expected_u<void> Reg(std::string_view query);
+    [[nodiscard]] util::Expected_u<void> List(std::optional<InstFormat> filter= std::nullopt);
 
 private:
-    int processInstruction(uint32_t hexVal);
-    int processInstruction(std::string_view assembly);
+    [[nodiscard]] util::Expected_u<void> processInstruction(InstInput auto input);
     int replLoop();
 
     static void replBanner();

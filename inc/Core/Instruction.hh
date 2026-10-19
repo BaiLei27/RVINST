@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "Core/IBaseInstType.hh"
+#include "Util/ErrorHandle.hh"
 
 class Instruction {
 private:
@@ -37,7 +38,7 @@ public:
     [[nodiscard]] std::string_view GetName() const;
     [[nodiscard]] std::string_view GetFormat() const noexcept;
 
-    bool Decode();
+    [[nodiscard]] util::Expected_u<void> Decode();
     void ShowInfo() const;
 
 private:

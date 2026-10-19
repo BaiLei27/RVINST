@@ -20,6 +20,9 @@ endif()
 
 option(enableTests "Build the INST smoke test executable" ON)
 
+# Directory-wide. Gui turns exceptions back on for Glib::Error.
+option(noExceptions "Compile C++ without exceptions (-fno-exceptions)" ON)
+
 # One directory for exes and shared libs so Cli/GUI share a single backend DLL
 # (Windows/MSYS load from the executable's directory). GUI still copies GTK DLLs there.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -48,6 +51,9 @@ configure_file(
     @ONLY
 )
 
+# Before any directory-level compile/link flags, so RVINST options do not leak in.
+add_subdirectory(Logger)
+
 include(CheckIPOSupported)
 include(CodeCheck)
 
@@ -57,6 +63,7 @@ check_ipo_supported(RESULT _ipo_supported)
 if(_ipo_supported)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         add_compile_options(-flto=full)
+        add_link_options(-flto=full -fuse-ld=lld)
     else()
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
     endif()
@@ -71,7 +78,8 @@ add_compile_options(
     -ffunction-sections
     -funroll-loops
     -fomit-frame-pointer
-    "$<$<CONFIG:Debug>:-ggdb3;-DDEBUG_>"
+    "$<$<CONFIG:Debug>:-O0;-ggdb3;-DDEBUG_>"
+    $<$<BOOL:${noExceptions}>:-fno-exceptions>
     $<$<CONFIG:Release,MinSizeRel>:-DNDEBUG_>
 )
 
@@ -90,7 +98,6 @@ add_link_options(
     $<$<CONFIG:Release,MinSizeRel>:-s>
 )
 
-add_subdirectory(Logger)
 add_library(${backend} SHARED)
 
 set_target_properties(${backend} PROPERTIES
@@ -106,44 +113,44 @@ include_directories(
 )
 
 target_sources(${backend} PRIVATE
-    inc/ISA/Regs.hpp
     src/ISA/Regs.cc
-
-    inc/Util/BiLookupTable.hpp
-    inc/Util/InputParse.hpp
-    inc/Util/config.hpp.in
-    inc/Util/InstFormatView.hpp
-
-    inc/Core/IBaseInstType.hh
+    src/Util/ErrorHandle.cc
+    src/Util/InputParse.cc
+    src/Util/InstFormatView.cc
     src/Core/IBaseInstType.cc
-
-    inc/ISA/InstFormat.hh
     src/ISA/InstFormat.cc
-
-    inc/Core/RType.hh
     src/Core/RType.cc
-
-    inc/Core/IType.hh
     src/Core/IType.cc
-
-    inc/Core/JType.hh
     src/Core/JType.cc
-
-    inc/Core/UType.hh
     src/Core/UType.cc
-
-    inc/Core/SType.hh
     src/Core/SType.cc
-
-    inc/Core/BType.hh
     src/Core/BType.cc
-
-    inc/Core/InstTypeFactory.hh
     src/Core/InstTypeFactory.cc
-
-    inc/Core/Instruction.hh
     src/Core/Instruction.cc
+    inc/Util/config.hpp.in
 )
+
+target_sources(${backend} PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS inc
+    FILES
+    inc/ISA/Regs.hpp
+    inc/ISA/InstFormat.hh
+    inc/Util/BiLookupTable.hpp
+    inc/Util/ErrorHandle.hh
+    inc/Util/InputParse.hh
+    inc/Util/InstFormatView.hh
+    inc/Core/IBaseInstType.hh
+    inc/Core/RType.hh
+    inc/Core/IType.hh
+    inc/Core/JType.hh
+    inc/Core/UType.hh
+    inc/Core/SType.hh
+    inc/Core/BType.hh
+    inc/Core/InstTypeFactory.hh
+    inc/Core/Instruction.hh
+)
+
 add_subdirectory(src/Cli)
 add_subdirectory(src/Gui)
 

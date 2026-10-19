@@ -1,18 +1,20 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
 #include <gtkmm.h>
 
 #include "Core/Instruction.hh"
 #include "Gui/InstCommST.hh"
 #include "ISA/InstFormat.hh"
-#include "Util/InstFormatView.hpp"
+#include "Util/InstFormatView.hh"
 
 class InstFormatUI: public Gtk::Box {
 public:
-    const util::InstFormatView *pView_ {};
+    std::vector<std::unique_ptr<class BinaryFieldWidget>> binaryOwned_;
+    std::vector<std::unique_ptr<class AsmMnemonicWidget>> asmOwned_;
+    sigc::signal<void(const std::string &)> signalOutput_;
+    InstCommST::BinaryFieldWidgetMap_u binaryFieldWidgets_;
+    InstCommST::AsmMnemonicWidgetMap_u asmFieldWidgets_;
+
     Gtk::Box *pResultCard_ {};
     Gtk::Grid *pResultGrid_ {};
     Gtk::Box *pFormatCard_ {};
@@ -24,19 +26,22 @@ public:
     Gtk::Label *pBinaryLabel_ {};
     Gtk::Box *pBitsRow_ {};
     Gtk::Box *pAsmValues_ {};
+    const util::InstFormatView *pView_ {};
     int resultRowIndex_ {};
-    InstCommST::BinaryFieldWidgetMap_u binaryFieldWidgets_;
-    InstCommST::AsmMnemonicWidgetMap_u asmFieldWidgets_;
-    std::vector<std::unique_ptr<class BinaryFieldWidget>> binaryOwned_;
-    std::vector<std::unique_ptr<class AsmMnemonicWidget>> asmOwned_;
+    InstFormat fmt_ { InstFormat::UNKNOWN };
     ItypeImmShape iShape_ { ItypeImmShape::IMM12 };
+    bool hasHexImm_ {};
 
 public:
-    sigc::signal<void(const std::string &)> signalOutput_;
-
     explicit InstFormatUI(InstFormat fmt);
     void UpdateDisplay(const Instruction &inst);
+    void SetHexImm(bool on) noexcept;
 
+public:
+    void RestoreHexPand();
+
+    [[nodiscard]] bool FitToContent();
+    [[nodiscard]] int MeasureWidth() const;
     [[nodiscard]] std::string GetAssemblyContent() const;
     [[nodiscard]] std::string GetBinaryContent() const;
     [[nodiscard]] std::string GetHexContent() const;
@@ -51,7 +56,8 @@ private:
     void setupHover();
     void rebuildBitDiagram(const util::InstFormatView &view);
     void rebuildAssemblyDisplay(const util::InstFormatView &view);
-    void applyIFormatView(const util::InstFormatView &view);
+    void clearHoverLinks() noexcept;
+    void applyView(const util::InstFormatView &view);
     void updateAssemblyDisplay(const Instruction &inst);
     void updateBinaryDisplay(const Instruction &inst);
     void updateHexDisplay(const Instruction &inst);

@@ -1,9 +1,36 @@
+#include <charconv>
+#include <cstdint>
 #include <format>
 #include <print>
 
 #include "Gui/AsmMnemonicWidget.hh"
 #include "Gui/BinaryFieldWidget.hh"
 #include "Gui/InstFormatUI.hh"
+
+namespace {
+
+[[nodiscard]] bool isImmAsmToken(std::string_view token) noexcept
+{
+    // Covers "imm", "imm7" (shift) and "shamt"; never "immediate"-style prose.
+    return token == "shamt" || token.starts_with("imm");
+}
+
+/// Core always emits decimal immediates; Gui optionally shows them as hex.
+[[nodiscard]] std::string formatAsmImm(std::string_view text, bool hex)
+{
+    if(!hex || text.empty()) return std::string(text);
+
+    std::int64_t value {};
+    const auto *const BEGIN= text.data();
+    const auto *const END  = BEGIN + text.size();
+    auto [ptr, ec]         = std::from_chars(BEGIN, END, value);
+    if(ec != std::errc() || ptr != END) return std::string(text);
+
+    if(value < 0) return std::format("-0x{:x}", -value);
+    return std::format("0x{:x}", value);
+}
+
+} // namespace
 
 void InstFormatUI::appendResultRow(const char *pTitle,
                                    Gtk::Widget &value,
@@ -67,7 +94,8 @@ void InstFormatUI::appendResultRow(const char *pTitle,
 
 InstFormatUI::InstFormatUI(InstFormat fmt)
     : Gtk::Box(Gtk::Orientation::VERTICAL, 14),
-      pView_(&util::GetInstFormatView(fmt))
+      pView_(&util::GetInstFormatView(fmt)),
+      fmt_(fmt)
 {
     add_css_class("format-panel");
     setupResultCard();
@@ -213,9 +241,24 @@ void InstFormatUI::setupBitDiagram()
     pFormatCard_->append(*pBitsRow_);
 }
 
+void InstFormatUI::clearHoverLinks() noexcept
+{
+    for(auto &pField: binaryOwned_) {
+        if(pField) {
+            pField->relatedAsm_.clear();
+            pField->relatedBinary_.clear();
+        }
+    }
+    for(auto &pAsm: asmOwned_) {
+        if(pAsm) pAsm->relatedBinary_.clear();
+    }
+}
+
 void InstFormatUI::rebuildBitDiagram(const util::InstFormatView &view)
 {
     if(!pBitsRow_) return;
+
+    clearHoverLinks();
 
     while(Gtk::Widget *pChild= pBitsRow_->get_first_child()) {
         pBitsRow_->remove(*pChild);
@@ -241,6 +284,8 @@ void InstFormatUI::rebuildAssemblyDisplay(const util::InstFormatView &view)
 {
     if(!pAsmValues_) return;
 
+    clearHoverLinks();
+
     while(Gtk::Widget *pChild= pAsmValues_->get_first_child()) {
         pAsmValues_->remove(*pChild);
     }
@@ -256,7 +301,7 @@ void InstFormatUI::rebuildAssemblyDisplay(const util::InstFormatView &view)
     }
 }
 
-void InstFormatUI::applyIFormatView(const util::InstFormatView &view)
+void InstFormatUI::applyView(const util::InstFormatView &view)
 {
     pView_= &view;
     rebuildBitDiagram(view);
@@ -274,15 +319,25 @@ void InstFormatUI::setupHover()
     }
 }
 
+void InstFormatUI::SetHexImm(bool on) noexcept { hasHexImm_= on; }
+
 void InstFormatUI::UpdateDisplay(const Instruction &inst)
 {
-    if(const auto *pType= inst.GetTypePtr(); pType && InstFormat::I == pType->GetInstFormat()) {
-        const auto &L   = pType->GetInstLayout();
-        const auto SHAPE= DetectIImmShape(L.I.opc, L.I.fct3);
-        if(SHAPE != iShape_) {
-            iShape_= SHAPE;
-            applyIFormatView(util::GetIInstFormatView(SHAPE));
-        }
+    const auto *pType= inst.GetTypePtr();
+    if(!pType) return;
+
+    const auto FMT= pType->GetInstFormat();
+    auto shape    = ItypeImmShape::IMM12;
+    if(InstFormat::I == FMT) {
+        const auto &L= pType->GetInstLayout();
+        shape        = DetectIImmShape(L.I.opc, L.I.fct3);
+    }
+
+    if(FMT != fmt_ || (InstFormat::I == FMT && shape != iShape_)) {
+        fmt_   = FMT;
+        iShape_= shape;
+        applyView(InstFormat::I == FMT ? util::GetIInstFormatView(shape)
+                                       : util::GetInstFormatView(FMT));
     }
 
     updateHeader(inst);
@@ -340,15 +395,19 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
     size_t j         = 0;
 
     for(const auto &token: pView_->asmTokens_) {
-        if(token == ",") continue;
+        if(token == "," || token == "(") continue; // Punctuation is owned by the format view, not by operand values.
 
-        while(j < parts.size() && (parts[j] == " " || parts[j] == ",")) {
+        while(j < parts.size()
+              && (parts[j] == " "
+                  || parts[j] == ","
+                  || parts[j] == "(")) {
             ++j;
         }
 
         auto it= asmFieldWidgets_.find(token);
-        if(it != asmFieldWidgets_.end() && it->second->GetLabel() && j < parts.size()) {
-            it->second->GetLabel()->set_text(parts[j++]);
+        if(it != asmFieldWidgets_.end() && it->second->GetLabel() && j < parts.size()) { // NOLINT
+            const auto &part= parts[j++];
+            it->second->GetLabel()->set_text(isImmAsmToken(token) ? formatAsmImm(part, hasHexImm_) : part);
         }
     }
 }
@@ -386,9 +445,13 @@ std::string InstFormatUI::GetAssemblyContent() const
             result+= ", ";
             continue;
         }
+        if(token == "(" || token == ")") {
+            result+= std::string(token);
+            continue;
+        }
 
         auto it= asmFieldWidgets_.find(token);
-        if(it == asmFieldWidgets_.end() || !it->second->GetLabel()) continue;
+        if(it == asmFieldWidgets_.end() || !it->second->GetLabel()) continue; // NOLINT
 
         result+= it->second->GetLabel()->get_text().raw();
         if(token == "mnemonic") result+= " ";
@@ -412,4 +475,36 @@ std::string InstFormatUI::GetBinaryContent() const
 std::string InstFormatUI::GetHexContent() const
 {
     return pHexLabel_ ? std::string(pHexLabel_->get_text().raw()) : std::string {};
+}
+
+bool InstFormatUI::FitToContent()
+{
+    if(!pBitsRow_) return false;
+
+    // Temporarily unexpand fields to measure intrinsic bit-diagram width.
+    for(auto &pField: binaryOwned_) {
+        if(pField && pField->GetRoot()) pField->GetRoot()->set_hexpand(false);
+    }
+    pBitsRow_->set_hexpand(false);
+    return true;
+}
+
+int InstFormatUI::MeasureWidth() const
+{
+    if(!pBitsRow_) return 0;
+
+    int minW= 0, natW= 0, minBase= -1, natBase= -1;
+    pBitsRow_->measure(Gtk::Orientation::HORIZONTAL, -1, minW, natW, minBase, natBase);
+    return natW;
+}
+
+void InstFormatUI::RestoreHexPand()
+{
+    if(!pBitsRow_) return;
+
+    for(auto &pField: binaryOwned_) {
+        if(pField && pField->GetRoot()) pField->GetRoot()->set_hexpand(true);
+    }
+    pBitsRow_->set_hexpand(true);
+    pBitsRow_->queue_resize();
 }

@@ -1,8 +1,6 @@
-#include <print>
-
 #include "Core/UType.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace {
 
@@ -15,14 +13,14 @@ uint32_t parseAsmImm20(std::string_view tok)
 
 } // namespace
 
-UType::UType(uint32_t inst, InstFormat format, bool hasSetABI)
-    : IBaseInstType(inst, format, hasSetABI)
+UType::UType(InstFormat format, uint32_t inst, bool hasSetABI)
+    : IBaseInstType(format, inst, hasSetABI)
 {
     init();
 }
 
-UType::UType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI)
-    : IBaseInstType(std::move(instAssembly), format, hasSetABI)
+UType::UType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI)
+    : IBaseInstType(format, std::move(instAssembly), hasSetABI)
 {
     init();
 }
@@ -35,7 +33,7 @@ void UType::Parse()
                  GetInstOpcode(),
                  Layout_.entity_,
                  +Layout_.U.rd,
-                 +Layout_.U.immCt1F);
+                 +Layout_.U.immCt1F); //+s.x <==> static_cast<int>(s.x)
 #endif
 }
 
@@ -46,7 +44,7 @@ void UType::mnemonicHelper()
     appendOperands({ " ", rd, ",", immStr });
 }
 
-const InstLayout &UType::Assembly()
+util::Expected_u<const InstLayout *> UType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -60,7 +58,7 @@ const InstLayout &UType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto UType::calculateKeyID() -> KeyT

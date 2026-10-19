@@ -1,14 +1,9 @@
 #pragma once
 
-#include <cstdint>
-#include <string_view>
-#include <vector>
-#include <gtkmm.h>
-
 #include "Gui/IHoverWidget.hh"
 #include "Gui/InstCommST.hh"
 #include "ISA/InstFormat.hh"
-#include "Util/InstFormatView.hpp"
+#include "Util/InstFormatView.hh"
 
 class AsmMnemonicWidget;
 

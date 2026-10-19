@@ -1,9 +1,6 @@
-#include <print>
-#include <string>
-
 #include "Core/SType.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace {
 
@@ -36,14 +33,14 @@ bool parseStoreAddr(std::string_view token, int32_t &immOut, std::string &regStr
 
 } // namespace
 
-SType::SType(uint32_t inst, InstFormat format, bool hasSetABI)
-    : IBaseInstType(inst, format, hasSetABI)
+SType::SType(InstFormat format, uint32_t inst, bool hasSetABI)
+    : IBaseInstType(format, inst, hasSetABI)
 {
     init();
 }
 
-SType::SType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI)
-    : IBaseInstType(std::move(instAssembly), format, hasSetABI)
+SType::SType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI)
+    : IBaseInstType(format, std::move(instAssembly), hasSetABI)
 {
     init();
 }
@@ -75,7 +72,7 @@ void SType::mnemonicHelper()
     appendOperands({ " ", rs2, ",", immStr, "(", rs1, ")" });
 }
 
-const InstLayout &SType::Assembly()
+util::Expected_u<const InstLayout *> SType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -108,7 +105,7 @@ const InstLayout &SType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto SType::calculateKeyID() -> KeyT

@@ -1,16 +1,14 @@
-#include <print>
-
 #include "Core/RType.hh"
 #include "ISA/Regs.hpp"
 
-RType::RType(uint32_t inst, InstFormat format, bool hasSetABI)
-    : IBaseInstType(inst, format, hasSetABI)
+RType::RType(InstFormat format, uint32_t inst, bool hasSetABI)
+    : IBaseInstType(format, inst, hasSetABI)
 {
     init();
 }
 
-RType::RType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI)
-    : IBaseInstType(std::move(instAssembly), format, hasSetABI)
+RType::RType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI)
+    : IBaseInstType(format, std::move(instAssembly), hasSetABI)
 {
     init();
 }
@@ -31,7 +29,7 @@ void RType::Parse()
                  +Layout_.R.fct7,
                  +Layout_.R.rs1,
                  +Layout_.R.rs2,
-                 +Layout_.R.rd); //s.x <==> static_cast<int>(s.x)
+                 +Layout_.R.rd); // s.x <==> static_cast<int>(s.x)
 #endif
 }
 
@@ -43,7 +41,7 @@ void RType::mnemonicHelper()
     appendOperands({ " ", rd, ",", rs1, ",", rs2 });
 }
 
-const InstLayout &RType::Assembly()
+util::Expected_u<const InstLayout *> RType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -64,7 +62,7 @@ const InstLayout &RType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto RType::calculateKeyID() -> KeyT

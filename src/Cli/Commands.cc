@@ -1,144 +1,110 @@
 #include "Cli/Commands.hh"
 
-#include <algorithm>
-#include <cctype>
-#include <cstdint>
 #include <cstdio>
-#include <format>
 #include <iostream>
-#include <optional>
-#include <print>
-#include <string>
 
 #include "Core/Instruction.hh"
 #include "ISA/InstFormat.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace cli {
 
 Commands::Commands(const GlobalOptions &opts): Opts_(opts), Fmt_(opts.outputMode_) { }
 
-int Commands::Decode(std::string_view input)
+template <InstInput Input>
+util::Expected_u<void> Commands::processInstruction(Input input)
 {
-    const auto PARSED= util::ClassifyInstInput(input);
+    using Raw_u           = std::remove_cvref_t<Input>;
+    constexpr bool IS_WORD= std::same_as<Raw_u, uint32_t>;
 
-    if(util::InputKind::ASSEMBLY == PARSED.kind_) {
-        Fmt_.PrintError("decode expects hex or binary input, got assembly. Use 'encode' instead.");
-        return 1;
+    Instruction inst(input, Opts_.hasABI_);
+
+    auto label= [&] {
+        if constexpr(IS_WORD) {
+            return std::format("{:#010x}", input);
+        } else {
+            return std::string(input);
+        }
+    }();
+
+    if(!inst.GetTypePtr()) {
+        return util::Unexpected(util::Error::Unsupported(std::format("unsupported instruction: {}", label)));
     }
 
-    return processInstruction(PARSED.word_);
+    util::Expected_u<void> decoded;
+    {
+        CoutSuppressor suppress;
+        decoded= inst.Decode();
+    }
+    if(!decoded) {
+        const auto REASON= decoded.error().Msg();
+        if constexpr(IS_WORD) {
+            return util::Unexpected(util::Error::DecodeFailed(
+                std::format("failed to decode instruction: {} ({})", label, REASON)));
+        } else {
+            return util::Unexpected(util::Error::EncodeFailed(
+                std::format("failed to encode instruction: {} ({})", label, REASON)));
+        }
+    }
+
+    Fmt_.PrintInstruction(inst, label);
+    return {};
 }
 
-int Commands::Encode(std::string_view input)
+util::Expected_u<void> Commands::Decode(std::string_view input)
 {
     const auto PARSED= util::ClassifyInstInput(input);
+    if(!PARSED) return util::Unexpected(PARSED.error());
 
-    if(PARSED.kind_ != util::InputKind::ASSEMBLY) {
-        Fmt_.PrintError("encode expects assembly input, got hex/binary. Use 'decode' instead.");
-        return 1;
+    if(util::InputKind::ASSEMBLY == PARSED->kind_) {
+        return util::Unexpected(util::Error::InvalidArg("decode expects hex or binary input, got assembly. Use 'encode' instead."));
+    }
+
+    return processInstruction(PARSED->word_);
+}
+
+util::Expected_u<void> Commands::Encode(std::string_view input)
+{
+    const auto PARSED= util::ClassifyInstInput(input);
+    if(!PARSED) return util::Unexpected(PARSED.error());
+
+    if(PARSED->kind_ != util::InputKind::ASSEMBLY) {
+        return util::Unexpected(util::Error::InvalidArg("encode expects assembly input, got hex/binary. Use 'decode' instead."));
     }
 
     return processInstruction(input);
 }
 
-int Commands::Reg(std::string_view query)
+util::Expected_u<void> Commands::Reg(std::string_view query)
 {
     auto idxOpt= isa::LOOKUP_REG_IDX(query);
 
-    if(!idxOpt) {
-        // Try plain numeric parse as fallback
+    if(!idxOpt) { // try parsing as a number
         std::string s(query);
-        if(std::ranges::all_of(s, [](unsigned char c) { return std::isdigit(c); })) {
-            auto v= std::stoul(s);
-            if(v < 32) idxOpt= static_cast<uint16_t>(v);
-        }
+        uint16_t v {};
+        const char *end     = s.data() + s.size(); // NOLINT
+        const auto [ptr, ec]= std::from_chars(s.data(), end, v, 10);
+        if(std::errc() == ec && ptr == end && v < 32) idxOpt= v;
     }
+
     if(!idxOpt || *idxOpt >= 32) {
-        Fmt_.PrintError(std::format("register '{}' not found", query));
-        return 1;
+        return util::Unexpected(util::Error::InvalidArg(std::format("register '{}' not found", query)));
     }
     Fmt_.PrintRegister(*idxOpt);
 
-    return 0;
+    return {};
 }
 
-int Commands::List(std::optional<InstFormat> filter)
+util::Expected_u<void> Commands::List(std::optional<InstFormat> filter)
 {
     auto entries= getAllInstructions(filter);
     if(entries.empty()) {
-        Fmt_.PrintError("no instructions found for the given filter");
-        return 1;
+        return util::Unexpected(util::Error::InvalidArg("no instructions found for the given filter"));
     }
     Fmt_.PrintInstructionList(entries);
 
-    return 0;
-}
-
-int Commands::processInstruction(uint32_t hexVal)
-{
-    try {
-        Instruction inst(hexVal, Opts_.hasABI_);
-
-        if(!inst.GetTypePtr()) {
-            Fmt_.PrintError(std::format("unsupported instruction: 0x{:08X}", hexVal));
-            return 1;
-        }
-
-        bool ok= false;
-        {
-            CoutSuppressor suppress;
-            ok= inst.Decode();
-        }
-        if(!ok) {
-            Fmt_.PrintError(std::format("failed to decode instruction: 0x{:08X}", hexVal));
-            return 1;
-        }
-        Fmt_.PrintInstruction(inst, std::format("0x{:08X}", hexVal));
-
-        return 0;
-
-    } catch(const std::exception &e) {
-        Fmt_.PrintError(e.what());
-        return 1;
-    } catch(...) {
-        Fmt_.PrintError("unknown error during instruction processing");
-        return 1;
-    }
-}
-
-int Commands::processInstruction(std::string_view assembly)
-{
-    try {
-        Instruction inst(assembly, Opts_.hasABI_);
-
-        if(!inst.GetTypePtr()) {
-            Fmt_.PrintError(std::format("unsupported instruction: {}", assembly));
-            return 1;
-        }
-
-        bool ok= false;
-        {
-            CoutSuppressor suppress;
-            ok= inst.Decode();
-        }
-        if(!ok) {
-            Fmt_.PrintError(std::format("failed to encode instruction: {}", assembly));
-            return 1;
-        }
-
-        Fmt_.PrintInstruction(inst, assembly);
-
-        return 0;
-
-    } catch(const std::exception &e) {
-        Fmt_.PrintError(e.what());
-        return 1;
-    } catch(...) {
-        Fmt_.PrintError("unknown error during instruction processing");
-        return 1;
-    }
+    return {};
 }
 
 void Commands::replBanner()
@@ -238,7 +204,9 @@ int Commands::replLoop()
                 if(arg.starts_with("--type ")) {
                     filter= stringToFormat(arg.substr(7));
                 }
-                List(filter);
+                if(auto r= List(filter); !r) {
+                    Fmt_.PrintError(std::string(r.error().Msg()));
+                }
                 continue;
             }
 
@@ -247,11 +215,17 @@ int Commands::replLoop()
         }
         // Auto-detect and process
         auto parsed= util::ClassifyInstInput(trimmed);
-        if(util::InputKind::HEX == parsed.kind_ || util::InputKind::BINARY == parsed.kind_) {
-            processInstruction(parsed.word_);
-        } else {
-            processInstruction(trimmed);
+        if(!parsed) {
+            Fmt_.PrintError(std::string(parsed.error().Msg()));
+            continue;
         }
+        util::Expected_u<void> result;
+        if(util::InputKind::HEX == parsed->kind_ || util::InputKind::BINARY == parsed->kind_) {
+            result= processInstruction(parsed->word_);
+        } else {
+            result= processInstruction(trimmed);
+        }
+        if(!result) Fmt_.PrintError(std::string(result.error().Msg()));
     }
     return 0;
 }

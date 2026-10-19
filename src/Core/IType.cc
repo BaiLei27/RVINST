@@ -1,6 +1,6 @@
 #include "Core/IType.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace {
 
@@ -50,14 +50,14 @@ constexpr uint8_t G_FENCE_IORW= 0xFU; // I|O|R|W
 
 } // namespace
 
-IType::IType(uint32_t inst, InstFormat format, bool hasSetABI)
-    : IBaseInstType(inst, format, hasSetABI)
+IType::IType(InstFormat format, uint32_t inst, bool hasSetABI)
+    : IBaseInstType(format, inst, hasSetABI)
 {
     init();
 }
 
-IType::IType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI)
-    : IBaseInstType(std::move(instAssembly), format, hasSetABI)
+IType::IType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI)
+    : IBaseInstType(format, std::move(instAssembly), hasSetABI)
 {
     init();
 }
@@ -120,7 +120,7 @@ void IType::mnemonicHelper()
     appendOperands({ " ", rd, ",", rs1, ",", immStr });
 }
 
-const InstLayout &IType::Assembly()
+util::Expected_u<const InstLayout *> IType::Assembly()
 {
     const auto &info  = LookupIdxAndInfo();
     const auto PAYLOAD= KEY_PAYLOAD(info.keyID_);
@@ -132,7 +132,7 @@ const InstLayout &IType::Assembly()
         Layout_.I.fct3  = 0;
         Layout_.I.imm0tB= PAYLOAD;
         mnemonicHelper();
-        return Layout_;
+        return &Layout_;
     }
 
     if(ItypeImmShape::FENCE == DetectIImmShape(OPC, PAYLOAD)) {
@@ -146,17 +146,19 @@ const InstLayout &IType::Assembly()
             const auto PRED= parseFenceSet(InstAssembly_.at(1));
             const auto SUCC= parseFenceSet(InstAssembly_.at(2));
             if(!PRED || !SUCC) {
-                throw std::invalid_argument("fence expects pred,succ (e.g. rw,rw or iorw,iorw)");
+                return util::Unexpected(
+                    util::Error::InvalidArg("fence expects pred,succ (e.g. rw,rw or iorw,iorw)"));
             }
             Layout_.I.imm0tB= PACK_FENCE_IMM(0, *PRED, *SUCC);
         } else if(1 == InstAssembly_.size()) {
             Layout_.I.imm0tB= PACK_FENCE_IMM(0, G_FENCE_IORW, G_FENCE_IORW); // bare `fence` => iorw,iorw
         } else {
-            throw std::invalid_argument("fence expects `fence` or `fence pred, succ`");
+            return util::Unexpected(
+                util::Error::InvalidArg("fence expects `fence` or `fence pred, succ`"));
         }
 
         mnemonicHelper();
-        return Layout_;
+        return &Layout_;
     }
 
     Layout_.I.fct3  = PAYLOAD;
@@ -176,7 +178,7 @@ const InstLayout &IType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto IType::calculateKeyID() -> KeyT

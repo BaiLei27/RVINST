@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -29,6 +30,14 @@ private:
 public:
     static std::unique_ptr<IBaseInstType> CreateType(uint32_t inst, bool hasSetABI= false);
     static std::unique_ptr<IBaseInstType> CreateType(std::vector<std::string> instAssembly, bool hasSetABI= false);
+
+    /**
+     * @brief Lightweight lookup shared by CreateType(): true when 'name' (case-insensitive)
+     * @param name
+     * @return  is a known mnemonic. No instruction object is constructed.
+     * @return false
+     */
+    [[nodiscard]] static bool IsKnownMnemonic(std::string_view name) noexcept;
 
 private:
     [[nodiscard]] static std::optional<std::pair<InstFormat, uint16_t>> matchInstName(std::string_view instName);

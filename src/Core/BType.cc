@@ -1,8 +1,6 @@
-#include <print>
-
 #include "Core/BType.hh"
 #include "ISA/Regs.hpp"
-#include "Util/InputParse.hpp"
+#include "Util/InputParse.hh"
 
 namespace {
 
@@ -24,14 +22,14 @@ void encodeBImm13(InstLayout &l, int32_t imm)
 
 } // namespace
 
-BType::BType(uint32_t inst, InstFormat format, bool hasSetABI)
-    : IBaseInstType(inst, format, hasSetABI)
+BType::BType(InstFormat format, uint32_t inst, bool hasSetABI)
+    : IBaseInstType(format, inst, hasSetABI)
 {
     init();
 }
 
-BType::BType(std::vector<std::string> instAssembly, InstFormat format, bool hasSetABI)
-    : IBaseInstType(std::move(instAssembly), format, hasSetABI)
+BType::BType(InstFormat format, std::vector<std::string> instAssembly, bool hasSetABI)
+    : IBaseInstType(format, std::move(instAssembly), hasSetABI)
 {
     init();
 }
@@ -65,7 +63,7 @@ void BType::mnemonicHelper()
     appendOperands({ " ", rs1, ",", rs2, ",", immStr });
 }
 
-const InstLayout &BType::Assembly()
+util::Expected_u<const InstLayout *> BType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
 
@@ -86,7 +84,7 @@ const InstLayout &BType::Assembly()
     }
 
     mnemonicHelper();
-    return Layout_;
+    return &Layout_;
 }
 
 auto BType::calculateKeyID() -> KeyT
