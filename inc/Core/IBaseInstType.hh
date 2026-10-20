@@ -66,7 +66,7 @@ public:
     [[nodiscard]] const std::vector<std::string> &Disassembly();
 
     // Unified keyID: (payload << 7) | (opcode & 0x7F). Defined below for Type table constexpr.
-    [[nodiscard]] static constexpr KeyT PACK_KEY(KeyT payload, uint8_t opc) noexcept { return payload << 7 | opc & 0x7FU; }
+    [[nodiscard]] static constexpr KeyT PACK_KEY(KeyT payload, uint8_t opc) noexcept { return payload << 7 | opc & 0x7F; }
 
     [[nodiscard]] static constexpr KeyT KEY_PAYLOAD(KeyT key) noexcept { return key >> 7; }
 

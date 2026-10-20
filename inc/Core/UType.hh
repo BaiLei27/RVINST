@@ -7,8 +7,8 @@ class UType: public IBaseInstType {
 public:
     constexpr static std::array<InstInfo, 2> G_INST_TABLE= {
         {
-         { .name_= "auipc", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::AUIPC), .opcode_= OpcMap::AUIPC },
-         { .name_= "lui", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::LUI), .opcode_= OpcMap::LUI },
+         { .name_= "auipc", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::AUIPC), .opcode_= OpcMap::AUIPC },
+         { .name_= "lui", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::LUI), .opcode_= OpcMap::LUI },
          }
     };
 
@@ -23,5 +23,5 @@ private:
     void mnemonicHelper() override;
     [[nodiscard]] const BiLookupTable<KeyT> *buildTable() override;
 
-    [[nodiscard]] static constexpr KeyT OP_K(uint8_t opc) noexcept { return PACK_KEY(0, opc); }
+    [[nodiscard]] static constexpr KeyT OP_K(uint8_t opc) noexcept { return PACK_KEY(0x00, opc); }
 };

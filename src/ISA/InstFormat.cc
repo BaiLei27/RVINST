@@ -157,7 +157,11 @@ std::span<const InstField> GetIInstFields(ItypeImmShape shape) noexcept
 
 ItypeImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept
 {
-    if(OpcMap::MISC_MEM == opc) return ItypeImmShape::FENCE;
-    if(OpcMap::OP_IMM == opc && (1 == f3 || 5 == f3)) return ItypeImmShape::SHIFT;
+    // MISC_MEM: f3=0/1 fence*; f3=2 is RV128I LQ (I-imm), not fence layout
+    if(OpcMap::MISC_MEM == opc && f3 <= 1) return ItypeImmShape::FENCE;
+    if((OpcMap::OP_IMM == opc || OpcMap::OP_IMM_32 == opc || OpcMap::OP_IMM_64 == opc)
+       && (1 == f3 || 5 == f3)) {
+        return ItypeImmShape::SHIFT;
+    }
     return ItypeImmShape::IMM12;
 }

@@ -64,8 +64,8 @@ std::string toLower(std::string_view s)
 
 std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(uint32_t inst, bool hasSetABI)
 {
-    const uint16_t OPCODE= inst & 0x7F;
-    auto it              = G_OPCODE_2_FORMAT.find(OPCODE);
+    const auto OPCODE= static_cast<OpcMap>(inst & 0x7FU);
+    auto it          = G_OPCODE_2_FORMAT.find(OPCODE);
     if(G_OPCODE_2_FORMAT.end() == it) return nullptr;
     return makeByFormat(it->second, inst, hasSetABI);
 }

@@ -5,32 +5,49 @@
 
 class IType: public IBaseInstType {
 public:
-    constexpr static std::array<InstInfo, 20> G_INST_TABLE= {
+    // OP_IMM* shift: payload = (immFunct << 3) | f3, immFunct is 0 or 0x20 (srai bit)
+    // MISC_MEM: fence/fence.i use f3; fence.tso/pause use full imm12; lq uses f3=2
+    constexpr static std::array<InstInfo, 33> G_INST_TABLE= {
         {
-         { .name_= "lb", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
-         { .name_= "lh", .XLEN_= "RV32I", .keyID_= PACK_KEY(1, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
-         { .name_= "lw", .XLEN_= "RV32I", .keyID_= PACK_KEY(2, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
-         { .name_= "ld", .XLEN_= "RV32I", .keyID_= PACK_KEY(3, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
-         { .name_= "lbu", .XLEN_= "RV32I", .keyID_= PACK_KEY(4, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
-         { .name_= "lhu", .XLEN_= "RV32I", .keyID_= PACK_KEY(5, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+         { .name_= "lb", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+         { .name_= "lbu", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x04, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+         { .name_= "ld", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x03, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+         { .name_= "ldu", .XLEN_= "RV128I", .keyID_= PACK_KEY(0x07, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+         { .name_= "lh", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x01, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+         { .name_= "lhu", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x05, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+         { .name_= "lw", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x02, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+         { .name_= "lwu", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x06, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
 
-         { .name_= "jalr", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::JALR), .opcode_= OpcMap::JALR },
+         { .name_= "fence", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },
+         { .name_= "fence.i", .XLEN_= "Zifencei", .keyID_= PACK_KEY(0x01, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },
+         { .name_= "fence.tso", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x833, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },
+         { .name_= "lq", .XLEN_= "RV128I", .keyID_= PACK_KEY(0x02, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },
+         { .name_= "pause", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x10, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },
 
-         { .name_= "addi", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
-         { .name_= "slli", .XLEN_= "RV32I", .keyID_= PACK_KEY(1, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
-         { .name_= "slti", .XLEN_= "RV32I", .keyID_= PACK_KEY(2, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
-         { .name_= "sltiu", .XLEN_= "RV32I", .keyID_= PACK_KEY(3, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
-         { .name_= "xori", .XLEN_= "RV32I", .keyID_= PACK_KEY(4, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
-         { .name_= "srli", .XLEN_= "RV32I", .keyID_= PACK_KEY(5, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
-         { .name_= "srai", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x20 << 3 | 5, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
-         { .name_= "ori", .XLEN_= "RV32I", .keyID_= PACK_KEY(6, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
-         { .name_= "andi", .XLEN_= "RV32I", .keyID_= PACK_KEY(7, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "addi", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "andi", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x07, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "ori", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x06, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "slli", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00U << 3 | 0x01, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "slti", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x02, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "sltiu", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x03, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "srai", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x20U << 3 | 0x05, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "srli", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00U << 3 | 0x05, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
+         { .name_= "xori", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x04, OpcMap::OP_IMM), .opcode_= OpcMap::OP_IMM },
 
-         { .name_= "fence", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },
-         { .name_= "fence.i", .XLEN_= "Zifencei", .keyID_= PACK_KEY(1, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },
+         { .name_= "addiw", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x00, OpcMap::OP_IMM_32), .opcode_= OpcMap::OP_IMM_32 },
+         { .name_= "slliw", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x00U << 3 | 0x01, OpcMap::OP_IMM_32), .opcode_= OpcMap::OP_IMM_32 },
+         { .name_= "sraiw", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x20U << 3 | 0x05, OpcMap::OP_IMM_32), .opcode_= OpcMap::OP_IMM_32 },
+         { .name_= "srliw", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x00U << 3 | 0x05, OpcMap::OP_IMM_32), .opcode_= OpcMap::OP_IMM_32 },
 
-         { .name_= "ecall", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
-         { .name_= "ebreak", .XLEN_= "RV32I", .keyID_= PACK_KEY(1, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
+         { .name_= "addid", .XLEN_= "RV128I", .keyID_= PACK_KEY(0x00, OpcMap::OP_IMM_64), .opcode_= OpcMap::OP_IMM_64 },
+         { .name_= "sllid", .XLEN_= "RV128I", .keyID_= PACK_KEY(0x00U << 3 | 0x01, OpcMap::OP_IMM_64), .opcode_= OpcMap::OP_IMM_64 },
+         { .name_= "sraid", .XLEN_= "RV128I", .keyID_= PACK_KEY(0x20U << 3 | 0x05, OpcMap::OP_IMM_64), .opcode_= OpcMap::OP_IMM_64 },
+         { .name_= "srlid", .XLEN_= "RV128I", .keyID_= PACK_KEY(0x00U << 3 | 0x05, OpcMap::OP_IMM_64), .opcode_= OpcMap::OP_IMM_64 },
+
+         { .name_= "jalr", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::JALR), .opcode_= OpcMap::JALR },
+
+         { .name_= "ebreak", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x01, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
+         { .name_= "ecall", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
          }
     };
 
