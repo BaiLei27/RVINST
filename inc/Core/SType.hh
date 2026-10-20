@@ -5,12 +5,13 @@
 
 class SType: public IBaseInstType {
 public:
-    constexpr static std::array<InstInfo, 4> G_INST_TABLE= {
+    constexpr static std::array<InstInfo, 5> G_INST_TABLE= {
         {
-         { .name_= "sb", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::STORE), .opcode_= OpcMap::STORE },
-         { .name_= "sh", .XLEN_= "RV32I", .keyID_= PACK_KEY(1, OpcMap::STORE), .opcode_= OpcMap::STORE },
-         { .name_= "sw", .XLEN_= "RV32I", .keyID_= PACK_KEY(2, OpcMap::STORE), .opcode_= OpcMap::STORE },
-         { .name_= "sd", .XLEN_= "RV64I", .keyID_= PACK_KEY(3, OpcMap::STORE), .opcode_= OpcMap::STORE },
+         { .name_= "sb", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::STORE), .opcode_= OpcMap::STORE },
+         { .name_= "sh", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x01, OpcMap::STORE), .opcode_= OpcMap::STORE },
+         { .name_= "sw", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x02, OpcMap::STORE), .opcode_= OpcMap::STORE },
+         { .name_= "sd", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x03, OpcMap::STORE), .opcode_= OpcMap::STORE },
+         { .name_= "sq", .XLEN_= "RV128I", .keyID_= PACK_KEY(0x04, OpcMap::STORE), .opcode_= OpcMap::STORE },
          }
     };
 

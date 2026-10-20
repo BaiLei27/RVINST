@@ -42,7 +42,7 @@ enum OpcMap : uint8_t { // RISC-V base opcode map, inst[1:0] === 0b11
     NMADD    = 0x4F, // 10_011_11
     OP_FP    = 0x53, // 10_100_11
     OP_V     = 0x57, // 10_101_11
-    CUSTOM_2 = 0x5B, // 10_110_11
+    OP_IMM_64= 0x5B, // 10_110_11 (RV128I draft; was custom-2)
     RESERVE_3= 0x5F, // 10_111_11
 
     // inst[6:5] = 11
@@ -52,7 +52,7 @@ enum OpcMap : uint8_t { // RISC-V base opcode map, inst[1:0] === 0b11
     JAL      = 0x6F, // 11_011_11
     SYSTEM   = 0x73, // 11_100_11
     OP_VE    = 0x77, // 11_101_11
-    CUSTOM_3 = 0x7B, // 11_110_11
+    OP_64    = 0x7B, // 11_110_11 (RV128I draft; was custom-3)
     RESERVE_5= 0x7F, // 11_111_11
 };
 enum class ItypeImmShape : uint8_t {
