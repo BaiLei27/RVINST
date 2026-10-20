@@ -20,17 +20,21 @@ private:
     const static inline std::flat_map<uint16_t, InstFormat> G_OPCODE_2_FORMAT {
         std::sorted_unique, // data is already 'sorted' and has 'no duplicate' elements, skip the internal sorting and deduplication steps.
         {
-            { 0x03, InstFormat::I }, // I-type: lb/lh/lw/...
-            { 0x0F, InstFormat::I }, // I-type: fence / fence.i
+            { 0x03, InstFormat::I }, // I-type: lb/lh/lw/ld/lwu/ldu/...
+            { 0x0F, InstFormat::I }, // I-type: fence* / lq (RV128I)
             { 0x13, InstFormat::I }, // I-type: addi/slli/...
             { 0x17, InstFormat::U }, // U-type: auipc
-            { 0x23, InstFormat::S }, // S-type: sw/sb etc.
-            { 0x33, InstFormat::R }, // R-type: add/sub/sll/slt etc.
+            { 0x1B, InstFormat::I }, // I-type: addiw/slliw/... / OP-IMM-32 (RV64I)
+            { 0x23, InstFormat::S }, // S-type: sb/sh/sw/sd/sq
+            { 0x33, InstFormat::R }, // R-type: add/sub/... / OP
             { 0x37, InstFormat::U }, // U-type: lui
+            { 0x3B, InstFormat::R }, // R-type: addw/subw/... / OP-32 (RV64I)
+            { 0x5B, InstFormat::I }, // I-type: addid/sllid/... / OP-IMM-64 (RV128I)
             { 0x63, InstFormat::B }, // B-type: beq/bne etc.
             { 0x67, InstFormat::I }, // I-type: jalr
             { 0x6F, InstFormat::J }, // J-type: jal
             { 0x73, InstFormat::I }, // I-type: ecall / ebreak
+            { 0x7B, InstFormat::R }, // R-type: addd/subd/... / OP-64 (RV128I)
 
             // clang-format on
         }
