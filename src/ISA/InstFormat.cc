@@ -1,6 +1,4 @@
 #include <array>
-#include <span>
-#include <string_view>
 
 #include "ISA/InstFormat.hh"
 

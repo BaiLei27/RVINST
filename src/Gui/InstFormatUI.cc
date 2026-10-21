@@ -9,14 +9,14 @@
 
 namespace {
 
-[[nodiscard]] bool isImmAsmToken(std::string_view token) noexcept
+bool isImmAsmToken(std::string_view token) noexcept
 {
     // Covers "imm", "imm7" (shift) and "shamt"; never "immediate"-style prose.
     return token == "shamt" || token.starts_with("imm");
 }
 
 /// Core always emits decimal immediates; Gui optionally shows them as hex.
-[[nodiscard]] std::string formatAsmImm(std::string_view text, bool hex)
+std::string formatAsmImm(std::string_view text, bool hex)
 {
     if(!hex || text.empty()) return std::string(text);
 

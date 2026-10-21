@@ -40,7 +40,7 @@ public:
     void PrintError(std::string_view msg);
     void PrintHelp();
 
-    [[nodiscard]] OutputMode Mode() const noexcept;
+    [[nodiscard]] OutputMode GetMode() const noexcept;
 
 private:
     [[nodiscard]] std::string paint(std::string_view text, std::string_view code) const;

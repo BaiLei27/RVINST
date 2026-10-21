@@ -6,7 +6,7 @@ namespace {
 
 constexpr uint8_t G_FENCE_IORW= 0xFU; // I|O|R|W
 
-[[nodiscard]] std::string formatFenceSet(uint16_t mask)
+std::string formatFenceSet(uint16_t mask)
 {
     std::string s;
     // NOLINTBEGIN
@@ -20,7 +20,7 @@ constexpr uint8_t G_FENCE_IORW= 0xFU; // I|O|R|W
     return s.empty() ? "0" : s;
 }
 
-[[nodiscard]] std::optional<uint16_t> parseFenceSet(std::string_view tok)
+std::optional<uint16_t> parseFenceSet(std::string_view tok)
 {
     if(tok.empty()) return std::nullopt;
 
@@ -43,7 +43,7 @@ constexpr uint8_t G_FENCE_IORW= 0xFU; // I|O|R|W
     return mask;
 }
 
-[[nodiscard]] constexpr uint16_t PACK_FENCE_IMM(uint16_t fm, uint16_t pred, uint16_t succ) noexcept
+constexpr uint16_t PACK_FENCE_IMM(uint16_t fm, uint16_t pred, uint16_t succ) noexcept
 {
     return (fm & 0xFU) << 8 | (pred & 0xFU) << 4 | (succ & 0xFU);
 }

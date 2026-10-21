@@ -85,7 +85,7 @@ OutputMode detectOutputMode(bool forceJson)
 
 OutputFormatter::OutputFormatter(OutputMode mode): Mode_(mode) { }
 
-OutputMode OutputFormatter::Mode() const noexcept { return Mode_; }
+OutputMode OutputFormatter::GetMode() const noexcept { return Mode_; }
 
 std::string OutputFormatter::paint(std::string_view text, std::string_view code) const
 {

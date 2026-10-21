@@ -2,7 +2,6 @@
 
 #include "Core/Instruction.hh"
 #include "Core/InstTypeFactory.hh"
-#include "ISA/InstFormat.hh"
 
 Instruction::Instruction(uint32_t inst, bool hasSetABI)
     : Type_(InstTypeFactory::CreateType(inst, hasSetABI)),

@@ -51,7 +51,7 @@ void registerTable(InstTypeFactory::name2FormatOpcode_u &m,
     }
 }
 
-[[nodiscard]] std::string toLower(std::string_view s)
+std::string toLower(std::string_view s)
 {
     std::string lower(s);
     std::ranges::transform(lower,

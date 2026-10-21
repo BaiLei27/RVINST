@@ -30,7 +30,7 @@ struct InstCase {
     std::string status_ { "impl" }; // impl | todo
 };
 
-[[nodiscard]] std::string toUpper(std::string s)
+std::string toUpper(std::string s)
 {
     for(char &c: s) {
         if(c >= 'a' && c <= 'z') c= static_cast<char>(c - 'a' + 'A');
@@ -38,7 +38,7 @@ struct InstCase {
     return s;
 }
 
-[[nodiscard]] std::string jsonField(std::string_view json, std::string_view key)
+std::string jsonField(std::string_view json, std::string_view key)
 {
     const auto NEEDLE= std::format("\"{}\"", key);
     auto pos         = json.find(NEEDLE);
@@ -54,7 +54,7 @@ struct InstCase {
     return std::string(json.substr(pos, END - pos));
 }
 
-[[nodiscard]] std::string quoteArg(std::string_view s)
+std::string quoteArg(std::string_view s)
 {
     std::string out;
     out.reserve(s.size() + 2);
@@ -72,7 +72,7 @@ struct InstCase {
 
 #ifdef _WIN32
 
-[[nodiscard]] std::string runProcess(const std::filesystem::path &exe,
+std::string runProcess(const std::filesystem::path &exe,
                                      std::string_view kind,
                                      std::string_view input)
 {
@@ -132,7 +132,7 @@ struct InstCase {
 
 #else
 
-[[nodiscard]] std::string runProcess(const std::filesystem::path &exe,
+std::string runProcess(const std::filesystem::path &exe,
                                      std::string_view kind,
                                      std::string_view input)
 {
@@ -161,7 +161,7 @@ public:
         : CliPath_(std::move(cliPath)),
           CasesPath_(std::move(casesPath)) { }
 
-    [[nodiscard]] int Run()
+    int Run()
     {
         if(!std::filesystem::exists(CliPath_)) {
             std::println(stderr, "CLI not found: {}", CliPath_.string());
@@ -204,7 +204,7 @@ private:
     size_t Failed_ {};
     std::string FailedLabels_;
 
-    [[nodiscard]] bool loadCases()
+    bool loadCases()
     {
         std::ifstream in(CasesPath_);
         if(!in) {
