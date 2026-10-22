@@ -69,6 +69,15 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${projectIncDir}/Gui/InstFormatUI.hh
     ${projectScrDir}/InstFormatUI.cc
 
+    ${projectIncDir}/Gui/AboutWindow.hh
+    ${projectScrDir}/AboutWindow.cc
+
+    ${projectIncDir}/Gui/SettingsPanel.hh
+    ${projectScrDir}/SettingsPanel.cc
+
+    ${projectIncDir}/Gui/FileLoader.hh
+    ${projectScrDir}/FileLoader.cc
+
     ${projectIncDir}/Gui/RISCVInstWindow.hh
     ${projectScrDir}/RISCVInstWindow.cc
 )

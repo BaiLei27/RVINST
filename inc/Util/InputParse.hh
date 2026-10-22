@@ -4,6 +4,7 @@
 #include <limits>
 #include <type_traits>
 
+#include "Core/Instruction.hh"
 #include "Util/ErrorHandle.hh"
 
 namespace util {
@@ -23,11 +24,15 @@ struct ParsedInstInput {
 [[nodiscard]] std::string_view TRIM_ASCII_WS(std::string_view s) noexcept;
 [[nodiscard]] constexpr std::string_view STRIP_INT_PREFIX(std::string_view s) noexcept;
 
-// True when s starts with an explicit numeric prefix (0x/0X/0b/0B)
+/// True when s starts with an explicit numeric prefix (0x/0X/0b/0B)
 [[nodiscard]] bool HasIntPrefix(std::string_view s) noexcept;
 [[nodiscard]] bool LooksLikeHex(std::string_view s);
 [[nodiscard]] bool LooksLikeBinary(std::string_view s);
 [[nodiscard]] Expected_u<ParsedInstInput> ClassifyInstInput(std::string_view input);
+
+/// Build and decode an instruction from an already-classified trimmed line.
+[[nodiscard]] Expected_u<std::unique_ptr<Instruction>>
+    MakeDecodedInstruction(std::string_view trimmed, const ParsedInstInput &parsed, bool hasSetABI);
 
 /**
  * @brief Parse a C/C++ integer literal (decimal, 0x hex, 0b binary, leading-0 octal, optional +/- sign)

@@ -61,3 +61,30 @@ add_custom_target(test_inputfile
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "ctest: inputfile_suite"
 )
+
+add_executable(tests_inputhist
+    InputHistoryMgr_test.cc
+)
+set_target_properties(tests_inputhist PROPERTIES
+    SUFFIX ".exe"
+)
+target_link_libraries(tests_inputhist PRIVATE
+    ${backend}
+)
+target_include_directories(tests_inputhist PRIVATE
+    ${CMAKE_SOURCE_DIR}/inc
+)
+add_test(
+    NAME inputhist_suite
+    COMMAND tests_inputhist
+)
+set_tests_properties(inputhist_suite PROPERTIES
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:${cli_target}>
+    TIMEOUT 30
+)
+add_custom_target(test_inputhist
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -R inputhist_suite
+    DEPENDS tests_inputhist
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "ctest: inputhist_suite"
+)

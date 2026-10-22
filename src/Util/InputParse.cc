@@ -1,6 +1,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <format>
 
 #include "Core/InstTypeFactory.hh"
 #include "Util/InputParse.hh"
@@ -15,7 +16,7 @@ bool HasIntPrefix(std::string_view s) noexcept
         || s.starts_with("0B");
 }
 
-[[nodiscard]]  std::string_view TRIM_ASCII_WS(std::string_view s) noexcept
+std::string_view TRIM_ASCII_WS(std::string_view s) noexcept
 {
     const auto START= s.find_first_not_of(" \t\r\n");
     if(std::string_view::npos == START) return {};
@@ -23,7 +24,7 @@ bool HasIntPrefix(std::string_view s) noexcept
     return s.substr(START, END - START + 1);
 }
 
-[[nodiscard]] constexpr std::string_view STRIP_INT_PREFIX(std::string_view s) noexcept
+constexpr std::string_view STRIP_INT_PREFIX(std::string_view s) noexcept
 {
     if(HasIntPrefix(s)) return s.substr(2);
 
@@ -88,6 +89,26 @@ Expected_u<ParsedInstInput> ClassifyInstInput(std::string_view input)
         r.kind_= InputKind::ASSEMBLY;
     }
     return r;
+}
+
+Expected_u<std::unique_ptr<Instruction>>
+    MakeDecodedInstruction(std::string_view trimmed, const ParsedInstInput &parsed, bool hasSetABI)
+{
+    std::unique_ptr<Instruction> inst;
+    if(InputKind::ASSEMBLY == parsed.kind_) {
+        inst= std::make_unique<Instruction>(trimmed, hasSetABI);
+    } else {
+        inst= std::make_unique<Instruction>(parsed.word_, hasSetABI);
+    }
+
+    if(!inst->GetTypePtr()) {
+        return Unexpected(Error::Unsupported(std::format("unsupported instruction: {}", trimmed)));
+    }
+
+    if(auto decoded= inst->Decode(); !decoded) {
+        return Unexpected(std::move(decoded.error()));
+    }
+    return inst;
 }
 
 } // namespace util

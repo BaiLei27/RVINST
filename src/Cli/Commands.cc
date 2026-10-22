@@ -16,10 +16,7 @@
     #include <unistd.h>  // isatty
 #endif
 
-#include "Core/Instruction.hh"
-#include "ISA/InstFormat.hh"
 #include "ISA/Regs.hpp"
-#include "Util/FileIo.hh"
 #include "Util/InputParse.hh"
 #include "Cli/Commands.hh"
 
@@ -28,10 +25,9 @@ namespace cli {
 Commands::Commands(const GlobalOptions &opts, bool saveHistory)
     : Opts_(opts), Fmt_(opts.outputMode_), SaveHistory_(saveHistory) { }
 
-template <InstInput Input>
-util::Expected_u<void> Commands::processInstruction(Input input)
+util::Expected_u<void> Commands::processInstruction(InstInput auto input)
 {
-    using Raw_u           = std::remove_cvref_t<Input>;
+    using Raw_u           = std::remove_cvref_t<decltype(input)>;
     constexpr bool IS_WORD= std::same_as<Raw_u, uint32_t>;
 
     Instruction inst(input, Opts_.hasABI_);
@@ -156,9 +152,9 @@ void Commands::replHistory()
     }
 }
 
-util::Expected_u<void> Commands::processFileLines(std::string_view path)
+util::Expected_u<void> Commands::ProcessFile(std::string_view path)
 {
-    return FileMgr_.ForEachLine(path, [this](std::string_view raw) {
+    return util::FileIo::ForEachLine(path, [this](std::string_view raw) {
         const auto TRIMMED= util::TRIM_ASCII_WS(raw);
         if(TRIMMED.empty()) return;
 
@@ -168,27 +164,13 @@ util::Expected_u<void> Commands::processFileLines(std::string_view path)
             Fmt_.PrintError(std::string(parsed.error().Msg()));
             return;
         }
-        util::Expected_u<void> result;
-        if(util::InputKind::HEX == parsed->kind_ || util::InputKind::BINARY == parsed->kind_) {
-            result= processInstruction(parsed->word_);
-        } else {
-            result= processInstruction(TRIMMED);
+        auto decoded= util::MakeDecodedInstruction(TRIMMED, *parsed, Opts_.hasABI_);
+        if(!decoded) {
+            Fmt_.PrintError(std::string(decoded.error().Msg()));
+            return;
         }
-        if(!result) Fmt_.PrintError(std::string(result.error().Msg()));
+        Fmt_.PrintInstruction(**decoded, TRIMMED);
     });
-}
-
-void Commands::replFile(std::string_view path)
-{
-    auto result= processFileLines(path);
-    if(!result) {
-        Fmt_.PrintError(std::string(result.error().Msg()));
-    }
-}
-
-util::Expected_u<void> Commands::ProcessFile(std::string_view path)
-{
-    return processFileLines(path);
 }
 
 namespace {
@@ -289,24 +271,24 @@ namespace {
     public:
         ScopedRawMode()
         {
-            if(0 != tcgetattr(STDIN_FILENO, &saved_)) return;
-            termios raw= saved_;
-            raw.c_lflag&= ~(tcflag_t)(ICANON | ECHO);
+            if(0 != tcgetattr(STDIN_FILENO, &Saved_)) return;
+            termios raw= Saved_;
+            raw.c_lflag&= ~static_cast<tcflag_t>(ICANON | ECHO);
             tcsetattr(STDIN_FILENO, TCSANOW, &raw);
-            active_= true;
+            Active_= true;
         }
 
         ~ScopedRawMode()
         {
-            if(active_) tcsetattr(STDIN_FILENO, TCSANOW, &saved_);
+            if(Active_) tcsetattr(STDIN_FILENO, TCSANOW, &Saved_);
         }
 
         ScopedRawMode(const ScopedRawMode &)            = delete;
         ScopedRawMode &operator= (const ScopedRawMode &)= delete;
 
     private:
-        termios saved_ {};
-        bool active_ { false };
+        termios Saved_ {};
+        bool Active_ { false };
     };
 
     bool readLinePlatform(std::string &line, util::InputHistoryMgr &history)
@@ -422,7 +404,9 @@ int Commands::replLoop()
                     std::println("  usage: :file <path>");
                     continue;
                 }
-                replFile(arg);
+                if(auto result= ProcessFile(arg); !result) {
+                    Fmt_.PrintError(std::string(result.error().Msg()));
+                }
                 continue;
             }
             if(verb == "json") {
@@ -483,14 +467,14 @@ int Commands::Repl()
 
     replBanner();
     replHelp();
-    const int rc= replLoop();
+    const int RC= replLoop();
 
     if(SaveHistory_) {
         if(auto r= FileMgr_.SaveHistory(History_); !r) {
             std::println("  (failed to save history: {})", r.error().Msg());
         }
     }
-    return rc;
+    return RC;
 }
 
 } // namespace cli

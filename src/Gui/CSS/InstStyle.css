@@ -525,6 +525,10 @@ label.manual-link,
         0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
+.settings-content {
+    min-width: 200px;
+}
+
 .settings-row {
     min-height: 40px;
 }
@@ -647,8 +651,18 @@ switch.abi-switch:checked trough,
     font-family: monospace;
 }
 
-.version-info-link {
+label.version-info-link,
+.version-info-link,
+.version-info-link link,
+.version-info-link * {
     color: @accent_blue;
+    font-family: monospace;
+    font-weight: 600;
+}
+
+.version-info-link:hover,
+.version-info-link:hover * {
+    color: @accent_blue_hover;
 }
 
 .about-close-button {
