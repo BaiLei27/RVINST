@@ -18,6 +18,51 @@ constexpr std::array<InstField, 6> G_R_FIELDS {
      }
 };
 
+constexpr std::array<InstField, 8> G_R_AMO_FIELDS {
+    {
+     { .name_= "funct5"sv, .startBit_= 27, .endBit_= 31, .desc_= "funct5"sv },
+     { .name_= "aq"sv, .startBit_= 26, .endBit_= 26, .desc_= "aq"sv },
+     { .name_= "rl"sv, .startBit_= 25, .endBit_= 25, .desc_= "rl"sv },
+     { .name_= "rs2"sv, .startBit_= 20, .endBit_= 24, .desc_= "rs2"sv },
+     { .name_= "rs1"sv, .startBit_= 15, .endBit_= 19, .desc_= "rs1"sv },
+     { .name_= "funct3"sv, .startBit_= 12, .endBit_= 14, .desc_= "funct3"sv },
+     { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 6, .desc_= "opcode"sv },
+     }
+};
+
+constexpr std::array<InstField, 7> G_R_FP_FIELDS {
+    {
+     { .name_= "funct5"sv, .startBit_= 27, .endBit_= 31, .desc_= "funct5"sv },
+     { .name_= "fmt"sv, .startBit_= 25, .endBit_= 26, .desc_= "fmt"sv },
+     { .name_= "rs2"sv, .startBit_= 20, .endBit_= 24, .desc_= "rs2"sv },
+     { .name_= "rs1"sv, .startBit_= 15, .endBit_= 19, .desc_= "rs1"sv },
+     { .name_= "rm"sv, .startBit_= 12, .endBit_= 14, .desc_= "rm / funct3"sv },
+     { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 6, .desc_= "opcode"sv },
+     }
+};
+
+constexpr std::array<InstField, 7> G_R_R4_FIELDS {
+    {
+     { .name_= "rs3"sv, .startBit_= 27, .endBit_= 31, .desc_= "rs3"sv },
+     { .name_= "fmt"sv, .startBit_= 25, .endBit_= 26, .desc_= "fmt"sv },
+     { .name_= "rs2"sv, .startBit_= 20, .endBit_= 24, .desc_= "rs2"sv },
+     { .name_= "rs1"sv, .startBit_= 15, .endBit_= 19, .desc_= "rs1"sv },
+     { .name_= "rm"sv, .startBit_= 12, .endBit_= 14, .desc_= "rm"sv },
+     { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 6, .desc_= "opcode"sv },
+     }
+};
+
+// Indexed by RtypeShape (BASE=0 .. R4=3).
+constexpr std::array<std::span<const InstField>, 4> G_R_SHAPE_FIELDS {
+    std::span<const InstField>(G_R_FIELDS),
+    std::span<const InstField>(G_R_AMO_FIELDS),
+    std::span<const InstField>(G_R_FP_FIELDS),
+    std::span<const InstField>(G_R_R4_FIELDS),
+};
+
 constexpr std::array<InstField, 5> G_I_FIELDS {
     {
      { .name_= "imm11_0"sv, .startBit_= 20, .endBit_= 31, .desc_= "imm[11:0]"sv },
@@ -45,6 +90,16 @@ constexpr std::array<InstField, 7> G_I_FENCE_FIELDS {
      { .name_= "pred"sv, .startBit_= 24, .endBit_= 27, .desc_= "pred"sv },
      { .name_= "succ"sv, .startBit_= 20, .endBit_= 23, .desc_= "succ"sv },
      { .name_= "rs1"sv, .startBit_= 15, .endBit_= 19, .desc_= "rs1"sv },
+     { .name_= "funct3"sv, .startBit_= 12, .endBit_= 14, .desc_= "funct3"sv },
+     { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 6, .desc_= "opcode"sv },
+     }
+};
+
+constexpr std::array<InstField, 5> G_I_CSR_FIELDS {
+    {
+     { .name_= "csr"sv, .startBit_= 20, .endBit_= 31, .desc_= "csr"sv },
+     { .name_= "rs1"sv, .startBit_= 15, .endBit_= 19, .desc_= "rs1 / uimm"sv },
      { .name_= "funct3"sv, .startBit_= 12, .endBit_= 14, .desc_= "funct3"sv },
      { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd"sv },
      { .name_= "opcode"sv, .startBit_= 0, .endBit_= 6, .desc_= "opcode"sv },
@@ -83,6 +138,13 @@ constexpr std::array<InstField, 3> G_U_FIELDS {
      }
 };
 
+constexpr std::array<InstField, 2> G_C_FIELDS {
+    {
+     { .name_= "inst15_2"sv, .startBit_= 2, .endBit_= 15, .desc_= "inst[15:2]"sv },
+     { .name_= "quadrant"sv, .startBit_= 0, .endBit_= 1, .desc_= "inst[1:0]"sv },
+     }
+};
+
 constexpr std::array<InstField, 6> G_J_FIELDS {
     {
      { .name_= "imm20"sv, .startBit_= 31, .endBit_= 31, .desc_= "imm[20]"sv },
@@ -94,21 +156,23 @@ constexpr std::array<InstField, 6> G_J_FIELDS {
      }
 };
 
-// Indexed by InstFormat (R=0 .. J=5).
-constexpr std::array<std::span<const InstField>, 6> G_FMT_FIELDS {
+// Indexed by InstFormat (R=0 .. C=6).
+constexpr std::array<std::span<const InstField>, 7> G_FMT_FIELDS {
     std::span<const InstField>(G_R_FIELDS),
     std::span<const InstField>(G_I_FIELDS),
     std::span<const InstField>(G_S_FIELDS),
     std::span<const InstField>(G_B_FIELDS),
     std::span<const InstField>(G_U_FIELDS),
     std::span<const InstField>(G_J_FIELDS),
+    std::span<const InstField>(G_C_FIELDS),
 };
 
-// Indexed by ItypeImmShape (IMM12=0, SHIFT=1, FENCE=2).
-constexpr std::array<std::span<const InstField>, 3> G_I_SHAPE_FIELDS {
+// Indexed by ItypeImmShape (IMM12=0, SHIFT=1, FENCE=2, CSR=3).
+constexpr std::array<std::span<const InstField>, 4> G_I_SHAPE_FIELDS {
     std::span<const InstField>(G_I_FIELDS),
     std::span<const InstField>(G_I_SHIFT_FIELDS),
     std::span<const InstField>(G_I_FENCE_FIELDS),
+    std::span<const InstField>(G_I_CSR_FIELDS),
 };
 
 } // namespace
@@ -135,6 +199,7 @@ std::string_view InstFormatName(InstFormat fmt) noexcept
     case InstFormat::B: return "B-Type";
     case InstFormat::U: return "U-Type";
     case InstFormat::J: return "J-Type";
+    case InstFormat::C: return "C-Type";
     default:            return "UNKNOW";
     }
 }
@@ -159,9 +224,29 @@ ItypeImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept
 {
     // MISC_MEM: f3=0/1 fence*; f3=2 is RV128I LQ (I-imm), not fence layout
     if(OpcMap::MISC_MEM == opc && f3 <= 1) return ItypeImmShape::FENCE;
+    // SYSTEM: f3=0 ecall/ebreak (imm12); f3≠0 Zicsr (csr address in [31:20])
+    if(OpcMap::SYSTEM == opc && 0 != f3) return ItypeImmShape::CSR;
     if((OpcMap::OP_IMM == opc || OpcMap::OP_IMM_32 == opc || OpcMap::OP_IMM_64 == opc)
        && (1 == f3 || 5 == f3)) {
         return ItypeImmShape::SHIFT;
     }
     return ItypeImmShape::IMM12;
+}
+
+std::span<const InstField> GetRInstFields(RtypeShape shape) noexcept
+{
+    const auto IDX= static_cast<size_t>(shape);
+    if(IDX >= G_R_SHAPE_FIELDS.size()) return {};
+
+    return G_R_SHAPE_FIELDS[IDX];
+}
+
+RtypeShape DetectRShape(uint32_t opc) noexcept
+{
+    if(OpcMap::AMO == opc) return RtypeShape::AMO;
+    if(OpcMap::OP_FP == opc) return RtypeShape::FP;
+    if(OpcMap::MADD == opc || OpcMap::MSUB == opc || OpcMap::NMSUB == opc || OpcMap::NMADD == opc) {
+        return RtypeShape::R4;
+    }
+    return RtypeShape::BASE;
 }

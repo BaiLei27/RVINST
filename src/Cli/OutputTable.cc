@@ -51,6 +51,9 @@ namespace {
         if(InstFormat::I == FMT) {
             const auto &l= pType->GetInstLayout();
             meta         = GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
+        } else if(InstFormat::R == FMT) {
+            const auto &l= pType->GetInstLayout();
+            meta         = GetRInstFields(DetectRShape(l.R.opc));
         }
         return { .bits_= std::span<const uint32_t>(pType->GetInstBitsField()), .meta_= meta };
     }
@@ -169,6 +172,8 @@ void OutputFormatter::printFieldTable(const Instruction &inst)
             detail= std::string(isa::LookupRegName(VAL, false));
             detail+= " / ";
             detail+= std::string(isa::LookupRegName(VAL, true));
+        } else if(fm.name_ == "csr") {
+            if(auto n= isa::LookupCSRName(static_cast<uint16_t>(VAL))) detail= std::string(*n);
         }
 
         std::format_to(out,
@@ -308,7 +313,7 @@ void OutputFormatter::PrintRegister(uint16_t idx)
                  std::string(abiName));
 }
 
-void OutputFormatter::PrintInstructionList(const std::vector<InstrEntry> &entries)
+void OutputFormatter::PrintInstructionList(const std::vector<util::InstCatalog> &entries)
 {
     if(OutputMode::JSON == Mode_) {
         printListJSON(entries);
@@ -480,7 +485,7 @@ void OutputFormatter::printRegisterJSON(uint16_t idx)
     std::println(R"({{"index":{},"arch":"{}","abi":"{}"}})", idx, arch, abi);
 }
 
-void OutputFormatter::printListJSON(const std::vector<InstrEntry> &entries)
+void OutputFormatter::printListJSON(const std::vector<util::InstCatalog> &entries)
 {
     std::string buf;
     buf.reserve(16 + entries.size() * 96);

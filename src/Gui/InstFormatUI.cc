@@ -11,8 +11,8 @@ namespace {
 
 bool isImmAsmToken(std::string_view token) noexcept
 {
-    // Covers "imm", "imm7" (shift) and "shamt"; never "immediate"-style prose.
-    return token == "shamt" || token.starts_with("imm");
+    // Covers "imm", "imm7" (shift), "shamt", and CSR address "csr".
+    return token == "shamt" || token == "csr" || token.starts_with("imm");
 }
 
 /// Core always emits decimal immediates; Gui optionally shows them as hex.
@@ -327,17 +327,25 @@ void InstFormatUI::UpdateDisplay(const Instruction &inst)
     if(!pType) return;
 
     const auto FMT= pType->GetInstFormat();
-    auto shape    = ItypeImmShape::IMM12;
+    auto iShape   = ItypeImmShape::IMM12;
+    auto rShape   = RtypeShape::BASE;
     if(InstFormat::I == FMT) {
         const auto &L= pType->GetInstLayout();
-        shape        = DetectIImmShape(L.I.opc, L.I.fct3);
+        iShape       = DetectIImmShape(L.I.opc, L.I.fct3);
+    } else if(InstFormat::R == FMT) {
+        const auto &L= pType->GetInstLayout();
+        rShape       = DetectRShape(L.R.opc);
     }
 
-    if(FMT != fmt_ || (InstFormat::I == FMT && shape != iShape_)) {
+    const bool SHAPE_CHANGED=
+        (InstFormat::I == FMT && iShape != iShape_) || (InstFormat::R == FMT && rShape != rShape_);
+    if(FMT != fmt_ || SHAPE_CHANGED) {
         fmt_   = FMT;
-        iShape_= shape;
-        applyView(InstFormat::I == FMT ? util::GetIInstFormatView(shape)
-                                       : util::GetInstFormatView(FMT));
+        iShape_= iShape;
+        rShape_= rShape;
+        if(InstFormat::I == FMT) applyView(util::GetIInstFormatView(iShape));
+        else if(InstFormat::R == FMT) applyView(util::GetRInstFormatView(rShape));
+        else applyView(util::GetInstFormatView(FMT));
     }
 
     updateHeader(inst);
@@ -408,6 +416,16 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
         if(it != asmFieldWidgets_.end() && it->second->GetLabel() && j < parts.size()) { // NOLINT
             const auto &part= parts[j++];
             it->second->GetLabel()->set_text(isImmAsmToken(token) ? formatAsmImm(part, hasHexImm_) : part);
+        }
+    }
+
+    // C-Type view only exposes a mnemonic chip — fold the full operand list into it.
+    if(1 == pView_->asmTokens_.size() && pView_->asmTokens_.front() == "mnemonic") {
+        auto it= asmFieldWidgets_.find(std::string_view { "mnemonic" });
+        if(it != asmFieldWidgets_.end() && it->second->GetLabel()) {
+            std::string full;
+            for(const auto &p: parts) full+= p;
+            it->second->GetLabel()->set_text(full);
         }
     }
 }
