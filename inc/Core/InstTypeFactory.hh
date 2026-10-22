@@ -26,6 +26,7 @@ private:
             { 0x17, InstFormat::U }, // U-type: auipc
             { 0x1B, InstFormat::I }, // I-type: addiw/slliw/... / OP-IMM-32 (RV64I)
             { 0x23, InstFormat::S }, // S-type: sb/sh/sw/sd/sq
+            { 0x2F, InstFormat::R }, // R-type: lr/sc/amo... / AMO (RV32A/64A)
             { 0x33, InstFormat::R }, // R-type: add/sub/... / OP
             { 0x37, InstFormat::U }, // U-type: lui
             { 0x3B, InstFormat::R }, // R-type: addw/subw/... / OP-32 (RV64I)

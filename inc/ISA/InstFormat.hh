@@ -76,6 +76,17 @@ union InstLayout {
         uint32_t fct7: 7;
     } R;
 
+    struct { // AMO: funct5|aq|rl occupy the funct7 slot
+        uint32_t opc : 7;
+        uint32_t rd  : 5;
+        uint32_t fct3: 3;
+        uint32_t rs1 : 5;
+        uint32_t rs2 : 5;
+        uint32_t rl  : 1;
+        uint32_t aq  : 1;
+        uint32_t fct5: 5;
+    } A;
+
     struct { // I(opcode:[0:6] | rd:[7:11] | funct3:[12:14] | rs1:[15:19] | imm0tB:[20:31])
         uint32_t opc   : 7;
         uint32_t rd    : 5;
