@@ -1,5 +1,3 @@
-#include <utility>
-
 #include "Core/IBaseInstType.hh"
 
 IBaseInstType::IBaseInstType(InstFormat format, uint32_t inst, bool hasSetABI)
@@ -27,7 +25,10 @@ IBaseInstType::KeyT IBaseInstType::GetKey() const noexcept { return Key_; }
 InstFormat IBaseInstType::GetInstFormat() const noexcept { return Format_; }
 
 // std::string_view IBaseInstType::GetInstDisassembly() const { return InstDisassembly_; }
-void IBaseInstType::SetInstAssembly(std::vector<std::string> instAssembly) { InstAssembly_= std::move(instAssembly); }
+void IBaseInstType::SetInstAssembly(std::vector<std::string> instAssembly)
+{
+    InstAssembly_= std::move(instAssembly);
+}
 
 void IBaseInstType::SetFormat(InstFormat format) noexcept { Format_= format; }
 
@@ -115,8 +116,16 @@ const BiLookupTable<IBaseInstType::KeyT> *
 {
     BiLookupTable<KeyT>::intMapName_u code2info;
     BiLookupTable<KeyT>::strMapIndex_u name2info;
-    code2info.reserve(entries.size());
-    name2info.reserve(entries.size());
+
+    auto reserveFlat= [](auto &fm, std::size_t n) {
+        auto ex { std::move(fm).extract() };
+        ex.keys.reserve(n);
+        ex.values.reserve(n);
+        fm.replace(std::move(ex.keys), std::move(ex.values));
+    };
+
+    reserveFlat(code2info, entries.size());
+    reserveFlat(name2info, entries.size());
 
     for(const auto &entry: entries) {
         if(0U == entry.opcode_ || entry.XLEN_.empty() || entry.name_.empty()) continue;
@@ -126,6 +135,8 @@ const BiLookupTable<IBaseInstType::KeyT> *
         manualURL.append(baseURL);
         manualURL.append(entry.name_);
 
+        // emplace binary-searches the insertion point, so flat_map stays
+        // sorted with no manual sort and no UB risk on duplicate keys.
         name2info.emplace(entry.name_,
                           BiLookupTable<KeyT>::IndexInfo { .manual_= manualURL,
                                                            .XLEN_  = entry.XLEN_,

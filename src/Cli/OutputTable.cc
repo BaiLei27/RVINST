@@ -52,7 +52,7 @@ namespace {
             const auto &l= pType->GetInstLayout();
             meta         = GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
         }
-        return { .bits_= pType->GetInstBitsField(), .meta_= meta };
+        return { .bits_= std::span<const uint32_t>(pType->GetInstBitsField()), .meta_= meta };
     }
 
     uint32_t fieldValue(std::span<const uint32_t> bits, size_t total, size_t index)

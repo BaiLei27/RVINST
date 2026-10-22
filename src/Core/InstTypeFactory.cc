@@ -31,10 +31,19 @@ std::unique_ptr<IBaseInstType> makeByFormat(InstFormat fmt, Args &&...args)
     }
 }
 
-using Name2FmtOpcode_u= std::unordered_map<std::string_view, std::pair<InstFormat, uint16_t>>;
-
+/**
+ * @brief flat_map::emplace binary-searches the insertion point and shifts the tail,
+ * keeping the map sorted. The G_INST_TABLE inputs are unsorted by name, so
+ * emplace (not sorted_unique) is the correct builder here.
+ * @tparam N
+ * @param m std::flat_map<std::string_view, std::pair<InstFormat, uint16_t>>;
+ * @param table std::array<IBaseInstType::InstInfo, N>
+ * @param fmt InstFormat
+ */
 template <size_t N>
-void registerTable(Name2FmtOpcode_u &m, const std::array<IBaseInstType::InstInfo, N> &table, InstFormat fmt)
+void registerTable(InstTypeFactory::name2FormatOpcode_u &m,
+                   const std::array<IBaseInstType::InstInfo, N> &table,
+                   InstFormat fmt)
 {
     for(const auto &entry: table) {
         if(0 == entry.opcode_ || entry.name_.empty()) continue;
@@ -56,8 +65,8 @@ void registerTable(Name2FmtOpcode_u &m, const std::array<IBaseInstType::InstInfo
 std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(uint32_t inst, bool hasSetABI)
 {
     const uint16_t OPCODE= inst & 0x7F;
-    auto it              = G_Opcode2Format.find(OPCODE);
-    if(G_Opcode2Format.end() == it) return nullptr;
+    auto it              = G_OPCODE_2_FORMAT.find(OPCODE);
+    if(G_OPCODE_2_FORMAT.end() == it) return nullptr;
     return makeByFormat(it->second, inst, hasSetABI);
 }
 
@@ -71,6 +80,8 @@ const InstTypeFactory::name2FormatOpcode_u &InstTypeFactory::getName2FormatOpcod
         registerTable(m, UType::G_INST_TABLE, InstFormat::U);
         registerTable(m, SType::G_INST_TABLE, InstFormat::S);
         registerTable(m, BType::G_INST_TABLE, InstFormat::B);
+        // The string_view keys point into the immortal G_INST_TABLE literals,
+        // so the ordering stays valid for the process lifetime.
         return m;
     }();
     return OPC_CACHE;

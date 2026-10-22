@@ -6,7 +6,7 @@
 #include <optional>
 #include <print>
 #include <string_view>
-#include <unordered_map>
+#include <flat_map>
 
 template <typename KeyT= uint16_t>
 class BiLookupTable { // Bidirectional lookup table for code2name and name2code
@@ -24,8 +24,10 @@ public:
         uint16_t opcode_ {};
     };
 
-    using intMapName_u = std::unordered_map<KeyT, NameInfo>;
-    using strMapIndex_u= std::unordered_map<std::string_view, IndexInfo>;
+    // std::flat_map keeps keys sorted in contiguous std::vector-backed
+    // storage: cache-friendly reads and O(log n) binary-search lookup.
+    using intMapName_u = std::flat_map<KeyT, NameInfo>;
+    using strMapIndex_u= std::flat_map<std::string_view, IndexInfo>;
 
     BiLookupTable(const intMapName_u &code2info,
                   const strMapIndex_u &name2info)
