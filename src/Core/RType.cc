@@ -1,6 +1,15 @@
 #include "Core/RType.hh"
 #include "ISA/Regs.hh"
 
+namespace {
+
+[[nodiscard]] bool nameStartsWith(std::string_view name, std::string_view prefix)
+{
+    return name.size() >= prefix.size() && name.substr(0, prefix.size()) == prefix;
+}
+
+} // namespace
+
 RType::RType(InstFormat format, uint32_t inst, bool hasSetABI)
     : IBaseInstType(format, inst, hasSetABI)
 {
@@ -13,14 +22,51 @@ RType::RType(InstFormat format, std::vector<std::string> instAssembly, bool hasS
     init();
 }
 
+bool RType::isAmoName(std::string_view name) noexcept
+{
+    return nameStartsWith(name, "amo") || nameStartsWith(name, "lr.") || nameStartsWith(name, "sc.");
+}
+
 void RType::Parse()
 {
-    setBitsField({ Layout_.R.opc,
-                   Layout_.R.rd,
-                   Layout_.R.fct3,
-                   Layout_.R.rs1,
-                   Layout_.R.rs2,
-                   Layout_.R.fct7 });
+    switch(DetectRShape(Layout_.R.opc)) {
+    case RtypeShape::AMO:
+        setBitsField({ Layout_.A.opc,
+                       Layout_.A.rd,
+                       Layout_.A.fct3,
+                       Layout_.A.rs1,
+                       Layout_.A.rs2,
+                       Layout_.A.rl,
+                       Layout_.A.aq,
+                       Layout_.A.fct5 });
+        break;
+    case RtypeShape::FP:
+        setBitsField({ Layout_.FP.opc,
+                       Layout_.FP.rd,
+                       Layout_.FP.rm,
+                       Layout_.FP.rs1,
+                       Layout_.FP.rs2,
+                       Layout_.FP.fmt,
+                       Layout_.FP.fct5 });
+        break;
+    case RtypeShape::R4:
+        setBitsField({ Layout_.R4.opc,
+                       Layout_.R4.rd,
+                       Layout_.R4.rm,
+                       Layout_.R4.rs1,
+                       Layout_.R4.rs2,
+                       Layout_.R4.fmt,
+                       Layout_.R4.rs3 });
+        break;
+    default:
+        setBitsField({ Layout_.R.opc,
+                       Layout_.R.rd,
+                       Layout_.R.fct3,
+                       Layout_.R.rs1,
+                       Layout_.R.rs2,
+                       Layout_.R.fct7 });
+        break;
+    }
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nfunct7: {}\nrs1: {}\nrs2: {}\nrd: {}",
                  GetInstOpcode(),
@@ -29,13 +75,37 @@ void RType::Parse()
                  +Layout_.R.fct7,
                  +Layout_.R.rs1,
                  +Layout_.R.rs2,
-                 +Layout_.R.rd); // s.x <==> static_cast<int>(s.x)
+                 +Layout_.R.rd);
 #endif
 }
 
 void RType::mnemonicHelper()
 {
-    auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_); // actually reg mnemonic only 5b (max: 31),never overflow
+    // Encode path has no NameAndXlenCache_; prefer the mnemonic already in InstAssembly_.
+    const auto NAME= !InstAssembly_.empty() ? std::string_view { InstAssembly_[0] }
+                                            : LookupNameAndInfo().name_;
+
+    if(OpcMap::AMO == Layout_.R.opc || isAmoName(NAME)) {
+        auto rd = isa::LookupRegName(Layout_.A.rd, HasSetABI_);
+        auto rs1= isa::LookupRegName(Layout_.A.rs1, HasSetABI_);
+        if(nameStartsWith(NAME, "lr.")) {
+            appendOperands({ " ", rd, ",", "(", rs1, ")" });
+        } else {
+            auto rs2= isa::LookupRegName(Layout_.A.rs2, HasSetABI_);
+            appendOperands({ " ", rd, ",", rs2, ",", "(", rs1, ")" });
+        }
+        if(Layout_.A.aq || Layout_.A.rl) {
+            std::string tagged { NAME };
+            if(!tagged.ends_with(".aq") && !tagged.ends_with(".rl")) {
+                if(Layout_.A.aq) tagged+= ".aq";
+                if(Layout_.A.rl) tagged+= ".rl";
+            }
+            if(!InstAssembly_.empty()) InstAssembly_[0]= std::move(tagged);
+        }
+        return;
+    }
+
+    auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
     auto rs1= isa::LookupRegName(Layout_.R.rs1, HasSetABI_);
     auto rs2= isa::LookupRegName(Layout_.R.rs2, HasSetABI_);
     appendOperands({ " ", rd, ",", rs1, ",", rs2 });
@@ -43,12 +113,41 @@ void RType::mnemonicHelper()
 
 util::Expected_u<const InstLayout *> RType::Assembly()
 {
-    const auto &info= LookupIdxAndInfo();
-
+    const auto &info  = LookupIdxAndInfo();
     Layout_.R.opc     = info.opcode_;
     const auto PAYLOAD= KEY_PAYLOAD(info.keyID_);
-    Layout_.R.fct7    = PAYLOAD >> 3;
-    Layout_.R.fct3    = PAYLOAD;
+    const auto NAME   = InstAssembly_.empty() ? std::string_view {} : std::string_view { InstAssembly_[0] };
+
+    if(OpcMap::AMO == info.opcode_) {
+        Layout_.A.fct5= PAYLOAD >> 3;
+        Layout_.A.fct3= PAYLOAD;
+        Layout_.A.aq  = 0;
+        Layout_.A.rl  = 0;
+
+        if(InstAssembly_.size() >= 3U) {
+            if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.A.rd= *rd;
+            if(nameStartsWith(NAME, "lr.")) {
+                std::string_view base= InstAssembly_.at(2);
+                if(base.starts_with('(') && base.ends_with(')')) {
+                    base= base.substr(1, base.size() - 2);
+                }
+                if(auto rs1= isa::LookupRegIdx(base)) Layout_.A.rs1= *rs1;
+                Layout_.A.rs2= 0;
+            } else if(InstAssembly_.size() >= 4U) {
+                if(auto rs2= isa::LookupRegIdx(InstAssembly_.at(2))) Layout_.A.rs2= *rs2;
+                std::string_view base= InstAssembly_.at(3);
+                if(base.starts_with('(') && base.ends_with(')')) {
+                    base= base.substr(1, base.size() - 2);
+                }
+                if(auto rs1= isa::LookupRegIdx(base)) Layout_.A.rs1= *rs1;
+            }
+        }
+        mnemonicHelper();
+        return &Layout_;
+    }
+
+    Layout_.R.fct7= PAYLOAD >> 3;
+    Layout_.R.fct3= PAYLOAD;
 
     if(InstAssembly_.size() >= 4U) {
         auto rdOpt = isa::LookupRegIdx(InstAssembly_.at(1));
@@ -67,6 +166,9 @@ util::Expected_u<const InstLayout *> RType::Assembly()
 
 auto RType::calculateKeyID() -> KeyT
 {
+    if(OpcMap::AMO == Layout_.R.opc) {
+        return Key_= AMO_K(Layout_.A.fct5, Layout_.A.fct3, Layout_.A.opc);
+    }
     return Key_= OP_K(Layout_.R.fct7, Layout_.R.fct3, Layout_.R.opc);
 }
 

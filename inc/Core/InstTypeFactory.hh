@@ -26,6 +26,7 @@ private:
             { OpcMap::AUIPC, InstFormat::U }, // U-type: auipc
             { OpcMap::OP_IMM_32, InstFormat::I }, // I-type: addiw/slliw/... / OP-IMM-32 (RV64I)
             { OpcMap::STORE, InstFormat::S }, // S-type: sb/sh/sw/sd/sq
+            { OpcMap::AMO, InstFormat::R }, // R-type: lr/sc/amo... / AMO (RV32A/64A)
             { OpcMap::OP, InstFormat::R }, // R-type: add/sub/... / OP
             { OpcMap::LUI, InstFormat::U }, // U-type: lui
             { OpcMap::OP_32, InstFormat::R }, // R-type: addw/subw/... / OP-32 (RV64I)

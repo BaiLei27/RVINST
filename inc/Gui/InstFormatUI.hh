@@ -30,6 +30,7 @@ public:
     int resultRowIndex_ {};
     InstFormat fmt_ { InstFormat::UNKNOWN };
     ItypeImmShape iShape_ { ItypeImmShape::IMM12 };
+    RtypeShape rShape_ { RtypeShape::BASE };
     bool hasHexImm_ {};
 
 public:
