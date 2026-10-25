@@ -71,6 +71,19 @@ enum class RtypeShape : uint8_t {
     R4,   // fused multiply-add: rs3 | fmt
 };
 
+/// RVC layout variants (Ch.27 Table 1; same InstFormat::C, different bitfield labels).
+enum class CShape : uint8_t {
+    CR,  // register
+    CI,  // immediate
+    CSS, // stack-relative store
+    CIW, // wide immediate
+    CL,  // load
+    CS,  // store
+    CA,  // arithmetic
+    CB,  // branch / shift / andi
+    CJ,  // jump
+};
+
 // NOLINTBEGIN
 
 // 32-bit instruction parsing union
@@ -141,13 +154,13 @@ union InstLayout {
     } J;
 
     struct { // R4 fused multiply-add (rs3|funct2 occupy the funct7 slot)
-        uint32_t opc : 7;
-        uint32_t rd  : 5;
-        uint32_t rm  : 3; // funct3 / rounding mode
-        uint32_t rs1 : 5;
-        uint32_t rs2 : 5;
-        uint32_t fmt : 2; // funct2: 00=S, 01=D, 10=H, 11=Q
-        uint32_t rs3 : 5;
+        uint32_t opc: 7;
+        uint32_t rd : 5;
+        uint32_t rm : 3; // funct3 / rounding mode
+        uint32_t rs1: 5;
+        uint32_t rs2: 5;
+        uint32_t fmt: 2; // funct2: 00=S, 01=D, 10=H, 11=Q
+        uint32_t rs3: 5;
     } R4;
 
     struct { // OP-FP: funct5|fmt occupy the funct7 slot (Ch.20/21)
@@ -160,11 +173,81 @@ union InstLayout {
         uint32_t fct5: 5;
     } FP;
 
-    // C: 16-bit RVC in entity_[15:0]; reuse R slot as bitfield view (see CType.cc).
+    // RVC (Ch.27): 16-bit encodings in entity_[15:0]; opc = inst[1:0] quadrant (≠ 0b11).
+    // Coarse view matches GetInstFields(C); CR..CJ overlay the nine formats in Table 1.
     struct {
-        uint32_t op : 2; // inst[1:0] quadrant
-        uint32_t b2 : 14;
+        uint32_t opc: 2;  // inst[1:0]
+        uint32_t b2 : 14; // inst[15:2]
     } C;
+
+    struct { // CR: funct4 | rd/rs1 | rs2 | opc
+        uint32_t opc : 2;
+        uint32_t rs2 : 5;
+        uint32_t rd  : 5; // also rs1
+        uint32_t fct4: 4;
+    } CR;
+
+    struct { // CI: funct3 | imm | rd/rs1 | imm | opc
+        uint32_t opc   : 2;
+        uint32_t imm0t4: 5; // inst[6:2]
+        uint32_t rd    : 5; // also rs1
+        uint32_t imm5  : 1; // inst[12]
+        uint32_t fct3  : 3;
+    } CI;
+
+    struct { // CSS: funct3 | imm | rs2 | opc
+        uint32_t opc : 2;
+        uint32_t rs2 : 5;
+        uint32_t imm6: 6; // inst[12:7]
+        uint32_t fct3: 3;
+    } CSS;
+
+    struct { // CIW: funct3 | imm | rd' | opc
+        uint32_t opc : 2;
+        uint32_t rd3 : 3; // rd' → x8..x15
+        uint32_t imm8: 8; // inst[12:5]
+        uint32_t fct3: 3;
+    } CIW;
+
+    struct { // CL: funct3 | imm | rs1' | imm | rd' | opc
+        uint32_t opc  : 2;
+        uint32_t rd3  : 3; // rd'
+        uint32_t immLo: 2; // inst[6:5]
+        uint32_t rs13 : 3; // rs1'
+        uint32_t immHi: 3; // inst[12:10]
+        uint32_t fct3 : 3;
+    } CL;
+
+    struct { // CS: funct3 | imm | rs1' | imm | rs2' | opc
+        uint32_t opc  : 2;
+        uint32_t rs23 : 3; // rs2'
+        uint32_t immLo: 2; // inst[6:5]
+        uint32_t rs13 : 3; // rs1'
+        uint32_t immHi: 3; // inst[12:10]
+        uint32_t fct3 : 3;
+    } CS;
+
+    struct { // CA: funct6 | rd'/rs1' | funct2 | rs2' | opc
+        uint32_t opc : 2;
+        uint32_t rs23: 3; // rs2'
+        uint32_t fct2: 2;
+        uint32_t rd3 : 3; // rd'/rs1'
+        uint32_t fct6: 6;
+    } CA;
+
+    struct { // CB: funct3 | offset | rd'/rs1' | offset | opc
+        uint32_t opc  : 2;
+        uint32_t offLo: 5; // inst[6:2]
+        uint32_t rd3  : 3; // rd'/rs1'
+        uint32_t offHi: 3; // inst[12:10]
+        uint32_t fct3 : 3;
+    } CB;
+
+    struct { // CJ: funct3 | jump target | opc
+        uint32_t opc   : 2;
+        uint32_t target: 11; // inst[12:2]
+        uint32_t fct3  : 3;
+    } CJ;
 
     // Constructor: Initialize from 32-bit instruction
     InstLayout(uint32_t instruction= 0);
@@ -190,5 +273,8 @@ struct InstField {
 
 [[nodiscard]] RtypeShape DetectRShape(uint32_t opc) noexcept;
 [[nodiscard]] std::span<const InstField> GetRInstFields(RtypeShape shape) noexcept;
+
+[[nodiscard]] CShape DetectCShape(uint32_t inst) noexcept; // inspects only inst[15:0]; full entity_ is fine
+[[nodiscard]] std::span<const InstField> GetCInstFields(CShape shape) noexcept;
 
 // Date:25/12/21/22:34

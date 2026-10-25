@@ -329,22 +329,29 @@ void InstFormatUI::UpdateDisplay(const Instruction &inst)
     const auto FMT= pType->GetInstFormat();
     auto iShape   = ItypeImmShape::IMM12;
     auto rShape   = RtypeShape::BASE;
+    auto cShape   = CShape::CI;
     if(InstFormat::I == FMT) {
         const auto &L= pType->GetInstLayout();
         iShape       = DetectIImmShape(L.I.opc, L.I.fct3);
     } else if(InstFormat::R == FMT) {
         const auto &L= pType->GetInstLayout();
         rShape       = DetectRShape(L.R.opc);
+    } else if(InstFormat::C == FMT) {
+        const auto &L= pType->GetInstLayout();
+        cShape       = DetectCShape(L.entity_);
     }
 
-    const bool SHAPE_CHANGED=
-        (InstFormat::I == FMT && iShape != iShape_) || (InstFormat::R == FMT && rShape != rShape_);
+    const bool SHAPE_CHANGED= (InstFormat::I == FMT && iShape != iShape_)
+                           || (InstFormat::R == FMT && rShape != rShape_)
+                           || (InstFormat::C == FMT && cShape != cShape_);
     if(FMT != fmt_ || SHAPE_CHANGED) {
         fmt_   = FMT;
         iShape_= iShape;
         rShape_= rShape;
+        cShape_= cShape;
         if(InstFormat::I == FMT) applyView(util::GetIInstFormatView(iShape));
         else if(InstFormat::R == FMT) applyView(util::GetRInstFormatView(rShape));
+        else if(InstFormat::C == FMT) applyView(util::GetCInstFormatView(cShape));
         else applyView(util::GetInstFormatView(FMT));
     }
 

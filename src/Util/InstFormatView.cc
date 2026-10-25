@@ -24,7 +24,15 @@ namespace {
     constexpr std::string_view G_S_KEY[] { "opcode", "funct3" };
     constexpr std::string_view G_U_KEY[] { "opcode" };
     constexpr std::string_view G_J_KEY[] { "opcode" };
-    constexpr std::string_view G_C_KEY[] { "quadrant", "inst15_2" };
+    constexpr std::string_view G_C_CR_KEY[] { "opcode", "funct4" };
+    constexpr std::string_view G_C_CI_KEY[] { "opcode", "funct3" };
+    constexpr std::string_view G_C_CSS_KEY[] { "opcode", "funct3" };
+    constexpr std::string_view G_C_CIW_KEY[] { "opcode", "funct3" };
+    constexpr std::string_view G_C_CL_KEY[] { "opcode", "funct3" };
+    constexpr std::string_view G_C_CS_KEY[] { "opcode", "funct3" };
+    constexpr std::string_view G_C_CA_KEY[] { "opcode", "funct6", "funct2" };
+    constexpr std::string_view G_C_CB_KEY[] { "opcode", "funct3" };
+    constexpr std::string_view G_C_CJ_KEY[] { "opcode", "funct3" };
 
     constexpr std::string_view G_R_BIN_OPC[] { "mnemonic", "funct3", "funct7" };
     constexpr std::string_view G_R_BIN_F3[] { "mnemonic", "opcode", "funct7" };
@@ -367,6 +375,103 @@ const InstFormatView &GetRInstFormatView(RtypeShape shape)
     }
 }
 
+const InstFormatView &GetCInstFormatView(CShape shape)
+{
+    static const InstFormatView K_C_CR {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CR),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CR_KEY,
+    };
+    static const InstFormatView K_C_CI {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CI),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CI_KEY,
+    };
+    static const InstFormatView K_C_CSS {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CSS),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CSS_KEY,
+    };
+    static const InstFormatView K_C_CIW {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CIW),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CIW_KEY,
+    };
+    static const InstFormatView K_C_CL {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CL),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CL_KEY,
+    };
+    static const InstFormatView K_C_CS {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CS),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CS_KEY,
+    };
+    static const InstFormatView K_C_CA {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CA),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CA_KEY,
+    };
+    static const InstFormatView K_C_CB {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CB),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CB_KEY,
+    };
+    static const InstFormatView K_C_CJ {
+        .typeName_ = InstFormatName(InstFormat::C),
+        .fmt_      = InstFormat::C,
+        .asmTokens_= G_C_ASM,
+        .fields_   = GetCInstFields(CShape::CJ),
+        .binaryRel_= {},
+        .asmRel_   = {},
+        .keyFields_= G_C_CJ_KEY,
+    };
+
+    switch(shape) {
+    case CShape::CR:  return K_C_CR;
+    case CShape::CSS: return K_C_CSS;
+    case CShape::CIW: return K_C_CIW;
+    case CShape::CL:  return K_C_CL;
+    case CShape::CS:  return K_C_CS;
+    case CShape::CA:  return K_C_CA;
+    case CShape::CB:  return K_C_CB;
+    case CShape::CJ:  return K_C_CJ;
+    default:          return K_C_CI;
+    }
+}
+
 const InstFormatView &GetInstFormatView(InstFormat fmt)
 {
     static const InstFormatView K_J {
@@ -405,15 +510,6 @@ const InstFormatView &GetInstFormatView(InstFormat fmt)
         .asmRel_   = G_B_ASM_REL,
         .keyFields_= G_S_KEY,
     };
-    static const InstFormatView K_C {
-        .typeName_ = InstFormatName(InstFormat::C),
-        .fmt_      = InstFormat::C,
-        .asmTokens_= G_C_ASM,
-        .fields_   = GetInstFields(InstFormat::C),
-        .binaryRel_= {},
-        .asmRel_   = {},
-        .keyFields_= G_C_KEY,
-    };
     static const InstFormatView K_UNKNOWN {};
 
     switch(fmt) {
@@ -423,7 +519,7 @@ const InstFormatView &GetInstFormatView(InstFormat fmt)
     case InstFormat::U: return K_U;
     case InstFormat::S: return K_S;
     case InstFormat::B: return K_B;
-    case InstFormat::C: return K_C;
+    case InstFormat::C: return GetCInstFormatView(CShape::CI);
     default:            return K_UNKNOWN;
     }
 }

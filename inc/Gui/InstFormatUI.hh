@@ -31,6 +31,7 @@ public:
     InstFormat fmt_ { InstFormat::UNKNOWN };
     ItypeImmShape iShape_ { ItypeImmShape::IMM12 };
     RtypeShape rShape_ { RtypeShape::BASE };
+    CShape cShape_ { CShape::CI };
     bool hasHexImm_ {};
 
 public:

@@ -54,6 +54,9 @@ namespace {
         } else if(InstFormat::R == FMT) {
             const auto &l= pType->GetInstLayout();
             meta         = GetRInstFields(DetectRShape(l.R.opc));
+        } else if(InstFormat::C == FMT) {
+            const auto &l= pType->GetInstLayout();
+            meta         = GetCInstFields(DetectCShape(l.entity_));
         }
         return { .bits_= std::span<const uint32_t>(pType->GetInstBitsField()), .meta_= meta };
     }
@@ -313,7 +316,7 @@ void OutputFormatter::PrintRegister(uint16_t idx)
                  std::string(abiName));
 }
 
-void OutputFormatter::PrintInstructionList(const std::vector<util::InstCatalog> &entries)
+void OutputFormatter::PrintInstructionList(const std::vector<InstrEntry> &entries)
 {
     if(OutputMode::JSON == Mode_) {
         printListJSON(entries);
@@ -485,7 +488,7 @@ void OutputFormatter::printRegisterJSON(uint16_t idx)
     std::println(R"({{"index":{},"arch":"{}","abi":"{}"}})", idx, arch, abi);
 }
 
-void OutputFormatter::printListJSON(const std::vector<util::InstCatalog> &entries)
+void OutputFormatter::printListJSON(const std::vector<InstrEntry> &entries)
 {
     std::string buf;
     buf.reserve(16 + entries.size() * 96);

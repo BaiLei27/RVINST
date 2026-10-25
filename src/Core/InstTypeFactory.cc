@@ -7,6 +7,7 @@
 #include "Core/RType.hh"
 #include "Core/SType.hh"
 #include "Core/UType.hh"
+#include "Core/CType.hh"
 
 namespace {
 
@@ -26,6 +27,8 @@ std::unique_ptr<IBaseInstType> makeByFormat(InstFormat fmt, Args &&...args)
         return std::make_unique<SType>(fmt, std::forward<Args>(args)...);
     case InstFormat::B:
         return std::make_unique<BType>(fmt, std::forward<Args>(args)...);
+    case InstFormat::C:
+        return std::make_unique<CType>(fmt, std::forward<Args>(args)...);
     default:
         return nullptr;
     }
@@ -46,7 +49,9 @@ void registerTable(InstTypeFactory::name2FormatOpcode_u &m,
                    InstFormat fmt)
 {
     for(const auto &entry: table) {
-        if(0 == entry.opcode_ || entry.name_.empty()) continue;
+        if(entry.name_.empty()) continue;
+        // RVC quadrant 0 uses opcode_=0; other formats use 0 as "unused" sentinel.
+        if(0 == entry.opcode_ && InstFormat::C != fmt) continue;
         m.emplace(entry.name_, std::pair { fmt, entry.opcode_ });
     }
 }
@@ -64,6 +69,8 @@ std::string toLower(std::string_view s)
 
 std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(uint32_t inst, bool hasSetABI)
 {
+    if(3U != (inst & 0x3U)) return makeByFormat(InstFormat::C, inst, hasSetABI);
+
     const auto OPCODE= static_cast<OpcMap>(inst & 0x7FU);
     auto it          = G_OPCODE_2_FORMAT.find(OPCODE);
     if(G_OPCODE_2_FORMAT.end() == it) return nullptr;
@@ -80,6 +87,7 @@ const InstTypeFactory::name2FormatOpcode_u &InstTypeFactory::getName2FormatOpcod
         registerTable(m, UType::G_INST_TABLE, InstFormat::U);
         registerTable(m, SType::G_INST_TABLE, InstFormat::S);
         registerTable(m, BType::G_INST_TABLE, InstFormat::B);
+        registerTable(m, CType::G_INST_TABLE, InstFormat::C);
         // The string_view keys point into the immortal G_INST_TABLE literals,
         // so the ordering stays valid for the process lifetime.
         return m;

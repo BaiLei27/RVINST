@@ -6,6 +6,7 @@
 #include "Core/RType.hh"
 #include "Core/SType.hh"
 #include "Core/UType.hh"
+#include "Core/CType.hh"
 #include "Cli/InstrEntry.hh"
 
 namespace cli {
@@ -16,7 +17,8 @@ std::vector<InstrEntry> getAllInstructions(std::optional<InstFormat> filter)
 
     auto addTable= [&](const auto &table, InstFormat fmt) {
         for(const auto &e: table) {
-            if(0 == e.opcode_ || e.name_.empty()) continue;
+            if(e.name_.empty()) continue;
+            if(0 == e.opcode_ && InstFormat::C != fmt) continue;
             out.emplace_back(e.name_, e.XLEN_, e.keyID_, e.opcode_, fmt);
         }
     };
@@ -27,6 +29,7 @@ std::vector<InstrEntry> getAllInstructions(std::optional<InstFormat> filter)
     if(!filter || InstFormat::B == *filter) addTable(BType::G_INST_TABLE, InstFormat::B);
     if(!filter || InstFormat::U == *filter) addTable(UType::G_INST_TABLE, InstFormat::U);
     if(!filter || InstFormat::J == *filter) addTable(JType::G_INST_TABLE, InstFormat::J);
+    if(!filter || InstFormat::C == *filter) addTable(CType::G_INST_TABLE, InstFormat::C);
 
     return out;
 }
@@ -41,6 +44,7 @@ std::optional<InstFormat> stringToFormat(std::string_view s)
         case 'B': return InstFormat::B;
         case 'U': return InstFormat::U;
         case 'J': return InstFormat::J;
+        case 'C': return InstFormat::C;
         default:  break;
         }
     }
@@ -50,6 +54,7 @@ std::optional<InstFormat> stringToFormat(std::string_view s)
     if(s == "b" || s == "B") return InstFormat::B;
     if(s == "u" || s == "U") return InstFormat::U;
     if(s == "j" || s == "J") return InstFormat::J;
+    if(s == "c" || s == "C") return InstFormat::C;
 
     return std::nullopt;
 }

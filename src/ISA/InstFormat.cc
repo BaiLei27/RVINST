@@ -145,6 +145,106 @@ constexpr std::array<InstField, 2> G_C_FIELDS {
      }
 };
 
+constexpr std::array<InstField, 4> G_C_CR_FIELDS {
+    {
+     { .name_= "funct4"sv, .startBit_= 12, .endBit_= 15, .desc_= "funct4"sv },
+     { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd/rs1"sv },
+     { .name_= "rs2"sv, .startBit_= 2, .endBit_= 6, .desc_= "rs2"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+constexpr std::array<InstField, 5> G_C_CI_FIELDS {
+    {
+     { .name_= "funct3"sv, .startBit_= 13, .endBit_= 15, .desc_= "funct3"sv },
+     { .name_= "imm5"sv, .startBit_= 12, .endBit_= 12, .desc_= "imm"sv },
+     { .name_= "rd"sv, .startBit_= 7, .endBit_= 11, .desc_= "rd/rs1"sv },
+     { .name_= "imm0t4"sv, .startBit_= 2, .endBit_= 6, .desc_= "imm"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+constexpr std::array<InstField, 4> G_C_CSS_FIELDS {
+    {
+     { .name_= "funct3"sv, .startBit_= 13, .endBit_= 15, .desc_= "funct3"sv },
+     { .name_= "imm6"sv, .startBit_= 7, .endBit_= 12, .desc_= "imm"sv },
+     { .name_= "rs2"sv, .startBit_= 2, .endBit_= 6, .desc_= "rs2"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+constexpr std::array<InstField, 4> G_C_CIW_FIELDS {
+    {
+     { .name_= "funct3"sv, .startBit_= 13, .endBit_= 15, .desc_= "funct3"sv },
+     { .name_= "imm8"sv, .startBit_= 5, .endBit_= 12, .desc_= "imm"sv },
+     { .name_= "rd'"sv, .startBit_= 2, .endBit_= 4, .desc_= "rd'"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+constexpr std::array<InstField, 6> G_C_CL_FIELDS {
+    {
+     { .name_= "funct3"sv, .startBit_= 13, .endBit_= 15, .desc_= "funct3"sv },
+     { .name_= "immHi"sv, .startBit_= 10, .endBit_= 12, .desc_= "imm"sv },
+     { .name_= "rs1'"sv, .startBit_= 7, .endBit_= 9, .desc_= "rs1'"sv },
+     { .name_= "immLo"sv, .startBit_= 5, .endBit_= 6, .desc_= "imm"sv },
+     { .name_= "rd'"sv, .startBit_= 2, .endBit_= 4, .desc_= "rd'"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+constexpr std::array<InstField, 6> G_C_CS_FIELDS {
+    {
+     { .name_= "funct3"sv, .startBit_= 13, .endBit_= 15, .desc_= "funct3"sv },
+     { .name_= "immHi"sv, .startBit_= 10, .endBit_= 12, .desc_= "imm"sv },
+     { .name_= "rs1'"sv, .startBit_= 7, .endBit_= 9, .desc_= "rs1'"sv },
+     { .name_= "immLo"sv, .startBit_= 5, .endBit_= 6, .desc_= "imm"sv },
+     { .name_= "rs2'"sv, .startBit_= 2, .endBit_= 4, .desc_= "rs2'"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+constexpr std::array<InstField, 5> G_C_CA_FIELDS {
+    {
+     { .name_= "funct6"sv, .startBit_= 10, .endBit_= 15, .desc_= "funct6"sv },
+     { .name_= "rd'"sv, .startBit_= 7, .endBit_= 9, .desc_= "rd'/rs1'"sv },
+     { .name_= "funct2"sv, .startBit_= 5, .endBit_= 6, .desc_= "funct2"sv },
+     { .name_= "rs2'"sv, .startBit_= 2, .endBit_= 4, .desc_= "rs2'"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+constexpr std::array<InstField, 5> G_C_CB_FIELDS {
+    {
+     { .name_= "funct3"sv, .startBit_= 13, .endBit_= 15, .desc_= "funct3"sv },
+     { .name_= "offHi"sv, .startBit_= 10, .endBit_= 12, .desc_= "offset"sv },
+     { .name_= "rd'"sv, .startBit_= 7, .endBit_= 9, .desc_= "rd'/rs1'"sv },
+     { .name_= "offLo"sv, .startBit_= 2, .endBit_= 6, .desc_= "offset"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+constexpr std::array<InstField, 3> G_C_CJ_FIELDS {
+    {
+     { .name_= "funct3"sv, .startBit_= 13, .endBit_= 15, .desc_= "funct3"sv },
+     { .name_= "target"sv, .startBit_= 2, .endBit_= 12, .desc_= "jump target"sv },
+     { .name_= "opcode"sv, .startBit_= 0, .endBit_= 1, .desc_= "opc"sv },
+     }
+};
+
+// Indexed by CShape (CR=0 .. CJ=8).
+constexpr std::array<std::span<const InstField>, 9> G_C_SHAPE_FIELDS {
+    std::span<const InstField>(G_C_CR_FIELDS),
+    std::span<const InstField>(G_C_CI_FIELDS),
+    std::span<const InstField>(G_C_CSS_FIELDS),
+    std::span<const InstField>(G_C_CIW_FIELDS),
+    std::span<const InstField>(G_C_CL_FIELDS),
+    std::span<const InstField>(G_C_CS_FIELDS),
+    std::span<const InstField>(G_C_CA_FIELDS),
+    std::span<const InstField>(G_C_CB_FIELDS),
+    std::span<const InstField>(G_C_CJ_FIELDS),
+};
+
 constexpr std::array<InstField, 6> G_J_FIELDS {
     {
      { .name_= "imm20"sv, .startBit_= 31, .endBit_= 31, .desc_= "imm[20]"sv },
@@ -249,4 +349,40 @@ RtypeShape DetectRShape(uint32_t opc) noexcept
         return RtypeShape::R4;
     }
     return RtypeShape::BASE;
+}
+
+std::span<const InstField> GetCInstFields(CShape shape) noexcept
+{
+    const auto IDX= static_cast<size_t>(shape);
+    if(IDX >= G_C_SHAPE_FIELDS.size()) return {};
+
+    return G_C_SHAPE_FIELDS[IDX];
+}
+
+CShape DetectCShape(uint32_t inst) noexcept
+{
+    const uint32_t Q = inst & 0x3U;
+    const uint32_t F3= (inst >> 13) & 0x7U;
+
+    if(0U == Q) {
+        if(0U == F3) return CShape::CIW;
+        if(F3 <= 3U) return CShape::CL;
+        return CShape::CS;
+    }
+    if(1U == Q) {
+        if(5U == F3) return CShape::CJ;
+        if(6U == F3 || 7U == F3) return CShape::CB;
+        if(4U == F3) {
+            const uint32_t MID= (inst >> 10) & 0x7U; // inst[12:10]
+            if(7U == MID || 3U == MID) return CShape::CA;
+            return CShape::CB;
+        }
+        return CShape::CI;
+    }
+    if(2U == Q) {
+        if(4U == F3) return CShape::CR;
+        if(F3 >= 5U) return CShape::CSS;
+        return CShape::CI;
+    }
+    return CShape::CI;
 }

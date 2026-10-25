@@ -93,6 +93,7 @@ struct InstFormatView {
 
 [[nodiscard]] const InstFormatView &GetIInstFormatView(ItypeImmShape shape);
 [[nodiscard]] const InstFormatView &GetRInstFormatView(RtypeShape shape);
+[[nodiscard]] const InstFormatView &GetCInstFormatView(CShape shape);
 [[nodiscard]] const InstFormatView &GetInstFormatView(InstFormat fmt);
 
 } // namespace util
