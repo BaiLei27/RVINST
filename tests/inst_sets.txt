@@ -324,6 +324,26 @@ decode|0x00100073|00100073|ebreak|I-Type|ebreak|impl
 encode|ebreak|00100073|ebreak|I-Type|ebreak|impl
 
 # =============================================================================
+# Zicsr — Ch.35: CSRRW/CSRRS/CSRRC + immediate forms (SYSTEM, funct3=1..3/5..7)
+# Known G CSRs decode to names (cycle/fflags/…); encode accepts name or 0xNNN.
+# =============================================================================
+decode|0xc00110f3|C00110F3|csrrw x1,cycle,x2|I-Type|csrrw|impl
+encode|csrrw x1, 0xc00, x2|C00110F3|csrrw x1,cycle,x2|I-Type|csrrw|impl
+encode|csrrw x1, cycle, x2|C00110F3|csrrw x1,cycle,x2|I-Type|csrrw|impl
+decode|0xc00120f3|C00120F3|csrrs x1,cycle,x2|I-Type|csrrs|impl
+encode|csrrs x1, cycle, x2|C00120F3|csrrs x1,cycle,x2|I-Type|csrrs|impl
+decode|0xc00130f3|C00130F3|csrrc x1,cycle,x2|I-Type|csrrc|impl
+encode|csrrc x1, cycle, x2|C00130F3|csrrc x1,cycle,x2|I-Type|csrrc|impl
+decode|0xc00150f3|C00150F3|csrrwi x1,cycle,2|I-Type|csrrwi|impl
+encode|csrrwi x1, cycle, 2|C00150F3|csrrwi x1,cycle,2|I-Type|csrrwi|impl
+decode|0xc00160f3|C00160F3|csrrsi x1,cycle,2|I-Type|csrrsi|impl
+encode|csrrsi x1, cycle, 2|C00160F3|csrrsi x1,cycle,2|I-Type|csrrsi|impl
+decode|0xc00170f3|C00170F3|csrrci x1,cycle,2|I-Type|csrrci|impl
+encode|csrrci x1, cycle, 2|C00170F3|csrrci x1,cycle,2|I-Type|csrrci|impl
+decode|0x0012d0f3|0012D0F3|csrrwi x1,fflags,5|I-Type|csrrwi|impl
+encode|csrrwi x1, fflags, 5|0012D0F3|csrrwi x1,fflags,5|I-Type|csrrwi|impl
+
+# =============================================================================
 # S-Type STORE  (3)  — RV32I only (sd is RV64I, listed below as todo/out-of-scope)
 # =============================================================================
 decode|0x00110223|00110223|sb x1,4(x2)|S-Type|sb|impl

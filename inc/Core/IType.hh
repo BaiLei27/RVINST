@@ -7,7 +7,8 @@ class IType: public IBaseInstType {
 public:
     // OP_IMM* shift: payload = (immFunct << 3) | f3, immFunct is 0 or 0x20 (srai bit)
     // MISC_MEM: fence/fence.i use f3; fence.tso/pause use full imm12; lq uses f3=2
-    constexpr static std::array<InstInfo, 36> G_INST_TABLE= {
+    // SYSTEM: ecall/ebreak use imm12 (f3=0); Zicsr uses (f3 << 8) so CSR keys never collide
+    constexpr static std::array<InstInfo, 42> G_INST_TABLE= {
         {
          { .name_= "lb", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
          { .name_= "lbu", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x04, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
@@ -50,6 +51,12 @@ public:
 
          { .name_= "jalr", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::JALR), .opcode_= OpcMap::JALR },
 
+         { .name_= "csrrc", .XLEN_= "Zicsr", .keyID_= PACK_KEY(0x03U << 8, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
+         { .name_= "csrrci", .XLEN_= "Zicsr", .keyID_= PACK_KEY(0x07U << 8, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
+         { .name_= "csrrs", .XLEN_= "Zicsr", .keyID_= PACK_KEY(0x02U << 8, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
+         { .name_= "csrrsi", .XLEN_= "Zicsr", .keyID_= PACK_KEY(0x06U << 8, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
+         { .name_= "csrrw", .XLEN_= "Zicsr", .keyID_= PACK_KEY(0x01U << 8, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
+         { .name_= "csrrwi", .XLEN_= "Zicsr", .keyID_= PACK_KEY(0x05U << 8, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
          { .name_= "ebreak", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x01, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
          { .name_= "ecall", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::SYSTEM), .opcode_= OpcMap::SYSTEM },
          }
