@@ -33,6 +33,36 @@ decode|0x003170b3|003170B3|and x1,x2,x3|R-Type|and|impl
 encode|and x1, x2, x3|003170B3|and x1,x2,x3|R-Type|and|impl
 
 # =============================================================================
+# R-Type M (RV32M + RV64M)  — Ch.35 listings, funct7=0000001
+# =============================================================================
+decode|0x023100b3|023100B3|mul x1,x2,x3|R-Type|mul|impl
+encode|mul x1, x2, x3|023100B3|mul x1,x2,x3|R-Type|mul|impl
+decode|0x023110b3|023110B3|mulh x1,x2,x3|R-Type|mulh|impl
+encode|mulh x1, x2, x3|023110B3|mulh x1,x2,x3|R-Type|mulh|impl
+decode|0x023120b3|023120B3|mulhsu x1,x2,x3|R-Type|mulhsu|impl
+encode|mulhsu x1, x2, x3|023120B3|mulhsu x1,x2,x3|R-Type|mulhsu|impl
+decode|0x023130b3|023130B3|mulhu x1,x2,x3|R-Type|mulhu|impl
+encode|mulhu x1, x2, x3|023130B3|mulhu x1,x2,x3|R-Type|mulhu|impl
+decode|0x023140b3|023140B3|div x1,x2,x3|R-Type|div|impl
+encode|div x1, x2, x3|023140B3|div x1,x2,x3|R-Type|div|impl
+decode|0x023150b3|023150B3|divu x1,x2,x3|R-Type|divu|impl
+encode|divu x1, x2, x3|023150B3|divu x1,x2,x3|R-Type|divu|impl
+decode|0x023160b3|023160B3|rem x1,x2,x3|R-Type|rem|impl
+encode|rem x1, x2, x3|023160B3|rem x1,x2,x3|R-Type|rem|impl
+decode|0x023170b3|023170B3|remu x1,x2,x3|R-Type|remu|impl
+encode|remu x1, x2, x3|023170B3|remu x1,x2,x3|R-Type|remu|impl
+decode|0x023100bb|023100BB|mulw x1,x2,x3|R-Type|mulw|impl
+encode|mulw x1, x2, x3|023100BB|mulw x1,x2,x3|R-Type|mulw|impl
+decode|0x023140bb|023140BB|divw x1,x2,x3|R-Type|divw|impl
+encode|divw x1, x2, x3|023140BB|divw x1,x2,x3|R-Type|divw|impl
+decode|0x023150bb|023150BB|divuw x1,x2,x3|R-Type|divuw|impl
+encode|divuw x1, x2, x3|023150BB|divuw x1,x2,x3|R-Type|divuw|impl
+decode|0x023160bb|023160BB|remw x1,x2,x3|R-Type|remw|impl
+encode|remw x1, x2, x3|023160BB|remw x1,x2,x3|R-Type|remw|impl
+decode|0x023170bb|023170BB|remuw x1,x2,x3|R-Type|remuw|impl
+encode|remuw x1, x2, x3|023170BB|remuw x1,x2,x3|R-Type|remuw|impl
+
+# =============================================================================
 # I-Type OP-IMM  (9)
 # =============================================================================
 decode|0x00310093|00310093|addi x1,x2,3|I-Type|addi|impl
