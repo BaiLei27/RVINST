@@ -1,3 +1,5 @@
+#include <format>
+
 #include "Core/IType.hh"
 #include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
@@ -118,7 +120,23 @@ void IType::mnemonicHelper()
     const auto SHAPE  = DetectIImmShape(OPC, Layout_.I.fct3);
 
     if(OpcMap::SYSTEM == OPC) {
-        if(InstAssembly_.size() > 1) InstAssembly_.resize(1);
+        if(0 == Layout_.I.fct3) {
+            if(InstAssembly_.size() > 1) InstAssembly_.resize(1);
+            return;
+        }
+        // Zicsr: csrr* rd, csr, rs1/uimm â€?known G CSRs by name, else 0xNNN
+        auto rd= isa::LookupRegName(Layout_.I.rd, HasSetABI_);
+        const uint16_t CSRN= static_cast<uint16_t>(Layout_.I.imm0tB & 0xFFFU);
+        const std::string CSR_STR= [&] {
+            if(auto n= isa::LookupCSRName(CSRN)) return std::string(*n);
+            return std::format("0x{:x}", CSRN);
+        }();
+        if(Layout_.I.fct3 >= 5) {
+            appendOperands({ " ", rd, ",", CSR_STR, ",", std::to_string(Layout_.I.rs1 & 0x1FU) });
+        } else {
+            auto rs1= isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
+            appendOperands({ " ", rd, ",", CSR_STR, ",", rs1 });
+        }
         return;
     }
 
@@ -156,10 +174,35 @@ util::Expected_u<const InstLayout *> IType::Assembly()
     const uint16_t OPC= Layout_.I.opc= info.opcode_;
 
     if(OpcMap::SYSTEM == OPC) {
+        if(PAYLOAD <= 1) {
+            // ecall/ebreak: payload is imm12; f3=0
+            Layout_.I.rd    = 0;
+            Layout_.I.rs1   = 0;
+            Layout_.I.fct3  = 0;
+            Layout_.I.imm0tB= PAYLOAD;
+            mnemonicHelper();
+            return &Layout_;
+        }
+        // Zicsr: payload = f3 << 8
+        Layout_.I.fct3  = static_cast<uint8_t>(PAYLOAD >> 8);
         Layout_.I.rd    = 0;
         Layout_.I.rs1   = 0;
-        Layout_.I.fct3  = 0;
-        Layout_.I.imm0tB= PAYLOAD;
+        Layout_.I.imm0tB= 0;
+        if(InstAssembly_.size() >= 4) {
+            if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.I.rd= *rd;
+            if(auto csr= isa::LookupCSRIdx(InstAssembly_.at(2))) {
+                Layout_.I.imm0tB= *csr;
+            } else {
+                int32_t csrNum {};
+                if(util::ParseInt(InstAssembly_.at(2), csrNum)) Layout_.I.imm0tB= csrNum & 0xFFFU;
+            }
+            if(Layout_.I.fct3 >= 5) {
+                int32_t uimm {};
+                if(util::ParseInt(InstAssembly_.at(3), uimm)) Layout_.I.rs1= uimm & 0x1FU;
+            } else if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(3))) {
+                Layout_.I.rs1= *rs1;
+            }
+        }
         mnemonicHelper();
         return &Layout_;
     }
@@ -274,7 +317,11 @@ auto IType::calculateKeyID() -> KeyT
             Key_= OP_K(Layout_.I.fct3, OpcMap::MISC_MEM);
         }
         break;
-    case OpcMap::SYSTEM: Key_= SYSTEM_K(Layout_.I.imm0tB, Layout_.I.opc); break;
+    case OpcMap::SYSTEM:
+        // f3=0 â†?ecall/ebreak keyed by imm12; else Zicsr keyed by f3<<8
+        Key_= 0 == Layout_.I.fct3 ? SYSTEM_K(Layout_.I.imm0tB, Layout_.I.opc)
+                                  : SYSTEM_K(static_cast<uint16_t>(Layout_.I.fct3) << 8, Layout_.I.opc);
+        break;
     default:             Key_= OP_K(Layout_.I.fct3, Layout_.I.opc); break;
     }
 
