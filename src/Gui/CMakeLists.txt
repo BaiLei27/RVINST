@@ -56,6 +56,7 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
 )
 
 target_sources(${PROJECT_NAME} PRIVATE
+    ${projectIncDir}/Gui/GlibString.hh
     ${projectIncDir}/Gui/InstCommST.hh
     ${projectIncDir}/Gui/IHoverWidget.hh
     ${projectScrDir}/IHoverWidget.cc
@@ -77,6 +78,9 @@ target_sources(${PROJECT_NAME} PRIVATE
 
     ${projectIncDir}/Gui/FileLoader.hh
     ${projectScrDir}/FileLoader.cc
+
+    ${projectIncDir}/Gui/InstListPanel.hh
+    ${projectScrDir}/InstListPanel.cc
 
     ${projectIncDir}/Gui/RISCVInstWindow.hh
     ${projectScrDir}/RISCVInstWindow.cc

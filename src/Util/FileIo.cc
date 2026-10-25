@@ -31,7 +31,7 @@ Expected_u<std::ifstream> FileIo::openInput(const fs::path &path)
     return in;
 }
 
-Expected_u<void> FileIo::streamLines(const fs::path &path, LineCallback_u onLine)
+Expected_u<void> FileIo::streamLines(const fs::path &path, const LineCallback_u &onLine)
 {
     auto in= openInput(path);
     if(!in) return Unexpected(std::move(in.error()));
@@ -43,7 +43,7 @@ Expected_u<void> FileIo::streamLines(const fs::path &path, LineCallback_u onLine
     return {};
 }
 
-Expected_u<void> FileIo::ForEachLine(std::string_view path, LineCallback_u onLine)
+Expected_u<void> FileIo::ForEachLine(std::string_view path, const LineCallback_u &onLine)
 {
     return streamLines(fs::path(path), onLine); // Caller's path is used verbatim; relative paths resolve against the CWD.
 }

@@ -69,6 +69,7 @@ Checks: '-*,
         -cppcoreguidelines-pro-type-union-access,
         -cppcoreguidelines-pro-type-vararg,
         -cppcoreguidelines-special-member-functions,
+        -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
 
         google-build-namespaces,
         google-build-using-namespace,
@@ -119,6 +120,7 @@ Checks: '-*,
         performance-unnecessary-value-param,
 
         readability*,
+        -readability-trailing-comma,
         -readability-avoid-unconditional-preprocessor-if,
         -readability-container-size-empty,
         -readability-container-contains,
@@ -149,10 +151,12 @@ FormatStyle: 'file'
 UseColor: 'true'
 CheckOptions:
   # 易出错代码结构 (Bugprone)
+  bugprone-signed-bitwise.IgnorePositiveIntegerLiterals: 'true'
   bugprone-easily-swappable-parameters.QualifiersMix: 'true'
   bugprone-misplaced-widening-cast.CheckImplicitCasts: 'true'
 
   # C++核心指南(cppcoreguidelines)
+  cppcoreguidelines-use-enum-class.IgnoreUnscopedEnumsInClasses: 'true'
   cppcoreguidelines-macro-usage.CheckCapsOnly: 'true'
   cppcoreguidelines-init-variables.MathHeader: '<cmath>'
   cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: 'true'
@@ -162,6 +166,10 @@ CheckOptions:
   modernize-use-override.IgnoreDestructors: 'true'
 
   # 可读性(Readability)
+  readability-implicit-bool-conversion.AllowPointerConditions: 'true'
+  readability-implicit-bool-conversion.AllowLogicalOperatorConversion: 'true'
+  readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: 'true'
+
   readability-identifier-length.IgnoredVariableNames: '^[abcijkmnpxyz]$'
   readability-identifier-length.MinimumParameterNameLength: '2'
   readability-identifier-length.MinimumVariableNameLength: '2'
@@ -174,7 +182,7 @@ CheckOptions:
   readability-identifier-naming.ConstantCase: 'UPPER_CASE'
   readability-identifier-naming.EnumCase: 'CamelCase'
   readability-identifier-naming.GlobalConstantPrefix: 'G_'
-  # readability-identifier-naming.GlobalFunctionCase: 'CamelCase'
+  readability-identifier-naming.GlobalFunctionCase: 'CamelCase'
   readability-identifier-naming.GlobalVariablePrefix: 'g_'
   readability-identifier-naming.LocalPointerCase: 'CamelCase'
   readability-identifier-naming.LocalPointerPrefix: 'p'
@@ -197,8 +205,6 @@ CheckOptions:
   # readability-identifier-naming.TypeAliasCase: 'camelBack'
   readability-identifier-naming.TypeAliasSuffix: '_u'
   readability-identifier-naming.VariableCase: 'camelBack'
-
-  readability-implicit-bool-conversion.AllowPointerConditions: 'true'
 
   # 杂项(Miscellaneous)
   misc-include-cleaner.MissingIncludes: 'false'

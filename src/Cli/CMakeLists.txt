@@ -31,9 +31,6 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${projectIncDir}/Cli/Commands.hh
     ${projectScrDir}/Commands.cc
 
-    ${projectIncDir}/Cli/InstrEntry.hh
-    ${projectScrDir}/InstrEntry.cc
-
     ${projectIncDir}/Cli/OutputTable.hh
     ${projectScrDir}/OutputTable.cc
 )

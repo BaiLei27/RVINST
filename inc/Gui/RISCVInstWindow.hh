@@ -4,6 +4,7 @@
 #include "Gui/AboutWindow.hh"
 #include "Gui/FileLoader.hh"
 #include "Gui/InstFormatUI.hh"
+#include "Gui/InstListPanel.hh"
 #include "Gui/SettingsPanel.hh"
 #include "Util/FileIo.hh"
 #include "Util/InputHistoryMgr.hh"
@@ -27,6 +28,7 @@ public:
     util::FileIo fileMgr_;
     std::unique_ptr<SettingsPanel> pSettings_;
     std::unique_ptr<FileLoader> pFileLoader_;
+    std::unique_ptr<InstListPanel> pInstList_;
     std::unique_ptr<AboutWindow> pAbout_;
     std::unique_ptr<Instruction> inst_;
 

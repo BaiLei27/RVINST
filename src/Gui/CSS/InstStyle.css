@@ -42,12 +42,25 @@
 @define-color error_text            #d70015;
 
 
+/* Four equal corners — some Win32 themes only round the top by default. */
+window.app-window,
+.app-window,
+.app-window > overlay,
+.app-window > box,
+window.inst-list-window,
+.inst-list-window,
+.inst-list-window > box {
+    border-radius: 12px;
+}
+
 .app-window,
 .app-window > box,
 .main-container,
 .format-panel,
 .about-window,
-.about-container {
+.about-container,
+.inst-list-window,
+.inst-list-window > box {
     background-color: @bg_color;
     color: @text_primary;
 }
@@ -529,6 +542,78 @@ label.manual-link,
     min-width: 200px;
 }
 
+.inst-list-panel {
+    min-width: 220px;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid @border_color;
+    background-color: @surface_color;
+}
+
+.inst-list-title {
+    color: @text_secondary;
+    font-family: monospace;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.inst-list-scroll {
+    min-width: 220px;
+    border: 1px solid @border_color;
+    border-radius: 12px;
+    background-color: @surface_soft;
+}
+
+.inst-list-modules {
+    padding: 8px;
+}
+
+.inst-list-module {
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid @border_color;
+    border-radius: 10px;
+    background-color: @surface_color;
+}
+
+.inst-list-module-empty {
+    opacity: 0.55;
+}
+
+.inst-list-module > title,
+.inst-list-module > title > label,
+.inst-list-module label {
+    font-family: monospace;
+    font-size: 1em;
+    font-weight: 600;
+    color: @text_secondary;
+}
+
+.inst-list-rows {
+    background: transparent;
+    border: none;
+}
+
+button.inst-list-row {
+    min-height: 28px;
+    padding: 2px 6px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+}
+
+button.inst-list-row:hover {
+    background-color: @surface_soft;
+}
+
+.inst-list-mnemonic {
+    color: @text_primary;
+    font-family: monospace;
+    font-size: 1em;
+    font-weight: 600;
+}
+
 .settings-row {
     min-height: 40px;
 }
@@ -580,7 +665,7 @@ switch slider,
 switch.abi-switch slider {
     min-width: 24px;
     min-height: 24px;
-    margin: 2px;
+    margin: 0; /* keep css_extra_size >= 0: Adwaita defaults slider margin to -1px, which makes min size negative on shrink */
     border-radius: 50%;
     background-image: none;
     background-color: white;
@@ -701,6 +786,7 @@ scrollbar {
 scrollbar slider {
     min-width: 6px;
     min-height: 6px;
+    margin: 0; /* Adwaita scrollbar slider defaults to -1px; keep min size non-negative on shrink */
     border-radius: 3px;
     background-color: rgba(0, 0, 0, 0.18);
 }

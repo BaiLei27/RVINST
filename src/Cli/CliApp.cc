@@ -2,10 +2,10 @@
 #include <algorithm>
 
 #include "ISA/InstFormat.hh"
-#include "Cli/Commands.hh"
-#include "Cli/InstrEntry.hh"
-#include "Cli/OutputTable.hh"
 #include "Util/ErrorHandle.hh"
+#include "Util/InstCatalog.hh"
+#include "Cli/Commands.hh"
+#include "Cli/OutputTable.hh"
 #include "Cli/CliApp.hh"
 #include "config.hpp"
 
@@ -122,11 +122,11 @@ int CliApp::Run(int argc, char *pArgv[])
         std::optional<InstFormat> filter;
         for(size_t i= 0; i < remaining.size(); ++i) {
             if(remaining[i] == "--type" && i + 1 < remaining.size()) {
-                filter= stringToFormat(remaining[++i]);
+                filter= util::StringToFormat(remaining[++i]);
                 if(!filter) return fail(std::format("invalid type: {}", remaining[i]));
 
             } else if(remaining[i].starts_with("--type=")) {
-                filter= stringToFormat(remaining[i].substr(7));
+                filter= util::StringToFormat(remaining[i].substr(7));
                 if(!filter) return fail(std::format("invalid type: {}", remaining[i].substr(7)));
             }
         }

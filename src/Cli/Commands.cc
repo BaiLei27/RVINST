@@ -96,8 +96,8 @@ util::Expected_u<void> Commands::Reg(std::string_view query)
         std::string s(query);
         uint16_t v {};
         const char *end     = s.data() + s.size(); // NOLINT
-        const auto [ptr, ec]= std::from_chars(s.data(), end, v, 10);
-        if(std::errc() == ec && ptr == end && v < 32) idxOpt= v;
+        const auto [PTR, EC]= std::from_chars(s.data(), end, v, 10);
+        if(std::errc() == EC && PTR == end && v < 32) idxOpt= v;
     }
 
     if(!idxOpt || *idxOpt >= 32) {
@@ -110,7 +110,7 @@ util::Expected_u<void> Commands::Reg(std::string_view query)
 
 util::Expected_u<void> Commands::List(std::optional<InstFormat> filter)
 {
-    auto entries= getAllInstructions(filter);
+    auto entries= util::GetAllInstructions(filter);
     if(entries.empty()) {
         return util::Unexpected(util::Error::InvalidArg("no instructions found for the given filter"));
     }
@@ -206,7 +206,7 @@ namespace {
         fflush(stdout);
     }
 
-#if defined(RVINST_NATIVE_WIN)
+#ifdef RVINST_NATIVE_WIN
     // Native Win32 (MSVC / MSYS2 clang64|ucrt64|mingw): arrows are VK_* events.
     class ScopedRawMode {
     public:
@@ -427,7 +427,7 @@ int Commands::replLoop()
             if(verb == "list") {
                 std::optional<InstFormat> filter;
                 if(arg.starts_with("--type ")) {
-                    filter= stringToFormat(arg.substr(7));
+                    filter= util::StringToFormat(arg.substr(7));
                 }
                 if(auto r= List(filter); !r) {
                     Fmt_.PrintError(std::string(r.error().Msg()));

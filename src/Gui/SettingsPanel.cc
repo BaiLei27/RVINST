@@ -18,7 +18,7 @@ SettingsPanel::SettingsPanel(bool abiOn, bool hexImmOn, bool saveHistOn, bool co
       CompactOn_(compactOn)
 {
     PMenuBtn_->set_icon_name("emblem-system-symbolic");
-    PMenuBtn_->set_tooltip_text("ABI / display settings");
+    PMenuBtn_->set_tooltip_text("settings");
     PMenuBtn_->set_always_show_arrow(false);
     PMenuBtn_->add_css_class("icon-button");
 
