@@ -133,7 +133,9 @@ void IType::mnemonicHelper()
         return;
     }
 
-    auto rd = isa::LookupRegName(Layout_.I.rd, HasSetABI_);
+    const bool FP_LOAD= OpcMap::LOAD_FP == OPC;
+    auto rd           = FP_LOAD ? isa::LookupFregName(Layout_.I.rd, HasSetABI_)
+                                : isa::LookupRegName(Layout_.I.rd, HasSetABI_);
     auto rs1= isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
     std::string immStr;
     if(ItypeImmShape::SHIFT == SHAPE) {
@@ -230,12 +232,16 @@ util::Expected_u<const InstLayout *> IType::Assembly()
         return &Layout_;
     }
 
-    // LOAD / JALR / LQ (MISC_MEM f3=2)
+    // LOAD / LOAD_FP / JALR / LQ (MISC_MEM f3=2)
     Layout_.I.fct3  = PAYLOAD;
     Layout_.I.imm0tB= 0;
 
     if(InstAssembly_.size() >= 4) {
-        if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.I.rd= *rd;
+        if(OpcMap::LOAD_FP == OPC) {
+            if(auto rd= isa::LookupFregIdx(InstAssembly_.at(1))) Layout_.I.rd= *rd;
+        } else if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) {
+            Layout_.I.rd= *rd;
+        }
         if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(2))) Layout_.I.rs1= *rs1;
 
         int32_t imm {};

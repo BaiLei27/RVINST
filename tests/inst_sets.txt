@@ -63,6 +63,70 @@ decode|0x023170bb|023170BB|remuw x1,x2,x3|R-Type|remuw|impl
 encode|remuw x1, x2, x3|023170BB|remuw x1,x2,x3|R-Type|remuw|impl
 
 # =============================================================================
+# F Extension (RV32F + RV64F) — Ch.35 listings; rm=dyn(7) on encode
+# =============================================================================
+decode|0x00412087|00412087|flw f1,x2,4|I-Type|flw|impl
+encode|flw f1, x2, 4|00412087|flw f1,x2,4|I-Type|flw|impl
+decode|0x00112227|00112227|fsw f1,4(x2)|S-Type|fsw|impl
+encode|fsw f1, 4, x2|00112227|fsw f1,4(x2)|S-Type|fsw|impl
+decode|0x203170c3|203170C3|fmadd.s f1,f2,f3,f4|R-Type|fmadd.s|impl
+encode|fmadd.s f1, f2, f3, f4|203170C3|fmadd.s f1,f2,f3,f4|R-Type|fmadd.s|impl
+decode|0x203170c7|203170C7|fmsub.s f1,f2,f3,f4|R-Type|fmsub.s|impl
+encode|fmsub.s f1, f2, f3, f4|203170C7|fmsub.s f1,f2,f3,f4|R-Type|fmsub.s|impl
+decode|0x203170cb|203170CB|fnmsub.s f1,f2,f3,f4|R-Type|fnmsub.s|impl
+encode|fnmsub.s f1, f2, f3, f4|203170CB|fnmsub.s f1,f2,f3,f4|R-Type|fnmsub.s|impl
+decode|0x203170cf|203170CF|fnmadd.s f1,f2,f3,f4|R-Type|fnmadd.s|impl
+encode|fnmadd.s f1, f2, f3, f4|203170CF|fnmadd.s f1,f2,f3,f4|R-Type|fnmadd.s|impl
+decode|0x003170d3|003170D3|fadd.s f1,f2,f3|R-Type|fadd.s|impl
+encode|fadd.s f1, f2, f3|003170D3|fadd.s f1,f2,f3|R-Type|fadd.s|impl
+decode|0x083170d3|083170D3|fsub.s f1,f2,f3|R-Type|fsub.s|impl
+encode|fsub.s f1, f2, f3|083170D3|fsub.s f1,f2,f3|R-Type|fsub.s|impl
+decode|0x103170d3|103170D3|fmul.s f1,f2,f3|R-Type|fmul.s|impl
+encode|fmul.s f1, f2, f3|103170D3|fmul.s f1,f2,f3|R-Type|fmul.s|impl
+decode|0x183170d3|183170D3|fdiv.s f1,f2,f3|R-Type|fdiv.s|impl
+encode|fdiv.s f1, f2, f3|183170D3|fdiv.s f1,f2,f3|R-Type|fdiv.s|impl
+decode|0x580170d3|580170D3|fsqrt.s f1,f2|R-Type|fsqrt.s|impl
+encode|fsqrt.s f1, f2|580170D3|fsqrt.s f1,f2|R-Type|fsqrt.s|impl
+decode|0x203100d3|203100D3|fsgnj.s f1,f2,f3|R-Type|fsgnj.s|impl
+encode|fsgnj.s f1, f2, f3|203100D3|fsgnj.s f1,f2,f3|R-Type|fsgnj.s|impl
+decode|0x203110d3|203110D3|fsgnjn.s f1,f2,f3|R-Type|fsgnjn.s|impl
+encode|fsgnjn.s f1, f2, f3|203110D3|fsgnjn.s f1,f2,f3|R-Type|fsgnjn.s|impl
+decode|0x203120d3|203120D3|fsgnjx.s f1,f2,f3|R-Type|fsgnjx.s|impl
+encode|fsgnjx.s f1, f2, f3|203120D3|fsgnjx.s f1,f2,f3|R-Type|fsgnjx.s|impl
+decode|0x283100d3|283100D3|fmin.s f1,f2,f3|R-Type|fmin.s|impl
+encode|fmin.s f1, f2, f3|283100D3|fmin.s f1,f2,f3|R-Type|fmin.s|impl
+decode|0x283110d3|283110D3|fmax.s f1,f2,f3|R-Type|fmax.s|impl
+encode|fmax.s f1, f2, f3|283110D3|fmax.s f1,f2,f3|R-Type|fmax.s|impl
+decode|0xc00170d3|C00170D3|fcvt.w.s x1,f2|R-Type|fcvt.w.s|impl
+encode|fcvt.w.s x1, f2|C00170D3|fcvt.w.s x1,f2|R-Type|fcvt.w.s|impl
+decode|0xc01170d3|C01170D3|fcvt.wu.s x1,f2|R-Type|fcvt.wu.s|impl
+encode|fcvt.wu.s x1, f2|C01170D3|fcvt.wu.s x1,f2|R-Type|fcvt.wu.s|impl
+decode|0xe00100d3|E00100D3|fmv.x.w x1,f2|R-Type|fmv.x.w|impl
+encode|fmv.x.w x1, f2|E00100D3|fmv.x.w x1,f2|R-Type|fmv.x.w|impl
+decode|0xa03120d3|A03120D3|feq.s x1,f2,f3|R-Type|feq.s|impl
+encode|feq.s x1, f2, f3|A03120D3|feq.s x1,f2,f3|R-Type|feq.s|impl
+decode|0xa03110d3|A03110D3|flt.s x1,f2,f3|R-Type|flt.s|impl
+encode|flt.s x1, f2, f3|A03110D3|flt.s x1,f2,f3|R-Type|flt.s|impl
+decode|0xa03100d3|A03100D3|fle.s x1,f2,f3|R-Type|fle.s|impl
+encode|fle.s x1, f2, f3|A03100D3|fle.s x1,f2,f3|R-Type|fle.s|impl
+decode|0xe00110d3|E00110D3|fclass.s x1,f2|R-Type|fclass.s|impl
+encode|fclass.s x1, f2|E00110D3|fclass.s x1,f2|R-Type|fclass.s|impl
+decode|0xd00170d3|D00170D3|fcvt.s.w f1,x2|R-Type|fcvt.s.w|impl
+encode|fcvt.s.w f1, x2|D00170D3|fcvt.s.w f1,x2|R-Type|fcvt.s.w|impl
+decode|0xd01170d3|D01170D3|fcvt.s.wu f1,x2|R-Type|fcvt.s.wu|impl
+encode|fcvt.s.wu f1, x2|D01170D3|fcvt.s.wu f1,x2|R-Type|fcvt.s.wu|impl
+decode|0xf00100d3|F00100D3|fmv.w.x f1,x2|R-Type|fmv.w.x|impl
+encode|fmv.w.x f1, x2|F00100D3|fmv.w.x f1,x2|R-Type|fmv.w.x|impl
+decode|0xc02170d3|C02170D3|fcvt.l.s x1,f2|R-Type|fcvt.l.s|impl
+encode|fcvt.l.s x1, f2|C02170D3|fcvt.l.s x1,f2|R-Type|fcvt.l.s|impl
+decode|0xc03170d3|C03170D3|fcvt.lu.s x1,f2|R-Type|fcvt.lu.s|impl
+encode|fcvt.lu.s x1, f2|C03170D3|fcvt.lu.s x1,f2|R-Type|fcvt.lu.s|impl
+decode|0xd02170d3|D02170D3|fcvt.s.l f1,x2|R-Type|fcvt.s.l|impl
+encode|fcvt.s.l f1, x2|D02170D3|fcvt.s.l f1,x2|R-Type|fcvt.s.l|impl
+decode|0xd03170d3|D03170D3|fcvt.s.lu f1,x2|R-Type|fcvt.s.lu|impl
+encode|fcvt.s.lu f1, x2|D03170D3|fcvt.s.lu f1,x2|R-Type|fcvt.s.lu|impl
+
+# =============================================================================
 # I-Type OP-IMM  (9)
 # =============================================================================
 decode|0x00310093|00310093|addi x1,x2,3|I-Type|addi|impl
