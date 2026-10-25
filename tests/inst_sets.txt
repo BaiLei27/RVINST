@@ -304,12 +304,20 @@ encode|lhu x1, 4, x2|00415083|lhu x1,x2,4|I-Type|lhu|todo
 # =============================================================================
 decode|0x000100e7|000100E7|jalr x1,x2,0|I-Type|jalr|impl
 encode|jalr x1, x2, 0|000100E7|jalr x1,x2,0|I-Type|jalr|impl
-decode|0x0ff0000f|0FF0000F|fence x0,x0,255|I-Type|fence|impl
-encode|fence|0FF0000F|fence x0,x0,255|I-Type|fence|todo
-# fence.i is Zifencei (listed with RV32I environments)
-decode|0x0000100f|0000100F|fence.i x0,x0,0|I-Type|fence.i|impl
-encode|fence.i|0000100F|fence.i x0,x0,0|I-Type|fence.i|todo
-# SYSTEM: decode of architectural encodings OK; encode currently emits wrong imm/key
+# fence: pred/succ sets (not generic I-type rd,rs1,imm)
+decode|0x0ff0000f|0FF0000F|fence iorw,iorw|I-Type|fence|impl
+encode|fence|0FF0000F|fence iorw,iorw|I-Type|fence|impl
+encode|fence iorw, iorw|0FF0000F|fence iorw,iorw|I-Type|fence|impl
+decode|0x0310000f|0310000F|fence rw,w|I-Type|fence|impl
+encode|fence rw, w|0310000F|fence rw,w|I-Type|fence|impl
+
+# =============================================================================
+# Zifencei — Ch.35: FENCE.I only (MISC-MEM, funct3=1)
+# =============================================================================
+decode|0x0000100f|0000100F|fence.i|I-Type|fence.i|impl
+encode|fence.i|0000100F|fence.i|I-Type|fence.i|impl
+
+# SYSTEM priv (funct3=0)
 decode|0x00000073|00000073|ecall|I-Type|ecall|impl
 encode|ecall|00000073|ecall|I-Type|ecall|impl
 decode|0x00100073|00100073|ebreak|I-Type|ebreak|impl
