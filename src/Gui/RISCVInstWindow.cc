@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <format>
 
+#include "Gui/GlibString.hh"
 #include "Gui/RISCVInstWindow.hh"
 #include "Util/InputParse.hh"
 
@@ -9,12 +10,6 @@ namespace {
 constexpr int G_MaxInputHistory   = 32;
 constexpr int G_HistoryVisibleRows= 8;
 constexpr int G_HistoryRowHeight  = 40;
-
-// string_view -> Glib::ustring (safe for NUL-free ISA strings)
-Glib::ustring toGlibUstring(std::string_view sv)
-{
-    return { sv.data(), sv.size() };
-}
 
 } // namespace
 
@@ -31,7 +26,7 @@ RISCVInstWindow::RISCVInstWindow()
 
     uiContainer_->set_margin(12);
     uiContainer_->add_css_class("main-container");
-#if defined(_WIN32)
+#ifdef _WIN32
     uiContainer_->add_css_class("standard"); // Windows users historically get the larger 25px-equivalent type scale.
 #else
     uiContainer_->add_css_class("compact"); // Compact 16px baseline keeps the 32-bit bit diagram narrow on Linux/Wayland.
@@ -85,7 +80,7 @@ RISCVInstWindow::RISCVInstWindow()
         fitWindowToContent(on);
     });
 
-    // File open â batch decode owned by FileLoader; window takes Instruction ownership.
+    // File open — batch decode owned by FileLoader; window takes Instruction ownership.
     pFileLoader_= std::make_unique<FileLoader>(*this, fileMgr_, [this] { return pSettings_->GetAbiOn(); });
     pFileLoader_->signalInput_.connect([this](std::string_view text) { pushInputHistory(text); });
     pFileLoader_->SetOnInstruction([this](std::unique_ptr<Instruction> inst) {
@@ -94,6 +89,24 @@ RISCVInstWindow::RISCVInstWindow()
     });
     pFileLoader_->signalError_.connect([this](const std::string &msg) { showError(msg); });
     pEntryRow_->append(*pFileLoader_->GetButton());
+
+    // Instruction list (between open-file and settings): non-modal child window.
+    pInstList_= std::make_unique<InstListPanel>(*this);
+    pInstList_->signalInstruction_.connect([this](std::string_view name, uint32_t word) {
+        const auto HEX= std::format("0x{:08X}", word);
+        insEntry_->set_text(gui::ToGlibUstring(HEX));
+        insEntry_->set_tooltip_text(gui::ToGlibUstring(name));
+
+        inst_= std::make_unique<Instruction>(word, pSettings_->GetAbiOn());
+        if(const auto DECODED= inst_->Decode(); !DECODED) {
+            showError(std::format("decode failed: {}", DECODED.error().Msg()));
+            return;
+        }
+        pushInputHistory(HEX);
+        showInsResult(*inst_);
+        // Do not grab_focus here: keep keyboard in the list for multi-pick.
+    });
+    pEntryRow_->append(*pInstList_->GetButton());
     pEntryRow_->append(*pSettings_->GetMenuButton());
 
     insButtonParse_->add_css_class("parse-button");
@@ -423,7 +436,7 @@ void RISCVInstWindow::applyHistoryAt(size_t index)
 {
     history_.JumpTo(index);
     if(!history_.IsBrowsing()) return;
-    insEntry_->set_text(toGlibUstring(history_.At(history_.CursorIndex())));
+    insEntry_->set_text(gui::ToGlibUstring(history_.At(history_.CursorIndex())));
     insEntry_->set_position(-1);
 }
 
@@ -437,7 +450,7 @@ void RISCVInstWindow::browseHistory(int delta)
     const auto STEP= history_.Step(delta);
     if(!STEP) return;
 
-    insEntry_->set_text(toGlibUstring(*STEP));
+    insEntry_->set_text(gui::ToGlibUstring(*STEP));
     insEntry_->set_position(-1);
 }
 

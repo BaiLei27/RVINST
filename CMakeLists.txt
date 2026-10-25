@@ -129,6 +129,7 @@ target_sources(${backend} PRIVATE
     src/Util/FileIo.cc
     src/Util/InputHistoryMgr.cc
     src/Util/InputParse.cc
+    src/Util/InstCatalog.cc
     src/Util/InstFormatView.cc
     src/Core/IBaseInstType.cc
     src/ISA/InstFormat.cc
@@ -155,6 +156,7 @@ target_sources(${backend} PUBLIC
     inc/Util/FileIo.hh
     inc/Util/InputHistoryMgr.hh
     inc/Util/InputParse.hh
+    inc/Util/InstCatalog.hh
     inc/Util/InstFormatView.hh
     inc/Core/IBaseInstType.hh
     inc/Core/RType.hh

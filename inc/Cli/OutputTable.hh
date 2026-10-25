@@ -3,8 +3,8 @@
 #include <iosfwd>
 #include <streambuf>
 
-#include "Cli/InstrEntry.hh"
 #include "Core/Instruction.hh"
+#include "Util/InstCatalog.hh"
 
 namespace cli {
 
@@ -23,7 +23,7 @@ public:
 enum class OutputMode : uint8_t {
     COLORED,
     PLAIN,
-    JSON
+    JSON,
 };
 
 class OutputFormatter {
@@ -36,7 +36,7 @@ public:
 public:
     void PrintInstruction(const Instruction &inst, std::string_view input);
     void PrintRegister(uint16_t idx);
-    void PrintInstructionList(const std::vector<InstrEntry> &entries);
+    void PrintInstructionList(const std::vector<util::InstCatalog> &entries);
     void PrintError(std::string_view msg);
     void PrintHelp();
 
@@ -55,7 +55,7 @@ private:
 
     static void printInstructionJSON(const Instruction &inst, std::string_view input);
     static void printRegisterJSON(uint16_t idx);
-    static void printListJSON(const std::vector<InstrEntry> &entries);
+    static void printListJSON(const std::vector<util::InstCatalog> &entries);
     static std::string jsonEscape(std::string_view s);
 };
 

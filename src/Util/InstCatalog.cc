@@ -1,19 +1,19 @@
 #include <cctype>
 
 #include "Core/BType.hh"
+#include "Core/CType.hh"
 #include "Core/IType.hh"
 #include "Core/JType.hh"
 #include "Core/RType.hh"
 #include "Core/SType.hh"
 #include "Core/UType.hh"
-#include "Core/CType.hh"
-#include "Cli/InstrEntry.hh"
+#include "Util/InstCatalog.hh"
 
-namespace cli {
+namespace util {
 
-std::vector<InstrEntry> getAllInstructions(std::optional<InstFormat> filter)
+std::vector<InstCatalog> GetAllInstructions(std::optional<InstFormat> filter)
 {
-    std::vector<InstrEntry> out;
+    std::vector<InstCatalog> out;
 
     auto addTable= [&](const auto &table, InstFormat fmt) {
         for(const auto &e: table) {
@@ -34,7 +34,7 @@ std::vector<InstrEntry> getAllInstructions(std::optional<InstFormat> filter)
     return out;
 }
 
-std::optional<InstFormat> stringToFormat(std::string_view s)
+std::optional<InstFormat> StringToFormat(std::string_view s)
 {
     if(s.size() == 1 || (s.size() >= 2 && (s[1] == '-' || std::tolower(static_cast<char>(s[1])) == 't'))) {
         switch(std::toupper(static_cast<char>(s.front()))) {
@@ -59,4 +59,4 @@ std::optional<InstFormat> stringToFormat(std::string_view s)
     return std::nullopt;
 }
 
-} // namespace cli
+} // namespace util

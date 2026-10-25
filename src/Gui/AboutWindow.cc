@@ -2,17 +2,8 @@
 #include <string_view>
 
 #include "Gui/AboutWindow.hh"
+#include "Gui/GlibString.hh"
 #include "config.hpp"
-
-namespace {
-
-// string_view -> Glib::ustring (safe for NUL-free ISA strings)
-Glib::ustring toGlibUstring(std::string_view sv)
-{
-    return { sv.data(), sv.size() };
-}
-
-} // namespace
 
 AboutWindow::AboutWindow(Gtk::Window &parent): PParent_(&parent) { }
 
@@ -53,7 +44,7 @@ void AboutWindow::build()
         pRow->set_halign(Gtk::Align::FILL);
         pRow->add_css_class("version-info-row");
 
-        auto *pName= Gtk::make_managed<Gtk::Label>(toGlibUstring(name));
+        auto *pName= Gtk::make_managed<Gtk::Label>(gui::ToGlibUstring(name));
         pName->set_halign(Gtk::Align::START);
         pName->set_valign(Gtk::Align::CENTER);
         pName->set_xalign(0.0F);
@@ -69,7 +60,7 @@ void AboutWindow::build()
         pValue->set_xalign(0.0F);
         pValue->add_css_class("version-info-value");
         if(link) {
-            const Glib::ustring URI= toGlibUstring(value);
+            const Glib::ustring URI= gui::ToGlibUstring(value);
 
             const auto MARKUP= std::format("<a href=\"{}\">{}</a>",
                                            Glib::Markup::escape_text(URI).raw(),
@@ -84,7 +75,7 @@ void AboutWindow::build()
                 },
                 false);
         } else {
-            pValue->set_text(toGlibUstring(value));
+            pValue->set_text(gui::ToGlibUstring(value));
         }
 
         pRow->append(*pName);
