@@ -7,7 +7,7 @@ class IType: public IBaseInstType {
 public:
     // OP_IMM* shift: payload = (immFunct << 3) | f3, immFunct is 0 or 0x20 (srai bit)
     // MISC_MEM: fence/fence.i use f3; fence.tso/pause use full imm12; lq uses f3=2
-    constexpr static std::array<InstInfo, 33> G_INST_TABLE= {
+    constexpr static std::array<InstInfo, 34> G_INST_TABLE= {
         {
          { .name_= "lb", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
          { .name_= "lbu", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x04, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
@@ -17,6 +17,8 @@ public:
          { .name_= "lhu", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x05, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
          { .name_= "lw", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x02, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
          { .name_= "lwu", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x06, OpcMap::LOAD), .opcode_= OpcMap::LOAD },
+
+         { .name_= "flw", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x02, OpcMap::LOAD_FP), .opcode_= OpcMap::LOAD_FP },
 
          { .name_= "fence", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },
          { .name_= "fence.i", .XLEN_= "Zifencei", .keyID_= PACK_KEY(0x01, OpcMap::MISC_MEM), .opcode_= OpcMap::MISC_MEM },

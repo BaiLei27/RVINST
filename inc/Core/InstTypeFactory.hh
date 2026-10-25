@@ -21,15 +21,22 @@ private:
         std::sorted_unique, // data is already 'sorted' and has 'no duplicate' elements, skip the internal sorting and deduplication steps.
         {
             { OpcMap::LOAD, InstFormat::I }, // I-type: lb/lh/lw/ld/lwu/ldu/...
+            { OpcMap::LOAD_FP, InstFormat::I }, // I-type: flw/fld/flq / LOAD-FP
             { OpcMap::MISC_MEM, InstFormat::I }, // I-type: fence* / lq (RV128I)
             { OpcMap::OP_IMM, InstFormat::I }, // I-type: addi/slli/...
             { OpcMap::AUIPC, InstFormat::U }, // U-type: auipc
             { OpcMap::OP_IMM_32, InstFormat::I }, // I-type: addiw/slliw/... / OP-IMM-32 (RV64I)
             { OpcMap::STORE, InstFormat::S }, // S-type: sb/sh/sw/sd/sq
+            { OpcMap::STORE_FP, InstFormat::S }, // S-type: fsw/fsd/fsq / STORE-FP
             { OpcMap::AMO, InstFormat::R }, // R-type: lr/sc/amo... / AMO (RV32A/64A)
             { OpcMap::OP, InstFormat::R }, // R-type: add/sub/... / OP
             { OpcMap::LUI, InstFormat::U }, // U-type: lui
             { OpcMap::OP_32, InstFormat::R }, // R-type: addw/subw/... / OP-32 (RV64I)
+            { OpcMap::MADD, InstFormat::R }, // R4: fmadd.*
+            { OpcMap::MSUB, InstFormat::R }, // R4: fmsub.*
+            { OpcMap::NMSUB, InstFormat::R }, // R4: fnmsub.*
+            { OpcMap::NMADD, InstFormat::R }, // R4: fnmadd.*
+            { OpcMap::OP_FP, InstFormat::R }, // R-type: fadd/fmul/... / OP-FP
             { OpcMap::OP_IMM_64, InstFormat::I }, // I-type: addid/sllid/... / OP-IMM-64 (RV128I)
             { OpcMap::BRANCH, InstFormat::B }, // B-type: beq/bne etc.
             { OpcMap::JALR, InstFormat::I }, // I-type: jalr

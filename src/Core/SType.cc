@@ -66,7 +66,9 @@ void SType::Parse()
 
 void SType::mnemonicHelper()
 {
-    auto rs2          = isa::LookupRegName(Layout_.S.rs2, HasSetABI_);
+    const bool FP_STORE= OpcMap::STORE_FP == Layout_.S.opc;
+    auto rs2           = FP_STORE ? isa::LookupFregName(Layout_.S.rs2, HasSetABI_)
+                                  : isa::LookupRegName(Layout_.S.rs2, HasSetABI_);
     auto rs1          = isa::LookupRegName(Layout_.S.rs1, HasSetABI_);
     std::string immStr= std::to_string(decodeSImm12(Layout_));
     appendOperands({ " ", rs2, ",", immStr, "(", rs1, ")" });
@@ -79,10 +81,17 @@ util::Expected_u<const InstLayout *> SType::Assembly()
     Layout_.S.opc = info.opcode_;
     Layout_.S.fct3= KEY_PAYLOAD(info.keyID_);
 
-    if(InstAssembly_.size() >= 4U) {
-        if(auto rs2Opt= isa::LookupRegIdx(InstAssembly_.at(1))) {
+    const bool FP_STORE= OpcMap::STORE_FP == Layout_.S.opc;
+    auto setRs2        = [&](std::string_view tok) {
+        if(FP_STORE) {
+            if(auto rs2Opt= isa::LookupFregIdx(tok)) Layout_.S.rs2= *rs2Opt;
+        } else if(auto rs2Opt= isa::LookupRegIdx(tok)) {
             Layout_.S.rs2= *rs2Opt;
         }
+    };
+
+    if(InstAssembly_.size() >= 4U) {
+        setRs2(InstAssembly_.at(1));
         int32_t imm {};
         if(util::ParseInt(InstAssembly_.at(2), imm)) {
             encodeSImm12(Layout_, imm);
@@ -91,9 +100,7 @@ util::Expected_u<const InstLayout *> SType::Assembly()
             Layout_.S.rs1= *rs1Opt;
         }
     } else if(InstAssembly_.size() >= 3U) {
-        if(auto rs2Opt= isa::LookupRegIdx(InstAssembly_.at(1))) {
-            Layout_.S.rs2= *rs2Opt;
-        }
+        setRs2(InstAssembly_.at(1));
         int32_t imm {};
         std::string baseReg;
         if(parseStoreAddr(InstAssembly_.at(2), imm, baseReg)) {
