@@ -138,6 +138,7 @@ target_sources(${backend} PRIVATE
     src/Core/UType.cc
     src/Core/SType.cc
     src/Core/BType.cc
+    src/Core/CType.cc
     src/Core/InstTypeFactory.cc
     src/Core/Instruction.cc
     inc/Util/config.hpp.in
@@ -162,6 +163,7 @@ target_sources(${backend} PUBLIC
     inc/Core/UType.hh
     inc/Core/SType.hh
     inc/Core/BType.hh
+    inc/Core/CType.hh
     inc/Core/InstTypeFactory.hh
     inc/Core/Instruction.hh
 )

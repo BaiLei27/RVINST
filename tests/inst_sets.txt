@@ -384,3 +384,86 @@ encode|jal x1, 8|008000EF|jal x1,8|J-Type|jal|impl
 # =============================================================================
 decode|0x00113223|00113223|sd x1,4(x2)|S-Type|sd|impl
 encode|sd x1, 4, x2|00113223|sd x1,4(x2)|S-Type|sd|impl
+
+# =============================================================================
+# C Extension (RVC)
+# =============================================================================
+decode|0x908A|908A|c.add x1,x2|C-Type|c.add|impl
+encode|c.add x1, x2|908A|c.add x1,x2|C-Type|c.add|impl
+decode|0x0085|0085|c.addi x1,1|C-Type|c.addi|impl
+encode|c.addi x1, 1|0085|c.addi x1,1|C-Type|c.addi|impl
+decode|0x6105|6105|c.addi16sp 16|C-Type|c.addi16sp|impl
+encode|c.addi16sp 16|6105|c.addi16sp 16|C-Type|c.addi16sp|impl
+decode|0x0088|0088|c.addi4spn x10,24|C-Type|c.addi4spn|impl
+encode|c.addi4spn x10, 16|0088|c.addi4spn x10,24|C-Type|c.addi4spn|impl
+decode|0x2085|2085|c.addiw x1,1|C-Type|c.addiw|impl
+encode|c.addiw x1, 1|2085|c.addiw x1,1|C-Type|c.addiw|impl
+decode|0x8C25|8C25|c.addw x8,x9|C-Type|c.addw|impl
+encode|c.addw x8, x9|8C25|c.addw x8,x9|C-Type|c.addw|impl
+decode|0x9C65|9C65|c.and x8,x9|C-Type|c.and|impl
+encode|c.and x8, x9|9C65|c.and x8,x9|C-Type|c.and|impl
+decode|0x8805|8805|c.andi x9,1|C-Type|c.andi|impl
+encode|c.andi x8, 1|8805|c.andi x9,1|C-Type|c.andi|impl
+decode|0xC005|C005|c.beqz x9,8|C-Type|c.beqz|impl
+encode|c.beqz x8, 8|C005|c.beqz x9,8|C-Type|c.beqz|impl
+decode|0xE005|E005|c.bnez x9,8|C-Type|c.bnez|impl
+encode|c.bnez x8, 8|E005|c.bnez x9,8|C-Type|c.bnez|impl
+decode|0x9002|9002|c.ebreak|C-Type|c.ebreak|impl
+encode|c.ebreak|9002|c.ebreak|C-Type|c.ebreak|impl
+decode|0x2080|2080|c.fld f8,0(x9)|C-Type|c.fld|impl
+encode|c.fld f8, 8, x9|2080|c.fld f8,0(x9)|C-Type|c.fld|impl
+decode|0x2082|2082|c.fldsp f1,0|C-Type|c.fldsp|impl
+encode|c.fldsp f1, 8|2082|c.fldsp f1,0|C-Type|c.fldsp|impl
+encode|c.flw f8, 4, x9|6080|c.flw f8,0(x9)|C-Type|c.flw|impl
+encode|c.flwsp f1, 8|6082|c.flwsp f1,0|C-Type|c.flwsp|impl
+decode|0xA080|A080|c.fsd f8,0(x9)|C-Type|c.fsd|impl
+encode|c.fsd f8, 8, x9|A080|c.fsd f8,0(x9)|C-Type|c.fsd|impl
+decode|0xA086|A086|c.fsdsp f1,520|C-Type|c.fsdsp|impl
+encode|c.fsdsp f1, 8|A086|c.fsdsp f1,520|C-Type|c.fsdsp|impl
+encode|c.fsw f8, 4, x9|E080|c.fsw f8,0(x9)|C-Type|c.fsw|impl
+encode|c.fswsp f1, 8|E106|c.fswsp f1,264|C-Type|c.fswsp|impl
+decode|0xA201|A201|c.j 264|C-Type|c.j|impl
+encode|c.j 8|A201|c.j 264|C-Type|c.j|impl
+encode|c.jal 8|20A1|c.jal 8|C-Type|c.jal|impl
+decode|0x9082|9082|c.jalr x1|C-Type|c.jalr|impl
+encode|c.jalr x1|9082|c.jalr x1|C-Type|c.jalr|impl
+decode|0x8082|8082|c.jr x1|C-Type|c.jr|impl
+encode|c.jr x1|8082|c.jr x1|C-Type|c.jr|impl
+decode|0x6080|6080|c.ld x8,0(x9)|C-Type|c.ld|impl
+encode|c.ld x8, 8, x9|6080|c.ld x8,0(x9)|C-Type|c.ld|impl
+decode|0x6086|6086|c.ldsp x1,16|C-Type|c.ldsp|impl
+encode|c.ldsp x1, 16|6086|c.ldsp x1,16|C-Type|c.ldsp|impl
+decode|0x4085|4085|c.li x1,1|C-Type|c.li|impl
+encode|c.li x1, 1|4085|c.li x1,1|C-Type|c.li|impl
+decode|0x6085|6085|c.lui x1,1|C-Type|c.lui|impl
+encode|c.lui x1, 1|6085|c.lui x1,1|C-Type|c.lui|impl
+decode|0x4080|4080|c.lw x8,0(x9)|C-Type|c.lw|impl
+encode|c.lw x8, 4, x9|4080|c.lw x8,0(x9)|C-Type|c.lw|impl
+decode|0x4082|4082|c.lwsp x1,0|C-Type|c.lwsp|impl
+encode|c.lwsp x1, 8|4082|c.lwsp x1,0|C-Type|c.lwsp|impl
+decode|0x808A|808A|c.mv x1,x2|C-Type|c.mv|impl
+encode|c.mv x1, x2|808A|c.mv x1,x2|C-Type|c.mv|impl
+decode|0x0001|0001|c.nop|C-Type|c.nop|impl
+encode|c.nop|0001|c.nop|C-Type|c.nop|impl
+decode|0x9C45|9C45|c.or x8,x9|C-Type|c.or|impl
+encode|c.or x8, x9|9C45|c.or x8,x9|C-Type|c.or|impl
+decode|0xE080|E080|c.sd x8,0(x9)|C-Type|c.sd|impl
+encode|c.sd x8, 8, x9|E080|c.sd x8,0(x9)|C-Type|c.sd|impl
+decode|0xE106|E106|c.sdsp x1,528|C-Type|c.sdsp|impl
+encode|c.sdsp x1, 16|E106|c.sdsp x1,528|C-Type|c.sdsp|impl
+decode|0x0086|0086|c.slli x1,1|C-Type|c.slli|impl
+encode|c.slli x1, 1|0086|c.slli x1,1|C-Type|c.slli|impl
+decode|0x9005|9005|c.srai x9,33|C-Type|c.srai|impl
+encode|c.srai x8, 1|9005|c.srai x9,33|C-Type|c.srai|impl
+decode|0x8005|8005|c.srli x9,1|C-Type|c.srli|impl
+encode|c.srli x8, 1|8005|c.srli x9,1|C-Type|c.srli|impl
+decode|0x9C05|9C05|c.sub x8,x9|C-Type|c.sub|impl
+encode|c.sub x8, x9|9C05|c.sub x8,x9|C-Type|c.sub|impl
+decode|0x8C05|8C05|c.subw x8,x9|C-Type|c.subw|impl
+encode|c.subw x8, x9|8C05|c.subw x8,x9|C-Type|c.subw|impl
+decode|0xC080|C080|c.sw x8,0(x9)|C-Type|c.sw|impl
+encode|c.sw x8, 4, x9|C080|c.sw x8,0(x9)|C-Type|c.sw|impl
+decode|0xC106|C106|c.swsp x1,8|C-Type|c.swsp|impl
+encode|c.swsp x1, 8|C106|c.swsp x1,8|C-Type|c.swsp|impl
+decode|0x9C25|9C25|c.xor x8,x9|C-Type|c.xor|impl
+encode|c.xor x8, x9|9C25|c.xor x8,x9|C-Type|c.xor|impl
