@@ -1,5 +1,5 @@
 #include "Core/JType.hh"
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
 
 namespace {
@@ -59,7 +59,7 @@ void JType::Parse()
 
 void JType::mnemonicHelper()
 {
-    auto rd           = isa::LOOKUP_REG_NAME(Layout_.J.rd, HasSetABI_);
+    auto rd           = isa::LookupRegName(Layout_.J.rd, HasSetABI_);
     std::string immStr= std::to_string(decodeJImm(Layout_));
     appendOperands({ " ", rd, ",", immStr });
 }
@@ -71,7 +71,7 @@ util::Expected_u<const InstLayout *> JType::Assembly()
     Layout_.J.opc= info.opcode_;
 
     if(InstAssembly_.size() >= 3) {
-        if(auto rdOpt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
+        if(auto rdOpt= isa::LookupRegIdx(InstAssembly_.at(1))) {
             Layout_.J.rd= *rdOpt;
         }
         int32_t imm {};

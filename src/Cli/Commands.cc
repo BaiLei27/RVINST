@@ -16,7 +16,7 @@
     #include <unistd.h>  // isatty
 #endif
 
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
 #include "Cli/Commands.hh"
 
@@ -90,7 +90,7 @@ util::Expected_u<void> Commands::Encode(std::string_view input)
 
 util::Expected_u<void> Commands::Reg(std::string_view query)
 {
-    auto idxOpt= isa::LOOKUP_REG_IDX(query);
+    auto idxOpt= isa::LookupRegIdx(query);
 
     if(!idxOpt) { // try parsing as a number
         std::string s(query);

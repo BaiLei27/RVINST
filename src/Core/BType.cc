@@ -1,5 +1,5 @@
 #include "Core/BType.hh"
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
 
 namespace {
@@ -57,8 +57,8 @@ void BType::Parse()
 
 void BType::mnemonicHelper()
 {
-    auto rs1   = isa::LOOKUP_REG_NAME(Layout_.B.rs1, HasSetABI_);
-    auto rs2   = isa::LOOKUP_REG_NAME(Layout_.B.rs2, HasSetABI_);
+    auto rs1   = isa::LookupRegName(Layout_.B.rs1, HasSetABI_);
+    auto rs2   = isa::LookupRegName(Layout_.B.rs2, HasSetABI_);
     auto immStr= std::to_string(decodeBImm13(Layout_));
     appendOperands({ " ", rs1, ",", rs2, ",", immStr });
 }
@@ -71,10 +71,10 @@ util::Expected_u<const InstLayout *> BType::Assembly()
     Layout_.B.fct3= KEY_PAYLOAD(info.keyID_);
 
     if(InstAssembly_.size() >= 4U) {
-        if(auto r1= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
+        if(auto r1= isa::LookupRegIdx(InstAssembly_.at(1))) {
             Layout_.B.rs1= *r1;
         }
-        if(auto r2= isa::LOOKUP_REG_IDX(InstAssembly_.at(2))) {
+        if(auto r2= isa::LookupRegIdx(InstAssembly_.at(2))) {
             Layout_.B.rs2= *r2;
         }
         int32_t imm {};

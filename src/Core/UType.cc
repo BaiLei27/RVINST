@@ -1,5 +1,5 @@
 #include "Core/UType.hh"
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
 
 namespace {
@@ -39,7 +39,7 @@ void UType::Parse()
 
 void UType::mnemonicHelper()
 {
-    auto rd           = isa::LOOKUP_REG_NAME(Layout_.U.rd, HasSetABI_);
+    auto rd           = isa::LookupRegName(Layout_.U.rd, HasSetABI_);
     std::string immStr= std::to_string(Layout_.U.immCt1F);
     appendOperands({ " ", rd, ",", immStr });
 }
@@ -51,7 +51,7 @@ util::Expected_u<const InstLayout *> UType::Assembly()
     Layout_.U.opc= info.opcode_;
 
     if(InstAssembly_.size() >= 3) {
-        if(auto rdOpt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
+        if(auto rdOpt= isa::LookupRegIdx(InstAssembly_.at(1))) {
             Layout_.U.rd= *rdOpt;
         }
         Layout_.U.immCt1F= parseAsmImm20(InstAssembly_.at(2));

@@ -147,7 +147,7 @@ target_sources(${backend} PUBLIC
     FILE_SET HEADERS
     BASE_DIRS inc
     FILES
-    inc/ISA/Regs.hpp
+    inc/ISA/Regs.hh
     inc/ISA/InstFormat.hh
     inc/Util/BiLookupTable.hpp
     inc/Util/ErrorHandle.hh
