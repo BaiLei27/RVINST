@@ -6,7 +6,7 @@
 #include "Core/IBaseInstType.hh"
 #include "Core/Instruction.hh"
 #include "ISA/InstFormat.hh"
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 #include "Cli/OutputTable.hh"
 
 namespace cli {
@@ -166,9 +166,9 @@ void OutputFormatter::printFieldTable(const Instruction &inst)
 
         std::string detail;
         if(isRegField(fm.name_)) {
-            detail= std::string(isa::LOOKUP_REG_NAME(VAL, false));
+            detail= std::string(isa::LookupRegName(VAL, false));
             detail+= " / ";
-            detail+= std::string(isa::LOOKUP_REG_NAME(VAL, true));
+            detail+= std::string(isa::LookupRegName(VAL, true));
         }
 
         std::format_to(out,
@@ -294,8 +294,8 @@ void OutputFormatter::PrintRegister(uint16_t idx)
         return;
     }
 
-    auto archName= isa::LOOKUP_REG_NAME(idx, false);
-    auto abiName = isa::LOOKUP_REG_NAME(idx, true);
+    auto archName= isa::LookupRegName(idx, false);
+    auto abiName = isa::LookupRegName(idx, true);
 
     constexpr size_t LABEL_W= 12;
     std::println("\n  {}\n  {}{}\n  {}{}\n  {}{}\n",
@@ -475,8 +475,8 @@ void OutputFormatter::printInstructionJSON(const Instruction &inst, std::string_
 
 void OutputFormatter::printRegisterJSON(uint16_t idx)
 {
-    auto arch= isa::LOOKUP_REG_NAME(idx, false);
-    auto abi = isa::LOOKUP_REG_NAME(idx, true);
+    auto arch= isa::LookupRegName(idx, false);
+    auto abi = isa::LookupRegName(idx, true);
     std::println(R"({{"index":{},"arch":"{}","abi":"{}"}})", idx, arch, abi);
 }
 

@@ -1,5 +1,5 @@
 #include "Core/IType.hh"
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
 
 namespace {
@@ -114,8 +114,8 @@ void IType::mnemonicHelper()
         return;
     }
 
-    auto rd           = isa::LOOKUP_REG_NAME(Layout_.I.rd, HasSetABI_);
-    auto rs1          = isa::LOOKUP_REG_NAME(Layout_.I.rs1, HasSetABI_);
+    auto rd           = isa::LookupRegName(Layout_.I.rd, HasSetABI_);
+    auto rs1          = isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
     std::string immStr= std::to_string(Layout_.I.imm0tB);
     appendOperands({ " ", rd, ",", rs1, ",", immStr });
 }
@@ -166,8 +166,8 @@ util::Expected_u<const InstLayout *> IType::Assembly()
     Layout_.I.imm0tB= ItypeImmShape::SHIFT == SHAPE ? PAYLOAD >> 3 << 5 : 0;
 
     if(InstAssembly_.size() >= 4) {
-        if(auto rd= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) Layout_.I.rd= *rd;
-        if(auto rs1= isa::LOOKUP_REG_IDX(InstAssembly_.at(2))) Layout_.I.rs1= *rs1;
+        if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.I.rd= *rd;
+        if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(2))) Layout_.I.rs1= *rs1;
 
         int32_t imm {};
         if(util::ParseInt(InstAssembly_.at(3), imm)) {

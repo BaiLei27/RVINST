@@ -1,202 +1,189 @@
 #include <algorithm>
+#include <cctype>
 #include <charconv>
-#include <numeric>
-#include <vector>
+#include <flat_map>
+#include <initializer_list>
 #include <string>
+#include <utility>
 
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 
 namespace isa {
-bool CheckIfDigit(std::string_view target, int (*proj)(int))
-{
-    return std::ranges::all_of(target, [&](unsigned char c) { return proj(c); });
-}
+namespace {
 
-std::optional<uint16_t> Str2Int(std::string_view target, int base)
-{
-    uint16_t result= 0;
-    auto [ptr, ec] = std::from_chars(target.data(), target.data() + target.size(), result, base);
-    if(std::errc() == ec) {
-        // std::cout << "res " << result << '\n';
-        return std::make_optional<uint16_t>(result);
+    using AbiMap= std::flat_map<std::string_view, uint16_t>;
+
+    [[nodiscard]] constexpr std::optional<strPair_u> PARSE_REGFILE_NAME(const RegFileTable &table,
+                                                                        size_t idx) noexcept
+    {
+        if(idx >= table.size()) return std::nullopt;
+        return table[idx];
     }
-    return std::nullopt;
-}
 
-std::optional<uint16_t> LOOKUP_REG_IDX(std::string_view target)
-{
-    // std::ranges::transform(target, target.begin(), [](unsigned char c) { return std::tolower(c); });
-    std::string lower(target);
-    if(!lower.empty()) {
-        lower[0]= static_cast<char>(std::tolower(lower[0]));
+    [[nodiscard]] constexpr std::string_view LOOKUP_REGFILE_NAME(const RegFileTable &table,
+                                                                 size_t regIdx,
+                                                                 bool hasSetABI,
+                                                                 std::string_view fallback) noexcept
+    {
+        if(regIdx >= table.size()) return fallback;
+        const auto &e= table[regIdx];
+        return hasSetABI ? e.second : e.first;
     }
-#if 0
-    if(target.starts_with('x')) { // deal x*
 
-        const auto *pIt= std::lower_bound( // NOLINT
-            G_INDEX_REGS_ABI.begin(),
-            G_INDEX_REGS_ABI.end(),
-            target,
-            REG_ENTRY_LESS);
-        if(pIt != G_INDEX_REGS_ABI.end()) { //
-            return std::make_optional<uint16_t>(std::distance(G_INDEX_REGS_ABI.begin(), pIt));
-        }
-#else
-    if(lower.starts_with('x') && CheckIfDigit(lower.substr(1), std::isdigit)) {
-
-        if(auto res= Str2Int(lower.substr(1), 10); res && *res < 32) {
-            return res;
-        }
-#endif
-        // clang-format off
-    } else if(CheckIfDigit(lower, std::isdigit)) {
-        return Str2Int(lower, 10);
-
-    } else if(lower.starts_with("0x") && CheckIfDigit(lower.substr(2), std::isxdigit)) {
-        return Str2Int(lower.substr(2), 16);
-
-    } else {
-        if("s0" == lower || "fp" == lower) {
-            return std::make_optional<uint16_t>(8);
-        }
-
-        static const std::vector<size_t> S_SORTED_BY_NAME_SECOND= [] {
-            std::vector<size_t> idx(G_REG_NUMBER);
-#if __cplusplus >= 202100L
-            std::ranges::iota(idx, 0);
-#else
-            std::iota(idx.begin(), idx.end(), 0);
-#endif
-            std::ranges::sort(idx, {}, [](size_t i) { return G_INDEX_REGS_ABI[i].second; });
-            return idx;
-        }();
-        // clang-format on
-        auto it= std::ranges::lower_bound(
-            S_SORTED_BY_NAME_SECOND,
-            lower,
-            std::ranges::less {},
-            [](size_t i) { return G_INDEX_REGS_ABI[i].second; });
-        if(it != S_SORTED_BY_NAME_SECOND.end() && G_INDEX_REGS_ABI[*it].second == lower) {
-            return std::make_optional<uint16_t>(*it);
-        }
+    [[nodiscard]] bool AllOfCtype(std::string_view target, int (*pred)(int)) noexcept
+    {
+        return std::ranges::all_of(target, [pred](unsigned char c) { return 0 != pred(c); });
     }
-    return std::nullopt;
-}
 
-#if 0
- std::optional<size_t> LOOKUP_REG_IDX1(std::string_view name)
-{
-    for(size_t i= 0; i < G_INDEX_REGS_ABI.size(); ++i) {
-        if(G_INDEX_REGS_ABI[i].first == name || G_INDEX_REGS_ABI[i].second == name) {
-            return i;
-        }
-    }
-    return std::nullopt;
-}
-
-constexpr std::optional<size_t> PARSE_REG_IDX(std::string_view name) noexcept
-{
-    if(name.starts_with('x')) {
-        std::string_view numStr(name.substr(1));
-        size_t num    = 0;
-        auto [ptr, ec]= std::from_chars(numStr.data(), numStr.data() + numStr.size(), num); // NOLINT
-        if(std::errc() == ec && num < G_REG_NUMBER) {
-            return num;
+    [[nodiscard]] std::optional<uint16_t> ParseU16(std::string_view target, int base) noexcept
+    {
+        uint16_t result     = 0;
+        const auto [PTR, EC]= std::from_chars(target.data(), target.data() + target.size(), result, base);
+        if(std::errc {} == EC && PTR == target.data() + target.size()) {
+            return result;
         }
         return std::nullopt;
     }
 
-    for(size_t i= 0; i < G_REG_NUMBER; ++i) {
-        if(G_INDEX_REGS_ABI[i].second == name) {
-            return i;
-        }
-    }
-
-    return std::nullopt;
-}
-
-template <typename Getter>
-static std::vector<size_t> BuildSortedIndexes(Getter &&getter)
-{
-    std::vector<size_t> idx(G_REG_NUMBER);
-    std::iota(idx.begin(), idx.end(), 0);
-
-    std::ranges::sort(idx, {}, std::forward<Getter>(getter));
-    return idx;
-}
-
-template <typename Getter>
-static std::optional<size_t> BinarySearch(
-    const std::vector<size_t> &sortedIndexes,
-    std::string_view name,
-    Getter &&getter)
-{
-
-    auto it= std::ranges::lower_bound(
-        sortedIndexes,
-        name,
-        std::ranges::less {},
-        std::forward<Getter>(getter));
-
-    if(it != sortedIndexes.end() && getter(*it) == name) {
-        return *it;
-    }
-    return std::nullopt;
-}
-
- std::optional<size_t> LOOKUP_REG_IDX2(std::string_view name)
-{
-    static const auto SORTED_BY_FIRST= BuildSortedIndexes(
-        [](size_t i) { return G_INDEX_REGS_ABI[i].first; });
-
-    auto idx= BinarySearch(SORTED_BY_FIRST, name, [](size_t i) { return G_INDEX_REGS_ABI[i].first; });
-    if(idx) return idx;
-
-    static const auto SORTED_BY_SECOND= BuildSortedIndexes(
-        [](size_t i) { return G_INDEX_REGS_ABI[i].second; });
-
-    return BinarySearch(SORTED_BY_SECOND, name, [](size_t i) { return G_INDEX_REGS_ABI[i].second; });
-}
-
- std::optional<size_t> LOOKUP_REG_IDX3(std::string_view name)
-{
-    static const std::vector<size_t> SORTED_BY_NAME_FIRST= [] {
-        std::vector<size_t> idx(G_REG_NUMBER);
-        std::iota(idx.begin(), idx.end(), 0);
-        std::ranges::sort(idx, {}, [](size_t i) { return G_INDEX_REGS_ABI[i].first; });
-        return idx;
-    }();
-
+    void AsciiLowerInPlace(std::string &s) noexcept
     {
-        auto it= std::ranges::lower_bound(
-            SORTED_BY_NAME_FIRST,
-            name,
-            std::ranges::less {},
-            [](size_t i) { return G_INDEX_REGS_ABI[i].first; });
-        if(it != SORTED_BY_NAME_FIRST.end() && G_INDEX_REGS_ABI[*it].first == name) {
-            return *it;
-        }
+        std::ranges::transform(s, s.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
     }
 
-    static const std::vector<size_t> SORTED_BY_NAME_SECOND= [] {
-        std::vector<size_t> idx(G_REG_NUMBER);
-        std::iota(idx.begin(), idx.end(), 0);
-        std::ranges::sort(idx, {}, [](size_t i) { return G_INDEX_REGS_ABI[i].second; });
-        return idx;
-    }();
-
+    [[nodiscard]] AbiMap MakeAbiMap(const RegFileTable &table,
+                                    std::initializer_list<std::pair<std::string_view, uint16_t>> extras= {})
     {
-        auto it= std::ranges::lower_bound(
-            SORTED_BY_NAME_SECOND,
-            name,
-            std::ranges::less {},
-            [](size_t i) { return G_INDEX_REGS_ABI[i].second; });
-        if(it != SORTED_BY_NAME_SECOND.end() && G_INDEX_REGS_ABI[*it].second == name) {
-            return *it;
+        AbiMap m;
+        for(uint16_t i= 0; i < G_REG_NUMBER; ++i) {
+            m.emplace(table[i].second, i);
         }
+        for(const auto &e: extras) {
+            m.emplace(e.first, e.second);
+        }
+        return m;
     }
 
+    [[nodiscard]] std::optional<uint16_t> FindAbi(const AbiMap &map, std::string_view name) noexcept
+    {
+        if(const auto IT= map.find(name); IT != map.end()) return IT->second;
+        return std::nullopt;
+    }
+
+    /// "x12" / "f3" style: prefix + decimal index in [0, G_REG_NUMBER).
+    [[nodiscard]] std::optional<uint16_t> LookupPrefixedIndex(std::string_view lower, char prefix) noexcept
+    {
+        if(!lower.starts_with(prefix) || !AllOfCtype(lower.substr(1), std::isdigit)) {
+            return std::nullopt;
+        }
+        if(auto res= ParseU16(lower.substr(1), 10); res && *res < G_REG_NUMBER) {
+            return res;
+        }
+        return std::nullopt;
+    }
+
+    /// ABI name -> index; built once. "s0"/"fp" alias x8 (table stores "s0/fp").
+    [[nodiscard]] const AbiMap &AbiName2RegIdx()
+    {
+        static const AbiMap S_MAP= MakeAbiMap(G_INDEX_REGS_ABI, {
+                                                                    { "s0", 8 },
+                                                                    { "fp", 8 }
+        });
+        return S_MAP;
+    }
+
+    [[nodiscard]] const AbiMap &AbiName2FregIdx()
+    {
+        static const AbiMap S_MAP= MakeAbiMap(G_INDEX_FREGS_ABI);
+        return S_MAP;
+    }
+
+    [[nodiscard]] const AbiMap &CsrName2Num()
+    {
+        static const auto S_MAP= [] {
+            AbiMap m;
+            for(const auto &e: G_UCSR_TABLE) {
+                m.emplace(e.name_, e.num_);
+            }
+            return m;
+        }();
+        return S_MAP;
+    }
+
+    consteval bool CSR_TABLE_SORTED_BY_NUM() noexcept
+    {
+        for(std::size_t i= 1; i < G_UCSR_TABLE.size(); ++i) {
+            if(G_UCSR_TABLE[i].num_ <= G_UCSR_TABLE[i - 1].num_) return false;
+        }
+        return true;
+    }
+
+    static_assert(CSR_TABLE_SORTED_BY_NUM());
+
+} // namespace
+
+// Not constexpr: cross-TU APIs cannot keep constexpr (implicitly inline) with
+// out-of-line definitions; call sites only need runtime lookup.
+std::optional<strPair_u> ParseRegName(size_t idx) noexcept
+{
+    return PARSE_REGFILE_NAME(G_INDEX_REGS_ABI, idx);
+}
+
+std::string_view LookupRegName(size_t regIdx, bool hasSetABI, std::string_view fallback) noexcept
+{
+    return LOOKUP_REGFILE_NAME(G_INDEX_REGS_ABI, regIdx, hasSetABI, fallback);
+}
+
+std::optional<strPair_u> ParseFregName(size_t idx) noexcept
+{
+    return PARSE_REGFILE_NAME(G_INDEX_FREGS_ABI, idx);
+}
+
+std::string_view LookupFregName(size_t regIdx, bool hasSetABI, std::string_view fallback) noexcept
+{
+    return LOOKUP_REGFILE_NAME(G_INDEX_FREGS_ABI, regIdx, hasSetABI, fallback);
+}
+
+std::optional<std::string_view> LookupCSRName(uint16_t num) noexcept
+{
+    const auto IT= std::ranges::lower_bound(G_UCSR_TABLE, num, {}, &CsrEntry::num_);
+    if(IT != G_UCSR_TABLE.end() && IT->num_ == num) return IT->name_;
     return std::nullopt;
 }
-#endif
+
+std::optional<uint16_t> LookupRegIdx(std::string_view target)
+{
+    std::string lower(target);
+    AsciiLowerInPlace(lower);
+
+    if(auto idx= LookupPrefixedIndex(lower, 'x')) return idx;
+
+    // Integer / hex forms are GPR-only (legacy CLI / assembly).
+    if(AllOfCtype(lower, std::isdigit)) {
+        return ParseU16(lower, 10);
+    }
+    if(lower.starts_with("0x") && AllOfCtype(lower.substr(2), std::isxdigit)) {
+        return ParseU16(lower.substr(2), 16);
+    }
+
+    return FindAbi(AbiName2RegIdx(), lower);
+}
+
+std::optional<uint16_t> LookupFregIdx(std::string_view target)
+{
+    std::string lower(target);
+    AsciiLowerInPlace(lower);
+
+    if(auto idx= LookupPrefixedIndex(lower, 'f')) return idx;
+    return FindAbi(AbiName2FregIdx(), lower);
+}
+
+std::optional<uint16_t> LookupCSRIdx(std::string_view name)
+{
+    std::string lower(name);
+    AsciiLowerInPlace(lower);
+    return FindAbi(CsrName2Num(), lower);
+}
+
 } // namespace isa

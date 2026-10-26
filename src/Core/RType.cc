@@ -1,5 +1,5 @@
 #include "Core/RType.hh"
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 
 RType::RType(InstFormat format, uint32_t inst, bool hasSetABI)
     : IBaseInstType(format, inst, hasSetABI)
@@ -35,9 +35,9 @@ void RType::Parse()
 
 void RType::mnemonicHelper()
 {
-    auto rd = isa::LOOKUP_REG_NAME(Layout_.R.rd, HasSetABI_); // actually reg mnemonic only 5b (max: 31),never overflow
-    auto rs1= isa::LOOKUP_REG_NAME(Layout_.R.rs1, HasSetABI_);
-    auto rs2= isa::LOOKUP_REG_NAME(Layout_.R.rs2, HasSetABI_);
+    auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_); // actually reg mnemonic only 5b (max: 31),never overflow
+    auto rs1= isa::LookupRegName(Layout_.R.rs1, HasSetABI_);
+    auto rs2= isa::LookupRegName(Layout_.R.rs2, HasSetABI_);
     appendOperands({ " ", rd, ",", rs1, ",", rs2 });
 }
 
@@ -51,9 +51,9 @@ util::Expected_u<const InstLayout *> RType::Assembly()
     Layout_.R.fct3    = PAYLOAD;
 
     if(InstAssembly_.size() >= 4U) {
-        auto rdOpt = isa::LOOKUP_REG_IDX(InstAssembly_.at(1));
-        auto rs1Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(2));
-        auto rs2Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(3));
+        auto rdOpt = isa::LookupRegIdx(InstAssembly_.at(1));
+        auto rs1Opt= isa::LookupRegIdx(InstAssembly_.at(2));
+        auto rs2Opt= isa::LookupRegIdx(InstAssembly_.at(3));
         if(rdOpt && rs1Opt && rs2Opt) {
             Layout_.R.rd = *rdOpt;
             Layout_.R.rs1= *rs1Opt;
