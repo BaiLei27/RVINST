@@ -14,10 +14,10 @@ std::string formatFenceSet(uint16_t mask)
 {
     std::string s;
     // NOLINTBEGIN
-    if(mask & 0x8U) s+= 'i';
-    if(mask & 0x4U) s+= 'o';
-    if(mask & 0x2U) s+= 'r';
-    if(mask & 0x1U) s+= 'w';
+    if(mask & 0x8) s+= 'i';
+    if(mask & 0x4) s+= 'o';
+    if(mask & 0x2) s+= 'r';
+    if(mask & 0x1) s+= 'w';
     // NOLINTEND
     return s.empty() ? "0" : s;
 }
@@ -35,10 +35,10 @@ std::optional<uint16_t> parseFenceSet(std::string_view tok)
     uint16_t mask {};
     for(unsigned char c: tok) {
         switch(std::tolower(c)) {
-        case 'i': mask|= 0x8U; break;
-        case 'o': mask|= 0x4U; break;
-        case 'r': mask|= 0x2U; break;
-        case 'w': mask|= 0x1U; break;
+        case 'i': mask|= 0x8; break;
+        case 'o': mask|= 0x4; break;
+        case 'r': mask|= 0x2; break;
+        case 'w': mask|= 0x1; break;
         default:  return std::nullopt;
         }
     }
@@ -47,7 +47,7 @@ std::optional<uint16_t> parseFenceSet(std::string_view tok)
 
 constexpr uint16_t PACK_FENCE_IMM(uint16_t fm, uint16_t pred, uint16_t succ) noexcept
 {
-    return (fm & 0xFU) << 8 | (pred & 0xFU) << 4 | (succ & 0xFU);
+    return (fm & 0xF) << 8 | (pred & 0xF) << 4 | (succ & 0xF);
 }
 
 [[nodiscard]] constexpr bool IS_SPECIAL_FENCE_IMM(uint32_t imm) noexcept
@@ -80,24 +80,24 @@ void IType::Parse()
 {
     const auto IMM= Layout_.I.imm0tB;
     switch(DetectIImmShape(Layout_.I.opc, Layout_.I.fct3)) {
-    case ItypeImmShape::SHIFT: {
+    case IImmShape::SHIFT: {
         // OP_IMM: up to 7-bit shamt (RV128); OP_IMM_64: 6-bit; OP_IMM_32: 5-bit
         if(OpcMap::OP_IMM == Layout_.I.opc) {
-            setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x7FU, IMM >> 7 });
+            setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x7F, IMM >> 7 });
         } else if(OpcMap::OP_IMM_64 == Layout_.I.opc) {
-            setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x3FU, IMM >> 6 });
+            setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x3F, IMM >> 6 });
         } else {
-            setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x1FU, IMM >> 5 });
+            setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x1F, IMM >> 5 });
         }
     } break;
-    case ItypeImmShape::FENCE:
+    case IImmShape::FENCE:
         setBitsField({ Layout_.I.opc,
                        Layout_.I.rd,
                        Layout_.I.fct3,
                        Layout_.I.rs1,
-                       IMM & 0xFU,
-                       IMM >> 4 & 0xFU,
-                       IMM >> 8 & 0xFU });
+                       IMM & 0xF,
+                       IMM >> 4 & 0xF,
+                       IMM >> 8 & 0xF });
         break;
     default:
         setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM });
@@ -125,14 +125,14 @@ void IType::mnemonicHelper()
             return;
         }
         // Zicsr: csrr* rd, csr, rs1/uimm â€?known G CSRs by name, else 0xNNN
-        auto rd= isa::LookupRegName(Layout_.I.rd, HasSetABI_);
-        const uint16_t CSRN= static_cast<uint16_t>(Layout_.I.imm0tB & 0xFFFU);
+        auto rd                  = isa::LookupRegName(Layout_.I.rd, HasSetABI_);
+        const uint16_t CSRN      = Layout_.I.imm0tB & 0xFFF;
         const std::string CSR_STR= [&] {
             if(auto n= isa::LookupCSRName(CSRN)) return std::string(*n);
             return std::format("0x{:x}", CSRN);
         }();
         if(Layout_.I.fct3 >= 5) {
-            appendOperands({ " ", rd, ",", CSR_STR, ",", std::to_string(Layout_.I.rs1 & 0x1FU) });
+            appendOperands({ " ", rd, ",", CSR_STR, ",", std::to_string(Layout_.I.rs1 & 0x1F) });
         } else {
             auto rs1= isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
             appendOperands({ " ", rd, ",", CSR_STR, ",", rs1 });
@@ -140,13 +140,13 @@ void IType::mnemonicHelper()
         return;
     }
 
-    if(ItypeImmShape::FENCE == SHAPE) {
+    if(IImmShape::FENCE == SHAPE) {
         if(1 == Layout_.I.fct3 || IS_SPECIAL_FENCE_IMM(Layout_.I.imm0tB)) {
             if(InstAssembly_.size() > 1) InstAssembly_.resize(1);
             return;
         }
-        const auto PRED= formatFenceSet(Layout_.I.imm0tB >> 4 & 0xFU);
-        const auto SUCC= formatFenceSet(Layout_.I.imm0tB & 0xFU);
+        const auto PRED= formatFenceSet(Layout_.I.imm0tB >> 4 & 0xF);
+        const auto SUCC= formatFenceSet(Layout_.I.imm0tB & 0xF);
         appendOperands({ " ", PRED, ",", SUCC });
         return;
     }
@@ -154,12 +154,15 @@ void IType::mnemonicHelper()
     const bool FP_LOAD= OpcMap::LOAD_FP == OPC;
     auto rd           = FP_LOAD ? isa::LookupFregName(Layout_.I.rd, HasSetABI_)
                                 : isa::LookupRegName(Layout_.I.rd, HasSetABI_);
-    auto rs1= isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
+    auto rs1          = isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
     std::string immStr;
-    if(ItypeImmShape::SHIFT == SHAPE) {
+    if(IImmShape::SHIFT == SHAPE) {
         uint32_t shamtMask= 0x1FU;
-        if(OpcMap::OP_IMM == OPC) shamtMask= 0x7FU;
-        else if(OpcMap::OP_IMM_64 == OPC) shamtMask= 0x3FU;
+        if(OpcMap::OP_IMM == OPC) {
+            shamtMask= 0x7FU;
+        } else if(OpcMap::OP_IMM_64 == OPC) {
+            shamtMask= 0x3FU;
+        }
         immStr= std::to_string(Layout_.I.imm0tB & shamtMask);
     } else {
         immStr= std::to_string(decodeIImm12(Layout_.I.imm0tB));
@@ -184,7 +187,7 @@ util::Expected_u<const InstLayout *> IType::Assembly()
             return &Layout_;
         }
         // Zicsr: payload = f3 << 8
-        Layout_.I.fct3  = static_cast<uint8_t>(PAYLOAD >> 8);
+        Layout_.I.fct3  = PAYLOAD >> 8;
         Layout_.I.rd    = 0;
         Layout_.I.rs1   = 0;
         Layout_.I.imm0tB= 0;
@@ -194,11 +197,11 @@ util::Expected_u<const InstLayout *> IType::Assembly()
                 Layout_.I.imm0tB= *csr;
             } else {
                 int32_t csrNum {};
-                if(util::ParseInt(InstAssembly_.at(2), csrNum)) Layout_.I.imm0tB= csrNum & 0xFFFU;
+                if(util::ParseInt(InstAssembly_.at(2), csrNum)) Layout_.I.imm0tB= csrNum & 0xFFF;
             }
             if(Layout_.I.fct3 >= 5) {
                 int32_t uimm {};
-                if(util::ParseInt(InstAssembly_.at(3), uimm)) Layout_.I.rs1= uimm & 0x1FU;
+                if(util::ParseInt(InstAssembly_.at(3), uimm)) Layout_.I.rs1= uimm & 0x1F;
             } else if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(3))) {
                 Layout_.I.rs1= *rs1;
             }
@@ -247,7 +250,7 @@ util::Expected_u<const InstLayout *> IType::Assembly()
     if(OpcMap::OP_IMM == OPC || OpcMap::OP_IMM_32 == OPC || OpcMap::OP_IMM_64 == OPC) {
         Layout_.I.fct3  = PAYLOAD;
         const auto SHAPE= DetectIImmShape(OPC, Layout_.I.fct3);
-        Layout_.I.imm0tB= ItypeImmShape::SHIFT == SHAPE ? PAYLOAD >> 3 << 5 : 0;
+        Layout_.I.imm0tB= IImmShape::SHIFT == SHAPE ? PAYLOAD >> 3 << 5 : 0;
 
         if(InstAssembly_.size() >= 4) {
             if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.I.rd= *rd;
@@ -255,7 +258,7 @@ util::Expected_u<const InstLayout *> IType::Assembly()
 
             int32_t imm {};
             if(util::ParseInt(InstAssembly_.at(3), imm)) {
-                if(ItypeImmShape::SHIFT == SHAPE) {
+                if(IImmShape::SHIFT == SHAPE) {
                     uint32_t shamtMask= 0x1FU;
                     uint32_t functMask= 0xFE0U;
                     if(OpcMap::OP_IMM == OPC) {
@@ -267,7 +270,7 @@ util::Expected_u<const InstLayout *> IType::Assembly()
                     }
                     Layout_.I.imm0tB= Layout_.I.imm0tB & functMask | imm & shamtMask;
                 } else {
-                    Layout_.I.imm0tB= imm & 0xFFFU;
+                    Layout_.I.imm0tB= imm & 0xFFF;
                 }
             }
         }
@@ -289,7 +292,7 @@ util::Expected_u<const InstLayout *> IType::Assembly()
 
         int32_t imm {};
         if(util::ParseInt(InstAssembly_.at(3), imm)) {
-            Layout_.I.imm0tB= imm & 0xFFFU;
+            Layout_.I.imm0tB= imm & 0xFFF;
         }
     }
 
@@ -305,8 +308,8 @@ auto IType::calculateKeyID() -> KeyT
     case OpcMap::OP_IMM_64: {
         // imm[10] only â€?wider shamts must not disturb the key
         const uint8_t FUNCT=
-            ItypeImmShape::SHIFT == DetectIImmShape(Layout_.I.opc, Layout_.I.fct3)
-                ? (Layout_.I.imm0tB >> 10 & 1 ? 0x20 : 0)
+            IImmShape::SHIFT == DetectIImmShape(Layout_.I.opc, Layout_.I.fct3)
+                ? (Layout_.I.imm0tB >> 10 & 1 ? 0x20 : 0) // NOLINT
                 : 0;
         Key_= OP_IMM_K(FUNCT, Layout_.I.fct3, Layout_.I.opc);
     } break;
@@ -320,9 +323,9 @@ auto IType::calculateKeyID() -> KeyT
     case OpcMap::SYSTEM:
         // f3=0 â†?ecall/ebreak keyed by imm12; else Zicsr keyed by f3<<8
         Key_= 0 == Layout_.I.fct3 ? SYSTEM_K(Layout_.I.imm0tB, Layout_.I.opc)
-                                  : SYSTEM_K(static_cast<uint16_t>(Layout_.I.fct3) << 8, Layout_.I.opc);
+                                  : SYSTEM_K(Layout_.I.fct3 << 8, Layout_.I.opc);
         break;
-    default:             Key_= OP_K(Layout_.I.fct3, Layout_.I.opc); break;
+    default: Key_= OP_K(Layout_.I.fct3, Layout_.I.opc); break;
     }
 
     return Key_;

@@ -38,13 +38,13 @@ public:
     static void CollectRelated(Map &map,
                                std::span<const std::string_view> keys,
                                std::vector<typename Map::mapped_type> &out,
-                               typename Map::mapped_type except= nullptr)
+                               Map::mapped_type pExcept= nullptr)
     {
         out.clear();
         out.reserve(keys.size());
         for(const std::string_view &k: keys) {
             auto it= map.find(k);
-            if(it == map.end() || it->second == except) continue;
+            if(it == map.end() || it->second == pExcept) continue;
 
             out.emplace_back(it->second);
         }

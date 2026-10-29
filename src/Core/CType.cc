@@ -8,30 +8,30 @@ namespace {
 // Pack Layout_.C (op|b2) into the 16-bit RVC word used by scrambled-imm helpers.
 [[nodiscard]] constexpr uint16_t C_RAW(const InstLayout &l) noexcept
 {
-    return static_cast<uint16_t>((l.C.b2 << 2) | l.C.opc);
+    return (l.C.b2 << 2) | l.C.opc;
 }
 
 // Write a 16-bit RVC word through Layout_.C; clears entity_[31:16].
 void setCRaw(InstLayout &l, uint16_t c) noexcept
 {
     l.entity_= 0;
-    l.C.opc  = c & 0x3U;
-    l.C.b2   = (c >> 2) & 0x3FFFU;
+    l.C.opc  = c & 0x3;
+    l.C.b2   = (c >> 2) & 0x3FFF;
 }
 
-[[nodiscard]] constexpr uint8_t C_QUAD(const InstLayout &l) noexcept { return static_cast<uint8_t>(l.C.opc); }
+[[nodiscard]] constexpr uint8_t C_QUAD(const InstLayout &l) noexcept { return l.C.opc; }
 
-[[nodiscard]] constexpr uint8_t C_F3(const InstLayout &l) noexcept { return static_cast<uint8_t>(l.CI.fct3); }
+[[nodiscard]] constexpr uint8_t C_F3(const InstLayout &l) noexcept { return l.CI.fct3; }
 
-[[nodiscard]] constexpr uint8_t C_RD(const InstLayout &l) noexcept { return static_cast<uint8_t>(l.CI.rd); }
+[[nodiscard]] constexpr uint8_t C_RD(const InstLayout &l) noexcept { return l.CI.rd; }
 
-[[nodiscard]] constexpr uint8_t C_RS2(const InstLayout &l) noexcept { return static_cast<uint8_t>(l.CR.rs2); }
+[[nodiscard]] constexpr uint8_t C_RS2(const InstLayout &l) noexcept { return l.CR.rs2; }
 
-[[nodiscard]] constexpr uint8_t C_RD3(const InstLayout &l) noexcept { return static_cast<uint8_t>(l.CL.rd3); }
+[[nodiscard]] constexpr uint8_t C_RD3(const InstLayout &l) noexcept { return l.CL.rd3; }
 
-[[nodiscard]] constexpr uint8_t C_RS1_3(const InstLayout &l) noexcept { return static_cast<uint8_t>(l.CL.rs13); }
+[[nodiscard]] constexpr uint8_t C_RS1_3(const InstLayout &l) noexcept { return l.CL.rs13; }
 
-void orU16(uint16_t &c, uint32_t bits) noexcept { c= static_cast<uint16_t>(c | bits); }
+void orU16(uint16_t &c, uint32_t bits) noexcept { c= c | bits; }
 
 // Sign-extend imm[5:0]; cast is required so the arithmetic right-shift is signed.
 [[nodiscard]] int32_t signExtend6(uint32_t imm6)
@@ -42,125 +42,125 @@ void orU16(uint16_t &c, uint32_t bits) noexcept { c= static_cast<uint16_t>(c | b
 
 [[nodiscard]] int32_t decodeCiImm6(uint16_t c)
 {
-    const uint32_t IMM= (c >> 12 & 0x1U) << 5 | (c >> 2 & 0x1FU);
+    const uint32_t IMM= (c >> 12 & 0x1) << 5 | (c >> 2 & 0x1F);
     return signExtend6(IMM);
 }
 
 void encodeCiImm6(uint16_t &c, int32_t imm)
 {
-    const uint32_t U= static_cast<uint32_t>(imm) & 0x3FU;
-    c&= static_cast<uint16_t>(~((0x1FU << 2) | (0x1U << 12)));
-    orU16(c, (U & 0x1FU) << 2);
-    orU16(c, (U >> 5 & 0x1U) << 12);
+    const uint32_t U= static_cast<uint32_t>(imm) & 0x3F; // signed imm → unsigned field
+    c&= ~((0x1FU << 2) | (0x1U << 12));                  // U only on << LHS
+    orU16(c, (U & 0x1F) << 2);
+    orU16(c, (U >> 5 & 0x1) << 12);
 }
 
-[[nodiscard]] int32_t decodeCssUimm7(uint16_t c, unsigned scale)
+[[nodiscard]] int32_t decodeCssUimm7(uint16_t c, uint32_t scale)
 {
-    return static_cast<int32_t>(((c >> 7) & 0x7FU) * scale);
+    return static_cast<int32_t>(((c >> 7) & 0x7F) * scale);
 }
 
-void encodeCssUimm7(uint16_t &c, int32_t byteOff, unsigned scale)
+void encodeCssUimm7(uint16_t &c, int32_t byteOff, uint32_t scale)
 {
-    const uint32_t UIMM= static_cast<uint32_t>(byteOff / static_cast<int32_t>(scale)) & 0x3FU;
-    c&= static_cast<uint16_t>(~(0x3FU << 7)); // CSS uimm[5:0] in [12:7]; keep funct3[15:13]
+    const uint32_t UIMM= byteOff / static_cast<int32_t>(scale) & 0x3F; // signed byte÷scale
+    c&= ~(0x3FU << 7);                                                 // CSS uimm[5:0] in [12:7]; keep funct3[15:13]
     orU16(c, UIMM << 7);
 }
 
 [[nodiscard]] int32_t decodeCiSpLoadImm(uint16_t c)
 {
-    const uint32_t UIMM= (c >> 12 & 0x1U) << 5 | (c >> 2 & 0x7U) << 2 | (c >> 5 & 0x3U) << 6
-                       | (c >> 4 & 0x4U) << 6;
-    return static_cast<int32_t>(UIMM * 4U);
-}
-
-void encodeCiSpLoad(uint16_t &c, uint8_t rd, int32_t byteOff, uint8_t f3)
-{
-    c&= 0x3U;
-    orU16(c, uint32_t { f3 } << 13);
-    orU16(c, uint32_t { rd } << 7);
-    const uint32_t UIMM= static_cast<uint32_t>(byteOff / 4) & 0x3FU;
-    orU16(c, (UIMM >> 5 & 0x1U) << 12);
-    orU16(c, (UIMM >> 2 & 0x7U) << 2);
-    orU16(c, (UIMM >> 4 & 0x1U) << 4);
-    orU16(c, (UIMM >> 6 & 0x3U) << 5);
+    const uint32_t UIMM= (c >> 12 & 0x1) << 5 | (c >> 2 & 0x7) << 2 | (c >> 5 & 0x3) << 6
+                       | (c >> 4 & 0x4) << 6;
+    return static_cast<int32_t>(UIMM * 4);
 }
 
 // CL/CS uimm[7:2] (byte offset / scale); rd'/rs2' in [4:2], rs1' in [9:7].
-[[nodiscard]] int32_t decodeClUimm(uint16_t c, unsigned scale)
+[[nodiscard]] int32_t decodeClUimm(uint16_t c, uint32_t scale)
 {
-    const uint32_t UIMM= (c >> 10 & 0x7U) << 3 | (c >> 5 & 0x3U) << 6 | (c >> 2 & 0x7U) << 2
-                       | (c >> 12 & 0x1U) << 5;
+    const uint32_t UIMM= (c >> 10 & 0x7) << 3 | (c >> 5 & 0x3) << 6 | (c >> 2 & 0x7) << 2
+                       | (c >> 12 & 0x1) << 5;
     return static_cast<int32_t>(UIMM * scale);
-}
-
-void encodeClCs(uint16_t &c, uint8_t reg3, uint8_t rs1p, uint32_t uimm, uint8_t f3)
-{
-    c&= 0x3U;
-    orU16(c, uint32_t { f3 } << 13);
-    orU16(c, (uimm >> 5 & 0x1U) << 12);
-    orU16(c, (uimm >> 3 & 0x3U) << 10);
-    orU16(c, (rs1p & 0x7U) << 7);
-    orU16(c, (uimm >> 6 & 0x3U) << 5);
-    orU16(c, (reg3 & 0x7U) << 2);
 }
 
 // CIW nzuimm[9:2] (byte offset, multiple of 4); rd' in [4:2].
 [[nodiscard]] int32_t decodeCiwUimm(uint16_t c)
 {
-    const uint32_t NZ= (c >> 12 & 0x1U) << 5 | (c >> 7 & 0xFU) << 2 | (c >> 6 & 0x1U) << 6
-                     | (c >> 5 & 0x1U) << 5 | (c >> 2 & 0x3U) | (c >> 11 & 0x3U) << 4;
+    const uint32_t NZ= (c >> 12 & 0x1) << 5 | (c >> 7 & 0xF) << 2 | (c >> 6 & 0x1) << 6
+                     | (c >> 5 & 0x1) << 5 | (c >> 2 & 0x3) | (c >> 11 & 0x3) << 4;
     return static_cast<int32_t>(NZ * 4);
+}
+
+void encodeCiSpLoad(uint16_t &c, uint8_t rd, int32_t byteOff, uint8_t f3)
+{
+    c&= 0x3;
+    orU16(c, uint32_t { f3 } << 13);
+    orU16(c, uint32_t { rd } << 7);
+    const uint32_t UIMM= byteOff / 4 & 0x3F;
+    orU16(c, (UIMM >> 5 & 0x1) << 12);
+    orU16(c, (UIMM >> 2 & 0x7) << 2);
+    orU16(c, (UIMM >> 4 & 0x1) << 4);
+    orU16(c, (UIMM >> 6 & 0x3) << 5);
+}
+
+void encodeClCs(uint16_t &c, uint8_t reg3, uint8_t rs1p, uint32_t uimm, uint8_t f3)
+{
+    c&= 0x3;
+    orU16(c, uint32_t { f3 } << 13);
+    orU16(c, (uimm >> 5 & 0x1) << 12);
+    orU16(c, (uimm >> 3 & 0x3) << 10);
+    orU16(c, (rs1p & 0x7) << 7);
+    orU16(c, (uimm >> 6 & 0x3) << 5);
+    orU16(c, (reg3 & 0x7) << 2);
 }
 
 void encodeCiwUimm(uint16_t &c, int32_t byteOff)
 {
-    const uint32_t NZ= static_cast<uint32_t>(byteOff / 4) & 0xFFU;
-    const uint8_t R3 = static_cast<uint8_t>((c >> 2) & 0x7U);
-    c                = static_cast<uint16_t>(c & 0x3U);
-    orU16(c, (NZ >> 6 & 0x1U) << 12);
-    orU16(c, (NZ >> 4 & 0x3U) << 11);
-    orU16(c, (NZ >> 2 & 0xFU) << 7);
-    orU16(c, (NZ >> 6 & 0x1U) << 6);
-    orU16(c, (NZ >> 5 & 0x1U) << 5);
-    orU16(c, ((R3 & 0x7U) << 2) | (NZ & 0x3U));
+    const uint32_t NZ= byteOff / 4 & 0xFF;
+    const uint8_t R3 = (c >> 2) & 0x7;
+    c                = c & 0x3;
+    orU16(c, (NZ >> 6 & 0x1) << 12);
+    orU16(c, (NZ >> 4 & 0x3) << 11);
+    orU16(c, (NZ >> 2 & 0xF) << 7);
+    orU16(c, (NZ >> 6 & 0x1) << 6);
+    orU16(c, (NZ >> 5 & 0x1) << 5);
+    orU16(c, ((R3 & 0x7) << 2) | (NZ & 0x3));
 }
 
 [[nodiscard]] int32_t decodeCbImm9(uint16_t c)
 {
-    const int32_t IMM= (c >> 12 & 0x1) << 8 | (c >> 5 & 0x3U) << 6 | (c >> 2 & 0x7U) << 3
-                     | (c >> 10 & 0x3U) << 1 | (c >> 12 & 0x1);
+    const auto IMM= static_cast<int32_t>((c >> 12 & 0x1) << 8 | (c >> 5 & 0x3) << 6 | (c >> 2 & 0x7) << 3
+                                         | (c >> 10 & 0x3) << 1 | (c >> 12 & 0x1));
     return IMM << 23 >> 23;
 }
 
 void encodeCbImm9(uint16_t &c, int32_t imm)
 {
     const int32_t S= imm & 0x1FF;
-    c&= static_cast<uint16_t>(~0x1F82U);
-    orU16(c, (S >> 3 & 0x7U) << 2);
-    orU16(c, (S >> 6 & 0x3U) << 5);
-    orU16(c, (S >> 1 & 0x3U) << 10);
-    orU16(c, (S >> 8 & 0x1U) << 12);
+    c&= ~0x1F82U; // U: unsigned ~ so high bits stay 1 before truncate into uint16_t
+    orU16(c, (S >> 3 & 0x7) << 2);
+    orU16(c, (S >> 6 & 0x3) << 5);
+    orU16(c, (S >> 1 & 0x3) << 10);
+    orU16(c, (S >> 8 & 0x1) << 12);
 }
 
 [[nodiscard]] int32_t decodeCjImm11(uint16_t c)
 {
-    const int32_t IMM= (c >> 12 & 0x1) << 10 | (c >> 2 & 0x1FU) << 5 | (c >> 7 & 0x1FU) << 1
-                     | (c >> 11 & 0x1) << 4 | (c >> 9 & 0x3U) << 8 | (c >> 8 & 0x1) << 3
-                     | (c >> 10 & 0x1) << 2;
+    const auto IMM= static_cast<int32_t>((c >> 12 & 0x1) << 10 | (c >> 2 & 0x1F) << 5 | (c >> 7 & 0x1F) << 1
+                                         | (c >> 11 & 0x1) << 4 | (c >> 9 & 0x3) << 8 | (c >> 8 & 0x1) << 3
+                                         | (c >> 10 & 0x1) << 2);
     return IMM << 21 >> 21;
 }
 
 void encodeCjImm11(uint16_t &c, int32_t imm)
 {
     const int32_t S= imm & 0x7FF;
-    c&= static_cast<uint16_t>(~0x1FFEU);
-    orU16(c, (S >> 1 & 0x1FU) << 7);
-    orU16(c, (S >> 5 & 0x1FU) << 2);
-    orU16(c, (S >> 10 & 0x1U) << 12);
-    orU16(c, (S >> 11 & 0x1U) << 11);
-    orU16(c, (S >> 9 & 0x1U) << 8);
-    orU16(c, (S >> 7 & 0x3U) << 9);
-    orU16(c, (S >> 4 & 0x1U) << 11);
+    c&= ~0x1FFEU; // U: unsigned ~
+    orU16(c, (S >> 1 & 0x1F) << 7);
+    orU16(c, (S >> 5 & 0x1F) << 2);
+    orU16(c, (S >> 10 & 0x1) << 12);
+    orU16(c, (S >> 11 & 0x1) << 11);
+    orU16(c, (S >> 9 & 0x1) << 8);
+    orU16(c, (S >> 7 & 0x3) << 9);
+    orU16(c, (S >> 4 & 0x1) << 11);
 }
 
 [[nodiscard]] uint8_t calcSubFromInst(const InstLayout &l)
@@ -168,75 +168,72 @@ void encodeCjImm11(uint16_t &c, int32_t imm)
     const uint8_t Q = C_QUAD(l);
     const uint8_t F3= C_F3(l);
 
-    if(0U == Q) {
-        if(3U == F3) return 1U; // LD (same encoding as FLW)
-        if(7U == F3) return 1U; // SD (same encoding as FSW)
-        return 0U;
-    }
-
-    if(1U == Q) {
-        if(0U == F3) {
-            if(0U == C_RD(l) && 0 == decodeCiImm6(C_RAW(l))) return 1U; // C.NOP
-            return 0U;
+    // Q = inst[1:0] quadrant; F3 = inst[15:13] funct3 (RVC Ch.27).
+    switch(Q) {
+    case 0: // Quadrant 0: CIW / CL / CS
+        switch(F3) {
+        case 3:            // c.flw / c.ld — sub=1 selects LD over FLW
+        case 7:  return 1; // c.fsw / c.sd — sub=1 selects SD over FSW
+        default: return 0;
         }
-        if(1U == F3) return 0U; // RV64C ADDIW over RV32C JAL
-        if(3U == F3) {
-            if(2U == C_RD(l)) return 1U; // C.ADDI16SP
-            return 0U;                   // C.LUI
+    case 1: // Quadrant 1: CI / CB / CA / CJ
+        switch(F3) {
+        case 0:                                                          // c.addi; rd=0 & imm=0 → c.nop (sub=1)
+            return 0U == C_RD(l) && 0 == decodeCiImm6(C_RAW(l)) ? 1 : 0; // c.nop : c.addi
+        case 1: return 0;                                                // c.addiw (RV64) / c.jal (RV32); sub unused
+        case 3:                                                          // c.lui; rd=x2 → c.addi16sp (sub=1)
+            return 2U == C_RD(l) ? 1 : 0;                                // c.addi16sp : c.lui
+        case 4: {                                                        // misc-ALU: CB shift/andi or CA
+            const uint8_t F610= l.CA.fct6 & 0x7;                         // inst[12:10]
+            const uint8_t F2  = l.CA.fct2;
+            switch(F610) {
+            case 7:  return (0x07U << 2) | F2;      // CA: 100 11 x — sub/xor/or/and
+            case 3:  return (0x03U << 2) | F2;      // CA: 100 01 x — subw/addw
+            case 2:  return 8;                      // CB: 100 10 — c.andi (sub=8)
+            default: return 0 != l.CI.imm5 ? 1 : 0; // CB: c.srai (sub=1) / c.srli (sub=0)
+            }
         }
-        if(4U == F3) {
-            const uint8_t F610= static_cast<uint8_t>(l.CA.fct6 & 0x7U); // inst[12:10]
-            const uint8_t F2  = static_cast<uint8_t>(l.CA.fct2);
-            if(7U == F610) return static_cast<uint8_t>((0x7U << 2) | F2); // CA (sub/xor/or/and)
-            if(3U == F610) return static_cast<uint8_t>((0x3U << 2) | F2); // CA (subw/addw)
-            if(2U == F610) return 8U;                                     // C.ANDI
-            if(0U != l.CI.imm5) return 1U;                                // C.SRAI
-            return 0U;                                                    // C.SRLI
+        default: return 0;
         }
-        return 0U;
-    }
-
-    if(2U == Q) {
-        if(3U == F3) return 1U; // LDSP
-        if(7U == F3) return 1U; // SDSP
-        if(4U == F3) {
-            const uint8_t B12= static_cast<uint8_t>(l.CI.imm5);
+    case 2: // Quadrant 2: CI / CR / CSS
+        switch(F3) {
+        case 3:           // c.flwsp / c.ldsp — sub=1 selects LDSP
+        case 7: return 1; // c.fswsp / c.sdsp — sub=1 selects SDSP
+        case 4: {         // CR family: jr/mv/ebreak/jalr/add via bit12 + rs2
+            const uint8_t B12= l.CI.imm5;
             const uint8_t RS2= C_RS2(l);
             if(0U == B12) {
-                if(0U == RS2) return 0U; // JR
-                return 4U;               // MV
+                return 0U == RS2 ? 0 : 4; // JR : MV
             }
             if(0U == RS2) {
-                if(0U == C_RD(l)) return 2U; // EBREAK
-                return 1U;                   // JALR
+                return 0U == C_RD(l) ? 2 : 1; // EBREAK : JALR
             }
-            return 3U; // ADD
+            return 3; // ADD
         }
-        return 0U;
+        default: return 0;
+        }
+    default: return 0;
     }
-
-    return 0U;
 }
 
 struct CPay {
-    uint8_t f3 {};
-    uint8_t sub {};
-    uint8_t q {};
+    uint8_t f3_ {};
+    uint8_t sub_ {};
+    uint8_t q_ {};
 };
 
-[[nodiscard]] constexpr CPay unpackPay(CType::KeyT key) noexcept
+[[nodiscard]] constexpr CPay UNPACK_PAY(CType::KeyT key) noexcept
 {
     const CType::KeyT PAY= CType::KEY_PAYLOAD(key);
-    return { .f3 = static_cast<uint8_t>((PAY >> 8) & 0x7U),
-             .sub= static_cast<uint8_t>((PAY >> 2) & 0x3FU),
-             .q  = static_cast<uint8_t>(PAY & 0x3U) };
+    return { .f3_ = static_cast<uint8_t>((PAY >> 8) & 0x7),
+             .sub_= static_cast<uint8_t>((PAY >> 2) & 0x3F),
+             .q_  = static_cast<uint8_t>(PAY & 0x3) };
 }
 
 [[nodiscard]] bool instMatchesKey(const InstLayout &l, CType::KeyT key)
 {
-    const CPay EXP= unpackPay(key);
-    if(C_QUAD(l) != EXP.q || C_F3(l) != EXP.f3) return false;
-    return calcSubFromInst(l) == EXP.sub;
+    const CPay EXP= UNPACK_PAY(key);
+    return C_QUAD(l) == EXP.q_ && C_F3(l) == EXP.f3_ && calcSubFromInst(l) == EXP.sub_;
 }
 
 [[nodiscard]] CType::KeyT resolveDecodeKey(const InstLayout &l)
@@ -244,50 +241,63 @@ struct CPay {
     for(const auto &entry: CType::G_INST_TABLE) {
         if(instMatchesKey(l, entry.keyID_)) return entry.keyID_;
     }
-    return 0xffffU;
+    return 0xffff;
 }
 
 [[nodiscard]] std::string reg3Name(uint8_t r3, bool abi)
 {
-    return std::string(isa::LookupRegName(static_cast<uint8_t>(8U + r3), abi));
+    return std::string(isa::LookupRegName(8 + r3, abi));
 }
 
 [[nodiscard]] std::string freg3Name(uint8_t r3, bool abi)
 {
-    return std::string(isa::LookupFregName(static_cast<uint8_t>(8U + r3), abi));
+    return std::string(isa::LookupFregName(8 + r3, abi));
 }
 
 [[nodiscard]] CAsmKind kindFromKey(CType::KeyT key)
 {
-    const CPay P= unpackPay(key);
+    const CPay P= UNPACK_PAY(key);
 
-    if(0U == P.q) {
-        if(0U == P.f3) return CAsmKind::CIW_ADDI4SPN;
-        if(1U == P.f3) return CAsmKind::CL_FP;
-        if(5U == P.f3) return CAsmKind::CS_FP;
-        if(2U == P.f3) return CAsmKind::CL_INT;
-        if(6U == P.f3) return CAsmKind::CS_INT;
-        if(3U == P.f3) return 0U == P.sub ? CAsmKind::CL_FP : CAsmKind::CL_INT;
-        if(7U == P.f3) return 0U == P.sub ? CAsmKind::CS_FP : CAsmKind::CS_INT;
-    }
-    if(1U == P.q) {
-        if(5U == P.f3) return CAsmKind::CJ;
-        if(6U == P.f3 || 7U == P.f3) return CAsmKind::CB_BRANCH;
-        if(4U == P.f3 && 8U == P.sub) return CAsmKind::CB_ANDI;
-        if(4U == P.f3 && P.sub <= 1U) return CAsmKind::CB_SHIFT;
-        if(4U == P.f3) return CAsmKind::CA;
-        if(3U == P.f3) return 1U == P.sub ? CAsmKind::CI_ADDI16SP : CAsmKind::CI_LUI;
-        return CAsmKind::CI;
-    }
-    if(2U == P.q) {
-        if(0U == P.f3) return CAsmKind::CI_SLLI;
-        if(1U == P.f3) return CAsmKind::CI_SP_FP_LOAD;
-        if(5U == P.f3) return CAsmKind::CSS_FP;
-        if(2U == P.f3) return CAsmKind::CI_SP_LOAD;
-        if(6U == P.f3) return CAsmKind::CSS_INT;
-        if(3U == P.f3) return 0U == P.sub ? CAsmKind::CI_SP_FP_LOAD : CAsmKind::CI_SP_LOAD;
-        if(4U == P.f3) return CAsmKind::CR;
-        if(7U == P.f3) return 0U == P.sub ? CAsmKind::CSS_FP : CAsmKind::CSS_INT;
+    // q_ = inst[1:0]; f3_ = inst[15:13] (same encoding as calcSubFromInst).
+    switch(P.q_) {
+    case 0: // Quadrant 0
+        switch(P.f3_) {
+        case 0:  return CAsmKind::CIW_ADDI4SPN;                           // c.addi4spn
+        case 1:  return CAsmKind::CL_FP;                                  // c.fld
+        case 5:  return CAsmKind::CS_FP;                                  // c.fsd
+        case 2:  return CAsmKind::CL_INT;                                 // c.lw
+        case 6:  return CAsmKind::CS_INT;                                 // c.sw
+        case 3:  return 0 == P.sub_ ? CAsmKind::CL_FP : CAsmKind::CL_INT; // c.flw / c.ld
+        case 7:  return 0 == P.sub_ ? CAsmKind::CS_FP : CAsmKind::CS_INT; // c.fsw / c.sd
+        default: break;
+        }
+        break;
+    case 1: // Quadrant 1
+        switch(P.f3_) {
+        case 5: return CAsmKind::CJ;        // c.j
+        case 6:                             // c.beqz
+        case 7: return CAsmKind::CB_BRANCH; // c.bnez
+        case 4:                             // misc-ALU
+            if(8U == P.sub_) return CAsmKind::CB_ANDI;
+            if(P.sub_ <= 1U) return CAsmKind::CB_SHIFT; // c.srli / c.srai
+            return CAsmKind::CA;
+        case 3:  return 1 == P.sub_ ? CAsmKind::CI_ADDI16SP : CAsmKind::CI_LUI;
+        default: return CAsmKind::CI; // c.addi / c.li / c.nop / c.addiw / c.jal
+        }
+    case 2: // Quadrant 2
+        switch(P.f3_) {
+        case 0:  return CAsmKind::CI_SLLI;                                            // c.slli
+        case 1:  return CAsmKind::CI_SP_FP_LOAD;                                      // c.fldsp
+        case 5:  return CAsmKind::CSS_FP;                                             // c.fsdsp
+        case 2:  return CAsmKind::CI_SP_LOAD;                                         // c.lwsp
+        case 6:  return CAsmKind::CSS_INT;                                            // c.swsp
+        case 3:  return 0 == P.sub_ ? CAsmKind::CI_SP_FP_LOAD : CAsmKind::CI_SP_LOAD; // c.flwsp / c.ldsp
+        case 4:  return CAsmKind::CR;                                                 // c.jr / c.mv / c.ebreak / c.jalr / c.add
+        case 7:  return 0 == P.sub_ ? CAsmKind::CSS_FP : CAsmKind::CSS_INT;           // c.fswsp / c.sdsp
+        default: break;
+        }
+        break;
+    default: break;
     }
     return CAsmKind::CI;
 }
@@ -372,25 +382,25 @@ void CType::mnemonicHelper()
     case CAsmKind::CL_INT: {
         const auto RD       = reg3Name(C_RD3(Layout_), HasSetABI_);
         const auto RS1      = reg3Name(C_RS1_3(Layout_), HasSetABI_);
-        const unsigned SCALE= "c.ld" == NM ? 8U : 4U;
+        const uint32_t SCALE= "c.ld" == NM ? 8U : 4U;
         appendOperands({ " ", RD, ",", std::to_string(decodeClUimm(RAW, SCALE)), "(", RS1, ")" });
     } break;
     case CAsmKind::CL_FP: {
         const auto RD       = freg3Name(C_RD3(Layout_), HasSetABI_);
         const auto RS1      = reg3Name(C_RS1_3(Layout_), HasSetABI_);
-        const unsigned SCALE= ("c.fld" == NM || "c.fldsp" == NM) ? 8U : 4U;
+        const uint32_t SCALE= ("c.fld" == NM || "c.fldsp" == NM) ? 8U : 4U;
         appendOperands({ " ", RD, ",", std::to_string(decodeClUimm(RAW, SCALE)), "(", RS1, ")" });
     } break;
     case CAsmKind::CS_INT: {
-        const auto RS2      = reg3Name(static_cast<uint8_t>(Layout_.CS.rs23), HasSetABI_);
+        const auto RS2      = reg3Name(C_RD3(Layout_), HasSetABI_); // CS.rs23 @ [4:2]
         const auto RS1      = reg3Name(C_RS1_3(Layout_), HasSetABI_);
-        const unsigned SCALE= "c.sd" == NM ? 8U : 4U;
+        const uint32_t SCALE= "c.sd" == NM ? 8U : 4U;
         appendOperands({ " ", RS2, ",", std::to_string(decodeClUimm(RAW, SCALE)), "(", RS1, ")" });
     } break;
     case CAsmKind::CS_FP: {
-        const auto RS2      = freg3Name(static_cast<uint8_t>(Layout_.CS.rs23), HasSetABI_);
+        const auto RS2      = freg3Name(C_RD3(Layout_), HasSetABI_);
         const auto RS1      = reg3Name(C_RS1_3(Layout_), HasSetABI_);
-        const unsigned SCALE= ("c.fsd" == NM || "c.fsdsp" == NM) ? 8U : 4U;
+        const uint32_t SCALE= ("c.fsd" == NM || "c.fsdsp" == NM) ? 8U : 4U;
         appendOperands({ " ", RS2, ",", std::to_string(decodeClUimm(RAW, SCALE)), "(", RS1, ")" });
     } break;
     case CAsmKind::CI: {
@@ -408,16 +418,16 @@ void CType::mnemonicHelper()
         break;
     case CAsmKind::CB_SHIFT: {
         const uint32_t SH= Layout_.CI.imm0t4 | Layout_.CI.imm5 << 5;
-        appendOperands({ " ", reg3Name(static_cast<uint8_t>(Layout_.CB.rd3), HasSetABI_), ",", std::to_string(SH) });
+        appendOperands({ " ", reg3Name(C_RS1_3(Layout_), HasSetABI_), ",", std::to_string(SH) }); // CB.rd3 @ [9:7]
     } break;
     case CAsmKind::CB_ANDI:
-        appendOperands({ " ", reg3Name(static_cast<uint8_t>(Layout_.CB.rd3), HasSetABI_), ",", std::to_string(decodeCiImm6(RAW)) });
+        appendOperands({ " ", reg3Name(C_RS1_3(Layout_), HasSetABI_), ",", std::to_string(decodeCiImm6(RAW)) });
         break;
     case CAsmKind::CB_BRANCH:
-        appendOperands({ " ", reg3Name(static_cast<uint8_t>(Layout_.CB.rd3), HasSetABI_), ",", std::to_string(decodeCbImm9(RAW)) });
+        appendOperands({ " ", reg3Name(C_RS1_3(Layout_), HasSetABI_), ",", std::to_string(decodeCbImm9(RAW)) });
         break;
     case CAsmKind::CA:
-        appendOperands({ " ", reg3Name(static_cast<uint8_t>(Layout_.CA.rd3), HasSetABI_), ",", reg3Name(static_cast<uint8_t>(Layout_.CA.rs23), HasSetABI_) });
+        appendOperands({ " ", reg3Name(C_RS1_3(Layout_), HasSetABI_), ",", reg3Name(C_RD3(Layout_), HasSetABI_) });
         break;
     case CAsmKind::CJ:
         appendOperands({ " ", std::to_string(decodeCjImm11(RAW)) });
@@ -430,11 +440,11 @@ void CType::mnemonicHelper()
         }
     } break;
     case CAsmKind::CSS_INT: {
-        const unsigned SCALE= "c.sdsp" == NM ? 8U : 4U;
+        const uint32_t SCALE= "c.sdsp" == NM ? 8U : 4U;
         appendOperands({ " ", isa::LookupRegName(C_RS2(Layout_), HasSetABI_), ",", std::to_string(decodeCssUimm7(RAW, SCALE)) });
     } break;
     case CAsmKind::CSS_FP: {
-        const unsigned SCALE= "c.fsdsp" == NM ? 8U : 4U;
+        const uint32_t SCALE= "c.fsdsp" == NM ? 8U : 4U;
         appendOperands({ " ", isa::LookupFregName(C_RS2(Layout_), HasSetABI_), ",", std::to_string(decodeCssUimm7(RAW, SCALE)) });
     } break;
     case CAsmKind::CI_SLLI: {
@@ -455,12 +465,12 @@ util::Expected_u<const InstLayout *> CType::Assembly()
 {
     const auto &info= LookupIdxAndInfo();
     Key_            = info.keyID_;
-    const CPay PAY  = unpackPay(info.keyID_);
+    const CPay PAY  = UNPACK_PAY(info.keyID_);
 
-    uint16_t c= PAY.q;
-    orU16(c, uint32_t { PAY.f3 } << 13);
+    uint16_t c= PAY.q_;
+    orU16(c, uint32_t { PAY.f3_ } << 13);
 
-    const auto &MN     = InstAssembly_.at(0);
+    const auto &mn     = InstAssembly_.at(0);
     const CAsmKind KIND= kindFromKey(info.keyID_);
 
     switch(KIND) {
@@ -478,9 +488,9 @@ util::Expected_u<const InstLayout *> CType::Assembly()
         if(InstAssembly_.size() >= 4) {
             auto parseReg3= [&](std::string_view tok, bool fp) -> std::optional<uint8_t> {
                 if(fp) {
-                    if(auto i= isa::LookupFregIdx(tok)) return static_cast<uint8_t>(*i - 8U);
+                    if(auto i= isa::LookupFregIdx(tok)) return *i - 8;
                 } else if(auto i= isa::LookupRegIdx(tok)) {
-                    return *i >= 8U ? std::make_optional(static_cast<uint8_t>(*i - 8U)) : std::nullopt;
+                    return *i >= 8 ? std::optional<uint8_t> { *i - 8 } : std::nullopt;
                 }
                 return std::nullopt;
             };
@@ -491,9 +501,9 @@ util::Expected_u<const InstLayout *> CType::Assembly()
             if(auto rs1= parseReg3(InstAssembly_.at(3), false)) rs1p= *rs1;
             int32_t imm {};
             if(util::ParseInt(InstAssembly_.at(2), imm)) {
-                const unsigned SCALE= ("c.ld" == MN || "c.fld" == MN) ? 8U : 4U;
-                const uint32_t UIMM = static_cast<uint32_t>(imm / static_cast<int32_t>(SCALE));
-                encodeClCs(c, rdp, rs1p, UIMM, PAY.f3);
+                const uint32_t SCALE= ("c.ld" == mn || "c.fld" == mn) ? 8U : 4U;
+                const uint32_t UIMM = imm / static_cast<int32_t>(SCALE);
+                encodeClCs(c, rdp, rs1p, UIMM, PAY.f3_);
             }
         }
     } break;
@@ -504,23 +514,23 @@ util::Expected_u<const InstLayout *> CType::Assembly()
             uint8_t rs2p {};
             uint8_t rs1p {};
             if(FP) {
-                if(auto rs2= isa::LookupFregIdx(InstAssembly_.at(1))) rs2p= static_cast<uint8_t>(*rs2 - 8U);
+                if(auto rs2= isa::LookupFregIdx(InstAssembly_.at(1))) rs2p= *rs2 - 8U;
             } else if(auto rs2= isa::LookupRegIdx(InstAssembly_.at(1))) {
-                if(*rs2 >= 8U) rs2p= static_cast<uint8_t>(*rs2 - 8U);
+                if(*rs2 >= 8U) rs2p= *rs2 - 8U;
             }
             if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(3))) {
-                if(*rs1 >= 8U) rs1p= static_cast<uint8_t>(*rs1 - 8U);
+                if(*rs1 >= 8U) rs1p= *rs1 - 8U;
             }
             int32_t imm {};
             if(util::ParseInt(InstAssembly_.at(2), imm)) {
-                const unsigned SCALE= ("c.sd" == MN || "c.fsd" == MN) ? 8U : 4U;
-                const uint32_t UIMM = static_cast<uint32_t>(imm / static_cast<int32_t>(SCALE));
-                encodeClCs(c, rs2p, rs1p, UIMM, PAY.f3);
+                const uint32_t SCALE= ("c.sd" == mn || "c.fsd" == mn) ? 8U : 4U;
+                const uint32_t UIMM = imm / static_cast<int32_t>(SCALE);
+                encodeClCs(c, rs2p, rs1p, UIMM, PAY.f3_);
             }
         }
     } break;
     case CAsmKind::CI: {
-        if("c.jal" == MN) {
+        if("c.jal" == mn) {
             orU16(c, 0x1U << 7);
             if(InstAssembly_.size() >= 2) {
                 int32_t imm {};
@@ -555,10 +565,10 @@ util::Expected_u<const InstLayout *> CType::Assembly()
             }
             int32_t sh {};
             if(util::ParseInt(InstAssembly_.at(2), sh)) {
-                orU16(c, (sh & 0x1FU) << 2);
-                orU16(c, (sh >> 5 & 0x1U) << 12);
+                orU16(c, (sh & 0x1F) << 2);
+                orU16(c, (sh >> 5 & 0x1) << 12);
             }
-            if("c.srai" == MN) orU16(c, 0x1U << 12);
+            if("c.srai" == mn) orU16(c, 0x1U << 12);
         }
     } break;
     case CAsmKind::CB_ANDI: {
@@ -588,8 +598,8 @@ util::Expected_u<const InstLayout *> CType::Assembly()
             if(auto rs2= isa::LookupRegIdx(InstAssembly_.at(2))) {
                 if(*rs2 >= 8U) orU16(c, (*rs2 - 8U) << 2);
             }
-            orU16(c, (uint32_t { PAY.sub } >> 2) << 10);
-            orU16(c, (uint32_t { PAY.sub } & 0x3U) << 5);
+            orU16(c, (uint32_t { PAY.sub_ } >> 2) << 10);
+            orU16(c, (uint32_t { PAY.sub_ } & 0x3) << 5);
         }
     } break;
     case CAsmKind::CJ: {
@@ -599,17 +609,17 @@ util::Expected_u<const InstLayout *> CType::Assembly()
         }
     } break;
     case CAsmKind::CR: {
-        if("c.ebreak" == MN) {
+        if("c.ebreak" == mn) {
             orU16(c, 0x1U << 12);
-        } else if("c.jr" == MN || "c.jalr" == MN) {
+        } else if("c.jr" == mn || "c.jalr" == mn) {
             if(InstAssembly_.size() >= 2) {
                 if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(1))) orU16(c, uint32_t { *rs1 } << 7);
             }
-            if("c.jalr" == MN) orU16(c, 0x1U << 12);
+            if("c.jalr" == mn) orU16(c, 0x1U << 12);
         } else if(InstAssembly_.size() >= 3) {
             if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) orU16(c, uint32_t { *rd } << 7);
             if(auto rs2= isa::LookupRegIdx(InstAssembly_.at(2))) orU16(c, uint32_t { *rs2 } << 2);
-            if("c.add" == MN) orU16(c, 0x1U << 12);
+            if("c.add" == mn) orU16(c, 0x1U << 12);
         }
     } break;
     case CAsmKind::CSS_INT:
@@ -623,7 +633,7 @@ util::Expected_u<const InstLayout *> CType::Assembly()
             }
             int32_t imm {};
             if(util::ParseInt(InstAssembly_.at(2), imm)) {
-                const unsigned SCALE= ("c.sdsp" == MN || "c.fsdsp" == MN) ? 8U : 4U;
+                const uint32_t SCALE= ("c.sdsp" == mn || "c.fsdsp" == mn) ? 8U : 4U;
                 encodeCssUimm7(c, imm, SCALE);
             }
         }
@@ -633,8 +643,8 @@ util::Expected_u<const InstLayout *> CType::Assembly()
             if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) orU16(c, uint32_t { *rd } << 7);
             int32_t sh {};
             if(util::ParseInt(InstAssembly_.at(2), sh)) {
-                orU16(c, (sh & 0x1FU) << 2);
-                orU16(c, (sh >> 5 & 0x1U) << 12);
+                orU16(c, (sh & 0x1F) << 2);
+                orU16(c, (sh >> 5 & 0x1) << 12);
             }
         }
     } break;
@@ -648,7 +658,7 @@ util::Expected_u<const InstLayout *> CType::Assembly()
                 rd= *r;
             }
             int32_t imm {};
-            if(util::ParseInt(InstAssembly_.at(2), imm)) encodeCiSpLoad(c, rd, imm, PAY.f3);
+            if(util::ParseInt(InstAssembly_.at(2), imm)) encodeCiSpLoad(c, rd, imm, PAY.f3_);
         }
     } break;
     default: break;

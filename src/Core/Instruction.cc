@@ -89,8 +89,7 @@ const std::bitset<32> &Instruction::GetBitField() const { return BitField_; }
 std::string Instruction::GetHexStr() const
 {
     const uint32_t W= BitField_.to_ulong();
-    if(3U != (W & 0x3U)) return std::format("{:04X}", W & 0xFFFFU);
-    return std::format("{:08X}", W);
+    return 3 != (W & 0x3) ? std::format("{:04X}", W & 0xFFFF) : std::format("{:08X}", W);
 }
 
 std::string Instruction::GetBinStr() const { return BitField_.to_string(); }
@@ -103,9 +102,7 @@ std::string_view Instruction::GetName() const { return Name_; }
 
 std::string_view Instruction::GetFormat() const noexcept
 {
-    if(!Type_) return "UNKNOW";
-
-    return InstFormatName(Type_->GetInstFormat());
+    return !Type_ ? "UNKNOW" : InstFormatName(Type_->GetInstFormat());
 }
 
 util::Expected_u<void> Instruction::Decode()

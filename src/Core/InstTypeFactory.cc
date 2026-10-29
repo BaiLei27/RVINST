@@ -69,12 +69,14 @@ std::string toLower(std::string_view s)
 
 std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(uint32_t inst, bool hasSetABI)
 {
-    if(3U != (inst & 0x3U)) return makeByFormat(InstFormat::C, inst, hasSetABI);
+    if(3U != (inst & 0x3)) return makeByFormat(InstFormat::C, inst, hasSetABI);
 
     const auto OPCODE= static_cast<OpcMap>(inst & 0x7FU);
     auto it          = G_OPCODE_2_FORMAT.find(OPCODE);
-    if(G_OPCODE_2_FORMAT.end() == it) return nullptr;
-    return makeByFormat(it->second, inst, hasSetABI);
+
+    return it == G_OPCODE_2_FORMAT.end()
+             ? nullptr
+             : makeByFormat(it->second, inst, hasSetABI);
 }
 
 const InstTypeFactory::name2FormatOpcode_u &InstTypeFactory::getName2FormatOpcode()
@@ -106,7 +108,7 @@ std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(std::vector<std::stri
     auto match= matchInstName(instName);
     if(!match) return nullptr;
 
-    const auto &[FMT, _1]= *match;
+    const auto FMT= match->first;
     return makeByFormat(FMT, std::move(instAssembly), hasSetABI);
 }
 

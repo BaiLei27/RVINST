@@ -41,7 +41,7 @@ BinaryFieldWidget::BinaryFieldWidget(const InstField &field, util::FieldTone ton
     pBits->set_can_target(false);
 
     const int WIDTH= field.endBit_ - field.startBit_ + 1;
-    controlLabels_.reserve(static_cast<size_t>(WIDTH));
+    controlLabels_.reserve(WIDTH);
     for(int i= 0; i < WIDTH; ++i) {
         auto *pBit= Gtk::make_managed<Gtk::Label>("0");
         pBit->set_width_chars(1);

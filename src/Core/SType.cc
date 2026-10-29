@@ -12,7 +12,7 @@ int32_t decodeSImm12(const InstLayout &l)
 
 void encodeSImm12(InstLayout &l, int32_t imm)
 {
-    const uint32_t S_IMM= imm & 0xFFFU;
+    const uint32_t S_IMM= imm & 0xFFF;
 
     l.S.imm0t4= S_IMM;
     l.S.imm5tB= S_IMM >> 5;
@@ -67,10 +67,12 @@ void SType::Parse()
 void SType::mnemonicHelper()
 {
     const bool FP_STORE= OpcMap::STORE_FP == Layout_.S.opc;
-    auto rs2           = FP_STORE ? isa::LookupFregName(Layout_.S.rs2, HasSetABI_)
-                                  : isa::LookupRegName(Layout_.S.rs2, HasSetABI_);
-    auto rs1          = isa::LookupRegName(Layout_.S.rs1, HasSetABI_);
-    std::string immStr= std::to_string(decodeSImm12(Layout_));
+
+    auto rs2   = FP_STORE ? isa::LookupFregName(Layout_.S.rs2, HasSetABI_)
+                          : isa::LookupRegName(Layout_.S.rs2, HasSetABI_);
+    auto rs1   = isa::LookupRegName(Layout_.S.rs1, HasSetABI_);
+    auto immStr= std::to_string(decodeSImm12(Layout_));
+
     appendOperands({ " ", rs2, ",", immStr, "(", rs1, ")" });
 }
 

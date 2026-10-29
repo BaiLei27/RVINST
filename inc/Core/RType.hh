@@ -65,21 +65,21 @@ public:
          { .name_= "srlw", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x00U << 3 | 0x05, OpcMap::OP_32), .opcode_= OpcMap::OP_32 },
          { .name_= "subw", .XLEN_= "RV64I", .keyID_= PACK_KEY(0x20U << 3 | 0x00, OpcMap::OP_32), .opcode_= OpcMap::OP_32 },
 
-         { .name_= "fmadd.d", .XLEN_= "RV32D", .keyID_= PACK_KEY(0x01U, OpcMap::MADD), .opcode_= OpcMap::MADD },
-         { .name_= "fmadd.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY(0x03U, OpcMap::MADD), .opcode_= OpcMap::MADD },
-         { .name_= "fmadd.s", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x00U, OpcMap::MADD), .opcode_= OpcMap::MADD },
+         { .name_= "fmadd.d", .XLEN_= "RV32D", .keyID_= PACK_KEY(0x01, OpcMap::MADD), .opcode_= OpcMap::MADD },
+         { .name_= "fmadd.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY(0x03, OpcMap::MADD), .opcode_= OpcMap::MADD },
+         { .name_= "fmadd.s", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x00, OpcMap::MADD), .opcode_= OpcMap::MADD },
 
-         { .name_= "fmsub.d", .XLEN_= "RV32D", .keyID_= PACK_KEY(0x01U, OpcMap::MSUB), .opcode_= OpcMap::MSUB },
-         { .name_= "fmsub.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY(0x03U, OpcMap::MSUB), .opcode_= OpcMap::MSUB },
-         { .name_= "fmsub.s", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x00U, OpcMap::MSUB), .opcode_= OpcMap::MSUB },
+         { .name_= "fmsub.d", .XLEN_= "RV32D", .keyID_= PACK_KEY(0x01, OpcMap::MSUB), .opcode_= OpcMap::MSUB },
+         { .name_= "fmsub.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY(0x03, OpcMap::MSUB), .opcode_= OpcMap::MSUB },
+         { .name_= "fmsub.s", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x00, OpcMap::MSUB), .opcode_= OpcMap::MSUB },
 
-         { .name_= "fnmsub.d", .XLEN_= "RV32D", .keyID_= PACK_KEY(0x01U, OpcMap::NMSUB), .opcode_= OpcMap::NMSUB },
-         { .name_= "fnmsub.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY(0x03U, OpcMap::NMSUB), .opcode_= OpcMap::NMSUB },
-         { .name_= "fnmsub.s", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x00U, OpcMap::NMSUB), .opcode_= OpcMap::NMSUB },
+         { .name_= "fnmsub.d", .XLEN_= "RV32D", .keyID_= PACK_KEY(0x01, OpcMap::NMSUB), .opcode_= OpcMap::NMSUB },
+         { .name_= "fnmsub.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY(0x03, OpcMap::NMSUB), .opcode_= OpcMap::NMSUB },
+         { .name_= "fnmsub.s", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x00, OpcMap::NMSUB), .opcode_= OpcMap::NMSUB },
 
-         { .name_= "fnmadd.d", .XLEN_= "RV32D", .keyID_= PACK_KEY(0x01U, OpcMap::NMADD), .opcode_= OpcMap::NMADD },
-         { .name_= "fnmadd.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY(0x03U, OpcMap::NMADD), .opcode_= OpcMap::NMADD },
-         { .name_= "fnmadd.s", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x00U, OpcMap::NMADD), .opcode_= OpcMap::NMADD },
+         { .name_= "fnmadd.d", .XLEN_= "RV32D", .keyID_= PACK_KEY(0x01, OpcMap::NMADD), .opcode_= OpcMap::NMADD },
+         { .name_= "fnmadd.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY(0x03, OpcMap::NMADD), .opcode_= OpcMap::NMADD },
+         { .name_= "fnmadd.s", .XLEN_= "RV32F", .keyID_= PACK_KEY(0x00, OpcMap::NMADD), .opcode_= OpcMap::NMADD },
 
          { .name_= "fadd.d", .XLEN_= "RV32D", .keyID_= PACK_KEY((0x00U << 2 | 0x01) << 8 | 0x00U << 3 | 0x00, OpcMap::OP_FP), .opcode_= OpcMap::OP_FP },
          { .name_= "fadd.q", .XLEN_= "RV32Q", .keyID_= PACK_KEY((0x00U << 2 | 0x03) << 8 | 0x00U << 3 | 0x00, OpcMap::OP_FP), .opcode_= OpcMap::OP_FP },
@@ -177,15 +177,15 @@ private:
     void mnemonicHelper() override;
     [[nodiscard]] const BiLookupTable<KeyT> *buildTable() override;
 
-    [[nodiscard]] static constexpr KeyT OP_K(uint8_t f7, uint8_t f3, uint8_t opc) noexcept { return PACK_KEY(static_cast<KeyT>(f7) << 3 | f3, opc); }
+    [[nodiscard]] static constexpr KeyT OP_K(uint8_t f7, uint8_t f3, uint8_t opc) noexcept { return PACK_KEY(f7 << 3 | f3, opc); }
 
-    [[nodiscard]] static constexpr KeyT AMO_K(uint8_t f5, uint8_t f3, uint8_t opc) noexcept { return PACK_KEY(static_cast<KeyT>(f5) << 3 | f3, opc); }
+    [[nodiscard]] static constexpr KeyT AMO_K(uint8_t f5, uint8_t f3, uint8_t opc) noexcept { return PACK_KEY(f5 << 3 | f3, opc); }
 
     [[nodiscard]] static constexpr KeyT R4_K(uint8_t fmt, uint8_t opc) noexcept { return PACK_KEY(fmt, opc); }
 
     [[nodiscard]] static constexpr KeyT FP_K(uint8_t f7, uint8_t rs2, uint8_t f3key) noexcept
     {
-        return PACK_KEY(static_cast<KeyT>(f7) << 8 | static_cast<KeyT>(rs2 & 0x1F) << 3 | (f3key & 0x07), OpcMap::OP_FP);
+        return PACK_KEY(f7 << 8 | (rs2 & 0x1F) << 3 | (f3key & 0x07), OpcMap::OP_FP);
     }
 
     [[nodiscard]] static bool isAmoName(std::string_view name) noexcept;

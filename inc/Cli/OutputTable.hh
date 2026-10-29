@@ -59,6 +59,6 @@ private:
     static std::string jsonEscape(std::string_view s);
 };
 
-OutputMode detectOutputMode(bool forceJson);
+OutputMode DetectOutputMode(bool forceJson);
 
 } // namespace cli

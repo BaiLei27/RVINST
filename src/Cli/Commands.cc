@@ -8,7 +8,7 @@
     #define RVINST_NATIVE_WIN 1
 #endif
 
-#if defined(RVINST_NATIVE_WIN)
+#ifdef RVINST_NATIVE_WIN
     #include <io.h>      // _isatty / _fileno
     #include <windows.h> // console input events
 #else
@@ -155,7 +155,7 @@ void Commands::replHistory()
 util::Expected_u<void> Commands::ProcessFile(std::string_view path)
 {
     return util::FileIo::ForEachLine(path, [this](std::string_view raw) {
-        const auto TRIMMED= util::TRIM_ASCII_WS(raw);
+        const auto TRIMMED= util::TrimAsciiWs(raw);
         if(TRIMMED.empty()) return;
 
         History_.Push(TRIMMED); // shared with manual input: browsable + :hist
@@ -238,8 +238,8 @@ namespace {
         while(true) {
             INPUT_RECORD rec {};
             DWORD n= 0;
-            if(!ReadConsoleInputW(GetStdHandle(STD_INPUT_HANDLE), &rec, 1, &n)) return false;
-            if(KEY_EVENT != rec.EventType || !rec.Event.KeyEvent.bKeyDown) continue;
+            if(!ReadConsoleInputW(GetStdHandle(STD_INPUT_HANDLE), &rec, 1, &n)) return false; // NOLINT
+            if(KEY_EVENT != rec.EventType || !rec.Event.KeyEvent.bKeyDown) continue;          // NOLINT
             const auto &key= rec.Event.KeyEvent;
             if(VK_RETURN == key.wVirtualKeyCode) {
                 std::println();
@@ -361,7 +361,7 @@ int Commands::replLoop()
             break;
         }
 
-        const auto TRIMMED= util::TRIM_ASCII_WS(line);
+        const auto TRIMMED= util::TrimAsciiWs(line);
         if(TRIMMED.empty()) continue;
 
         History_.Push(TRIMMED); // remember the command for Up/Down keys

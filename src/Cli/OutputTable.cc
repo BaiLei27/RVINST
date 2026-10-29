@@ -48,15 +48,14 @@ namespace {
         const auto FMT= pType->GetInstFormat();
 
         std::span<const InstField> meta= GetInstFields(FMT);
+        const auto &l                  = pType->GetInstLayout();
         if(InstFormat::I == FMT) {
-            const auto &l= pType->GetInstLayout();
-            meta         = GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
+            meta= GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
         } else if(InstFormat::R == FMT) {
-            const auto &l= pType->GetInstLayout();
-            meta         = GetRInstFields(DetectRShape(l.R.opc));
+
+            meta= GetRInstFields(DetectRShape(l.R.opc));
         } else if(InstFormat::C == FMT) {
-            const auto &l= pType->GetInstLayout();
-            meta         = GetCInstFields(DetectCShape(l.entity_));
+            meta= GetCInstFields(DetectCShape(l.entity_));
         }
         return { .bits_= std::span<const uint32_t>(pType->GetInstBitsField()), .meta_= meta };
     }
@@ -64,7 +63,7 @@ namespace {
     uint32_t fieldValue(std::span<const uint32_t> bits, size_t total, size_t index)
     {
         const size_t SRC= total - 1 - index; // MSB field is stored last
-        return SRC < bits.size() ? bits[SRC] : 0U;
+        return SRC < bits.size() ? bits[SRC] : 0;
     }
 
 } // namespace
@@ -80,13 +79,11 @@ CoutSuppressor::~CoutSuppressor()
     if(OldBuf_) std::cout.rdbuf(OldBuf_);
 }
 
-OutputMode detectOutputMode(bool forceJson)
+OutputMode DetectOutputMode(bool forceJson)
 {
     if(forceJson) return OutputMode::JSON;
 
-    if(isatty(fileno(stdout)) != 0) return OutputMode::COLORED;
-
-    return OutputMode::PLAIN;
+    return isatty(fileno(stdout)) != 0 ? OutputMode::COLORED : OutputMode::PLAIN;
 }
 
 OutputFormatter::OutputFormatter(OutputMode mode): Mode_(mode) { }
@@ -95,9 +92,8 @@ OutputMode OutputFormatter::GetMode() const noexcept { return Mode_; }
 
 std::string OutputFormatter::paint(std::string_view text, std::string_view code) const
 {
-    if(OutputMode::COLORED == Mode_) return std::string(code) + std::string(text) + G_C_RESET;
-
-    return std::string(text);
+    return OutputMode::COLORED == Mode_ ? std::string(code) + std::string(text) + G_C_RESET
+                                        : std::string(text);
 }
 
 std::string OutputFormatter::bold(std::string_view t) const { return paint(t, G_C_BOLD); }
@@ -176,7 +172,7 @@ void OutputFormatter::printFieldTable(const Instruction &inst)
             detail+= " / ";
             detail+= std::string(isa::LookupRegName(VAL, true));
         } else if(fm.name_ == "csr") {
-            if(auto n= isa::LookupCSRName(static_cast<uint16_t>(VAL))) detail= std::string(*n);
+            if(auto n= isa::LookupCSRName(VAL)) detail= std::string(*n);
         }
 
         std::format_to(out,
@@ -316,7 +312,7 @@ void OutputFormatter::PrintRegister(uint16_t idx)
                  std::string(abiName));
 }
 
-void OutputFormatter::PrintInstructionList(const std::vector<InstrEntry> &entries)
+void OutputFormatter::PrintInstructionList(const std::vector<util::InstCatalog> &entries)
 {
     if(OutputMode::JSON == Mode_) {
         printListJSON(entries);
@@ -488,7 +484,7 @@ void OutputFormatter::printRegisterJSON(uint16_t idx)
     std::println(R"({{"index":{},"arch":"{}","abi":"{}"}})", idx, arch, abi);
 }
 
-void OutputFormatter::printListJSON(const std::vector<InstrEntry> &entries)
+void OutputFormatter::printListJSON(const std::vector<util::InstCatalog> &entries)
 {
     std::string buf;
     buf.reserve(16 + entries.size() * 96);

@@ -3,6 +3,8 @@
 # update:24/10/13/23:42  version: 24-10-13.01
 Checks: '-*,
         bugprone*,
+        -bugprone-signed-bitwise,
+        -bugprone-tagged-union-member-count,
         -bugprone-argument-comment,
         -bugprone-crtp-constructor-accessibility,
         -bugprone-dynamic-static-initializers,
@@ -113,7 +115,7 @@ Checks: '-*,
 
         performance-avoid-endl,
         performance-enum-size,
-        performance-faster-string-find,
+        performance-prefer-single-char-overloads,
         performance-inefficient-algorithm,
         performance-inefficient-string-concatenation,
         performance-noexcept-move-constructor,

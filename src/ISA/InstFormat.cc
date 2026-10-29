@@ -1,4 +1,5 @@
 #include <array>
+#include <utility>
 
 #include "ISA/InstFormat.hh"
 
@@ -55,7 +56,7 @@ constexpr std::array<InstField, 7> G_R_R4_FIELDS {
      }
 };
 
-// Indexed by RtypeShape (BASE=0 .. R4=3).
+// Indexed by RShape (BASE=0 .. R4=3).
 constexpr std::array<std::span<const InstField>, 4> G_R_SHAPE_FIELDS {
     std::span<const InstField>(G_R_FIELDS),
     std::span<const InstField>(G_R_AMO_FIELDS),
@@ -307,12 +308,12 @@ std::string_view InstFormatName(InstFormat fmt) noexcept
 std::span<const InstField> GetInstFields(InstFormat fmt)
 {
     const auto IDX= static_cast<int>(fmt);
-    if(IDX < 0 || IDX >= static_cast<int>(G_FMT_FIELDS.size())) return {};
+    if(IDX < 0 || std::cmp_greater_equal(IDX, G_FMT_FIELDS.size())) return {};
 
     return G_FMT_FIELDS[IDX];
 }
 
-std::span<const InstField> GetIInstFields(ItypeImmShape shape) noexcept
+std::span<const InstField> GetIInstFields(IImmShape shape) noexcept
 {
     const auto IDX= static_cast<size_t>(shape);
     if(IDX >= G_I_SHAPE_FIELDS.size()) return {};
@@ -320,20 +321,20 @@ std::span<const InstField> GetIInstFields(ItypeImmShape shape) noexcept
     return G_I_SHAPE_FIELDS[IDX];
 }
 
-ItypeImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept
+IImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept
 {
     // MISC_MEM: f3=0/1 fence*; f3=2 is RV128I LQ (I-imm), not fence layout
-    if(OpcMap::MISC_MEM == opc && f3 <= 1) return ItypeImmShape::FENCE;
+    if(OpcMap::MISC_MEM == opc && f3 <= 1) return IImmShape::FENCE;
     // SYSTEM: f3=0 ecall/ebreak (imm12); f3≠0 Zicsr (csr address in [31:20])
-    if(OpcMap::SYSTEM == opc && 0 != f3) return ItypeImmShape::CSR;
+    if(OpcMap::SYSTEM == opc && 0 != f3) return IImmShape::CSR;
     if((OpcMap::OP_IMM == opc || OpcMap::OP_IMM_32 == opc || OpcMap::OP_IMM_64 == opc)
        && (1 == f3 || 5 == f3)) {
-        return ItypeImmShape::SHIFT;
+        return IImmShape::SHIFT;
     }
-    return ItypeImmShape::IMM12;
+    return IImmShape::IMM12;
 }
 
-std::span<const InstField> GetRInstFields(RtypeShape shape) noexcept
+std::span<const InstField> GetRInstFields(RShape shape) noexcept
 {
     const auto IDX= static_cast<size_t>(shape);
     if(IDX >= G_R_SHAPE_FIELDS.size()) return {};
@@ -341,14 +342,19 @@ std::span<const InstField> GetRInstFields(RtypeShape shape) noexcept
     return G_R_SHAPE_FIELDS[IDX];
 }
 
-RtypeShape DetectRShape(uint32_t opc) noexcept
+RShape DetectRShape(uint32_t opc) noexcept
 {
-    if(OpcMap::AMO == opc) return RtypeShape::AMO;
-    if(OpcMap::OP_FP == opc) return RtypeShape::FP;
-    if(OpcMap::MADD == opc || OpcMap::MSUB == opc || OpcMap::NMSUB == opc || OpcMap::NMADD == opc) {
-        return RtypeShape::R4;
+    if(OpcMap::AMO == opc) return RShape::AMO;
+    if(OpcMap::OP_FP == opc) return RShape::FP;
+
+    if(OpcMap::MADD == opc
+       || OpcMap::MSUB == opc
+       || OpcMap::NMSUB == opc
+       || OpcMap::NMADD == opc) {
+        return RShape::R4;
     }
-    return RtypeShape::BASE;
+
+    return RShape::BASE;
 }
 
 std::span<const InstField> GetCInstFields(CShape shape) noexcept
@@ -361,28 +367,31 @@ std::span<const InstField> GetCInstFields(CShape shape) noexcept
 
 CShape DetectCShape(uint32_t inst) noexcept
 {
-    const uint32_t Q = inst & 0x3U;
-    const uint32_t F3= (inst >> 13) & 0x7U;
+    const uint32_t Q = inst & 0x3;
+    const uint32_t F3= (inst >> 13) & 0x7;
 
-    if(0U == Q) {
-        if(0U == F3) return CShape::CIW;
-        if(F3 <= 3U) return CShape::CL;
+    switch(Q) {
+    case 0: {
+        if(0 == F3) return CShape::CIW;
+        if(F3 <= 3) return CShape::CL;
         return CShape::CS;
     }
-    if(1U == Q) {
-        if(5U == F3) return CShape::CJ;
-        if(6U == F3 || 7U == F3) return CShape::CB;
-        if(4U == F3) {
-            const uint32_t MID= (inst >> 10) & 0x7U; // inst[12:10]
-            if(7U == MID || 3U == MID) return CShape::CA;
-            return CShape::CB;
+    case 1:
+        switch(F3) {
+        case 5: return CShape::CJ;
+        case 6:
+        case 7: return CShape::CB;
+        case 4: {
+            const uint32_t MID= (inst >> 10) & 0x7; // inst[12:10]
+            return 7 == MID || 3 == MID ? CShape::CA : CShape::CB;
         }
+        default: return CShape::CI;
+        }
+    case 2: {
+        if(4 == F3) return CShape::CR;
+        if(F3 >= 5) return CShape::CSS;
         return CShape::CI;
     }
-    if(2U == Q) {
-        if(4U == F3) return CShape::CR;
-        if(F3 >= 5U) return CShape::CSS;
-        return CShape::CI;
+    default: return CShape::CI;
     }
-    return CShape::CI;
 }
