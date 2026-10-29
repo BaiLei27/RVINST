@@ -4,7 +4,7 @@ namespace util {
 namespace {
 
     constexpr std::string_view G_R_ASM[] { "mnemonic", "rd", ",", "rs1", ",", "rs2" };
-    constexpr std::string_view G_R_R4_ASM[] { "mnemonic", "rd", ",", "rs1", ",", "rs2", ",", "rs3" };
+    constexpr std::string_view G_R4_ASM[] { "mnemonic", "rd", ",", "rs1", ",", "rs2", ",", "rs3" };
     constexpr std::string_view G_I_ASM[] { "mnemonic", "rd", ",", "rs1", ",", "imm" };
     constexpr std::string_view G_I_CSR_ASM[] { "mnemonic", "rd", ",", "csr", ",", "rs1" };
     constexpr std::string_view G_I_FENCE_ASM[] { "mnemonic", "pred", ",", "succ" };
@@ -18,7 +18,7 @@ namespace {
     constexpr std::string_view G_R_KEY[] { "opcode", "funct3", "funct7" };
     constexpr std::string_view G_R_AMO_KEY[] { "opcode", "funct3", "funct5" };
     constexpr std::string_view G_R_FP_KEY[] { "opcode", "funct5", "fmt", "rm" };
-    constexpr std::string_view G_R_R4_KEY[] { "opcode", "fmt", "rm" };
+    constexpr std::string_view G_R4_KEY[] { "opcode", "fmt", "rm" };
     constexpr std::string_view G_I_KEY[] { "opcode", "funct3" };
     constexpr std::string_view G_I_SHIFT_KEY[] { "opcode", "funct3", "imm7" };
     constexpr std::string_view G_S_KEY[] { "opcode", "funct3" };
@@ -136,25 +136,25 @@ namespace {
         { .key_= "rs2",      .related_= G_SELF_RS2     },
     };
 
-    constexpr std::string_view G_R_R4_BIN_OPC[] { "mnemonic", "fmt" };
-    constexpr std::string_view G_R_R4_BIN_FMT[] { "mnemonic", "opcode" };
-    constexpr std::string_view G_R_R4_ASM_MNE[] { "opcode", "fmt" };
+    constexpr std::string_view G_R4_BIN_OPC[] { "mnemonic", "fmt" };
+    constexpr std::string_view G_R4_BIN_FMT[] { "mnemonic", "opcode" };
+    constexpr std::string_view G_R4_ASM_MNE[] { "opcode", "fmt" };
 
-    constexpr FieldRel G_R_R4_BIN_REL[] {
-        { .key_= "opcode", .related_= G_R_R4_BIN_OPC },
-        { .key_= "fmt",    .related_= G_R_R4_BIN_FMT },
-        { .key_= "rm",     .related_= G_SELF_RM      },
-        { .key_= "rd",     .related_= G_SELF_RD      },
-        { .key_= "rs1",    .related_= G_SELF_RS1     },
-        { .key_= "rs2",    .related_= G_SELF_RS2     },
-        { .key_= "rs3",    .related_= G_SELF_RS3     },
+    constexpr FieldRel G_R4_BIN_REL[] {
+        { .key_= "opcode", .related_= G_R4_BIN_OPC },
+        { .key_= "fmt",    .related_= G_R4_BIN_FMT },
+        { .key_= "rm",     .related_= G_SELF_RM    },
+        { .key_= "rd",     .related_= G_SELF_RD    },
+        { .key_= "rs1",    .related_= G_SELF_RS1   },
+        { .key_= "rs2",    .related_= G_SELF_RS2   },
+        { .key_= "rs3",    .related_= G_SELF_RS3   },
     };
-    constexpr FieldRel G_R_R4_ASM_REL[] {
-        { .key_= "mnemonic", .related_= G_R_R4_ASM_MNE },
-        { .key_= "rd",       .related_= G_SELF_RD      },
-        { .key_= "rs1",      .related_= G_SELF_RS1     },
-        { .key_= "rs2",      .related_= G_SELF_RS2     },
-        { .key_= "rs3",      .related_= G_SELF_RS3     },
+    constexpr FieldRel G_R4_ASM_REL[] {
+        { .key_= "mnemonic", .related_= G_R4_ASM_MNE },
+        { .key_= "rd",       .related_= G_SELF_RD    },
+        { .key_= "rs1",      .related_= G_SELF_RS1   },
+        { .key_= "rs2",      .related_= G_SELF_RS2   },
+        { .key_= "rs3",      .related_= G_SELF_RS3   },
     };
 
     constexpr FieldRel G_I_BIN_REL[] {
@@ -349,20 +349,9 @@ const InstFormatView &GetRInstFormatView(RShape shape)
         .asmRel_   = G_R_FP_ASM_REL,
         .keyFields_= G_R_FP_KEY,
     };
-    static const InstFormatView K_R_R4 {
-        .typeName_ = InstFormatName(InstFormat::R),
-        .fmt_      = InstFormat::R,
-        .asmTokens_= G_R_R4_ASM,
-        .fields_   = GetRInstFields(RShape::R4),
-        .binaryRel_= G_R_R4_BIN_REL,
-        .asmRel_   = G_R_R4_ASM_REL,
-        .keyFields_= G_R_R4_KEY,
-    };
-
     switch(shape) {
     case RShape::AMO: return K_R_AMO;
     case RShape::FP:  return K_R_FP;
-    case RShape::R4:  return K_R_R4;
     default:          return K_R;
     }
 }
@@ -414,17 +403,27 @@ const InstFormatView &GetInstFormatView(InstFormat fmt)
         .asmRel_   = {},
         .keyFields_= G_C_KEY,
     };
+    static const InstFormatView K_R4 {
+        .typeName_ = InstFormatName(InstFormat::R4),
+        .fmt_      = InstFormat::R4,
+        .asmTokens_= G_R4_ASM,
+        .fields_   = GetInstFields(InstFormat::R4),
+        .binaryRel_= G_R4_BIN_REL,
+        .asmRel_   = G_R4_ASM_REL,
+        .keyFields_= G_R4_KEY,
+    };
     static const InstFormatView K_UNKNOWN {};
 
     switch(fmt) {
-    case InstFormat::R: return GetRInstFormatView(RShape::BASE);
-    case InstFormat::I: return GetIInstFormatView(IImmShape::IMM12);
-    case InstFormat::J: return K_J;
-    case InstFormat::U: return K_U;
-    case InstFormat::S: return K_S;
-    case InstFormat::B: return K_B;
-    case InstFormat::C: return K_C;
-    default:            return K_UNKNOWN;
+    case InstFormat::R:  return GetRInstFormatView(RShape::BASE);
+    case InstFormat::I:  return GetIInstFormatView(IImmShape::IMM12);
+    case InstFormat::R4: return K_R4;
+    case InstFormat::J:  return K_J;
+    case InstFormat::U:  return K_U;
+    case InstFormat::S:  return K_S;
+    case InstFormat::B:  return K_B;
+    case InstFormat::C:  return K_C;
+    default:             return K_UNKNOWN;
     }
 }
 

@@ -336,7 +336,8 @@ void InstFormatUI::UpdateDisplay(const Instruction &inst)
     } else if(InstFormat::R == FMT) {
         rShape= DetectRShape(layout.R.opc);
     }
-    bool hasShapeChanged= (InstFormat::I == FMT && iShape != iShape_) || (InstFormat::R == FMT && rShape != rShape_);
+    bool hasShapeChanged= (InstFormat::I == FMT && iShape != iShape_)
+                         || (InstFormat::R == FMT && rShape != rShape_);
     if(FMT != fmt_ || hasShapeChanged) {
         fmt_   = FMT;
         iShape_= iShape;
@@ -346,7 +347,7 @@ void InstFormatUI::UpdateDisplay(const Instruction &inst)
         } else if(InstFormat::R == FMT) {
             applyView(util::GetRInstFormatView(rShape));
         } else {
-            applyView(util::GetInstFormatView(FMT));
+            applyView(util::GetInstFormatView(FMT)); // R4 and other fixed layouts
         }
     }
 

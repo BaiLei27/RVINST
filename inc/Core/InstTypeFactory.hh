@@ -32,10 +32,10 @@ private:
             { OpcMap::OP, InstFormat::R },        // R-type: add/sub/... / OP
             { OpcMap::LUI, InstFormat::U },       // U-type: lui
             { OpcMap::OP_32, InstFormat::R },     // R-type: addw/subw/... / OP-32 (RV64I)
-            { OpcMap::MADD, InstFormat::R },      // R4: fmadd.*
-            { OpcMap::MSUB, InstFormat::R },      // R4: fmsub.*
-            { OpcMap::NMSUB, InstFormat::R },     // R4: fnmsub.*
-            { OpcMap::NMADD, InstFormat::R },     // R4: fnmadd.*
+            { OpcMap::MADD, InstFormat::R4 },     // R4: fmadd.*
+            { OpcMap::MSUB, InstFormat::R4 },     // R4: fmsub.*
+            { OpcMap::NMSUB, InstFormat::R4 },    // R4: fnmsub.*
+            { OpcMap::NMADD, InstFormat::R4 },    // R4: fnmadd.*
             { OpcMap::OP_FP, InstFormat::R },     // R-type: fadd/fmul/... / OP-FP
             { OpcMap::OP_IMM_64, InstFormat::I }, // I-type: addid/sllid/... / OP-IMM-64 (RV128I)
             { OpcMap::BRANCH, InstFormat::B },    // B-type: beq/bne etc.

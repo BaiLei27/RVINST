@@ -13,6 +13,7 @@ enum class InstFormat : int8_t { // Instruction format enumeration
     U, // Upper immediate (lui/auipc)
     J, // Jump instruction (jal)
     C, // Compressed 16-bit (RVC; inst[1:0] != 0b11)
+    R4, // R-family fused multiply-add (fmadd/fmsub/fnmadd/fnmsub; rs3|fmt in [27:31]/[25:26])
 };
 
 enum OpcMap : uint8_t { // RISC-V base opcode map, inst[1:0] === 0b11
@@ -63,12 +64,11 @@ enum class IImmShape : uint8_t {
     CSR, // SYSTEM funct3≠0: imm[11:0] is the CSR address
 };
 
-/// R-family layout variants (same InstFormat::R, different bitfield labels).
+/// R-type layout variants (InstFormat::R only; R4 is InstFormat::R4).
 enum class RShape : uint8_t {
     BASE, // OP/OP-32/OP-64: classic funct7
     AMO,  // AMO: funct5 | aq | rl
     FP,   // OP-FP: funct5 | fmt (not a flat funct7)
-    R4,   // fused multiply-add: rs3 | fmt
 };
 
 // NOLINTBEGIN
@@ -96,25 +96,25 @@ union InstLayout {
         uint32_t rs3: 5;
     } R4;
 
-    struct { // AMO: funct5|aq|rl occupy the funct7 slot
+    struct { // AMO: funct5|aq|rl occupy the funct7 slot (InstFormat::R + RShape::AMO)
         uint32_t opc : 7;
         uint32_t rd  : 5;
         uint32_t fct3: 3;
         uint32_t rs1 : 5;
         uint32_t rs2 : 5;
-        uint32_t rl  : 1;
-        uint32_t aq  : 1;
-        uint32_t fct5: 5;
+        uint32_t rl  : 1; // [25]
+        uint32_t aq  : 1; // [26]
+        uint32_t fct5: 5; // [31:27]
     } A;
 
-    struct { // OP-FP: funct5|fmt occupy the funct7 slot (Ch.20/21)
+    struct { // OP-FP: funct5|fmt occupy the funct7 slot (InstFormat::R + RShape::FP)
         uint32_t opc : 7;
         uint32_t rd  : 5;
         uint32_t rm  : 3; // funct3 / rounding mode
         uint32_t rs1 : 5;
         uint32_t rs2 : 5;
-        uint32_t fmt : 2; // 00=S, 01=D, 10=H, 11=Q
-        uint32_t fct5: 5;
+        uint32_t fmt : 2; // [26:25] 00=S, 01=D, 10=H, 11=Q
+        uint32_t fct5: 5; // [31:27]
     } FP;
 
     struct { // I(opcode:[0:6] | rd:[7:11] | funct3:[12:14] | rs1:[15:19] | imm0tB:[20:31])

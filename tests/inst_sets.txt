@@ -69,14 +69,14 @@ decode|0x00412087|00412087|flw f1,x2,4|I-Type|flw|impl
 encode|flw f1, x2, 4|00412087|flw f1,x2,4|I-Type|flw|impl
 decode|0x00112227|00112227|fsw f1,4(x2)|S-Type|fsw|impl
 encode|fsw f1, 4, x2|00112227|fsw f1,4(x2)|S-Type|fsw|impl
-decode|0x203170c3|203170C3|fmadd.s f1,f2,f3,f4|R-Type|fmadd.s|impl
-encode|fmadd.s f1, f2, f3, f4|203170C3|fmadd.s f1,f2,f3,f4|R-Type|fmadd.s|impl
-decode|0x203170c7|203170C7|fmsub.s f1,f2,f3,f4|R-Type|fmsub.s|impl
-encode|fmsub.s f1, f2, f3, f4|203170C7|fmsub.s f1,f2,f3,f4|R-Type|fmsub.s|impl
-decode|0x203170cb|203170CB|fnmsub.s f1,f2,f3,f4|R-Type|fnmsub.s|impl
-encode|fnmsub.s f1, f2, f3, f4|203170CB|fnmsub.s f1,f2,f3,f4|R-Type|fnmsub.s|impl
-decode|0x203170cf|203170CF|fnmadd.s f1,f2,f3,f4|R-Type|fnmadd.s|impl
-encode|fnmadd.s f1, f2, f3, f4|203170CF|fnmadd.s f1,f2,f3,f4|R-Type|fnmadd.s|impl
+decode|0x203170c3|203170C3|fmadd.s f1,f2,f3,f4|R4-Type|fmadd.s|impl
+encode|fmadd.s f1, f2, f3, f4|203170C3|fmadd.s f1,f2,f3,f4|R4-Type|fmadd.s|impl
+decode|0x203170c7|203170C7|fmsub.s f1,f2,f3,f4|R4-Type|fmsub.s|impl
+encode|fmsub.s f1, f2, f3, f4|203170C7|fmsub.s f1,f2,f3,f4|R4-Type|fmsub.s|impl
+decode|0x203170cb|203170CB|fnmsub.s f1,f2,f3,f4|R4-Type|fnmsub.s|impl
+encode|fnmsub.s f1, f2, f3, f4|203170CB|fnmsub.s f1,f2,f3,f4|R4-Type|fnmsub.s|impl
+decode|0x203170cf|203170CF|fnmadd.s f1,f2,f3,f4|R4-Type|fnmadd.s|impl
+encode|fnmadd.s f1, f2, f3, f4|203170CF|fnmadd.s f1,f2,f3,f4|R4-Type|fnmadd.s|impl
 decode|0x003170d3|003170D3|fadd.s f1,f2,f3|R-Type|fadd.s|impl
 encode|fadd.s f1, f2, f3|003170D3|fadd.s f1,f2,f3|R-Type|fadd.s|impl
 decode|0x083170d3|083170D3|fsub.s f1,f2,f3|R-Type|fsub.s|impl
@@ -134,14 +134,14 @@ decode|0x00413087|00413087|fld f1,x2,4|I-Type|fld|impl
 encode|fld f1, x2, 4|00413087|fld f1,x2,4|I-Type|fld|impl
 decode|0x00113227|00113227|fsd f1,4(x2)|S-Type|fsd|impl
 encode|fsd f1, 4, x2|00113227|fsd f1,4(x2)|S-Type|fsd|impl
-decode|0x223170c3|223170C3|fmadd.d f1,f2,f3,f4|R-Type|fmadd.d|impl
-encode|fmadd.d f1, f2, f3, f4|223170C3|fmadd.d f1,f2,f3,f4|R-Type|fmadd.d|impl
-decode|0x223170c7|223170C7|fmsub.d f1,f2,f3,f4|R-Type|fmsub.d|impl
-encode|fmsub.d f1, f2, f3, f4|223170C7|fmsub.d f1,f2,f3,f4|R-Type|fmsub.d|impl
-decode|0x223170cb|223170CB|fnmsub.d f1,f2,f3,f4|R-Type|fnmsub.d|impl
-encode|fnmsub.d f1, f2, f3, f4|223170CB|fnmsub.d f1,f2,f3,f4|R-Type|fnmsub.d|impl
-decode|0x223170cf|223170CF|fnmadd.d f1,f2,f3,f4|R-Type|fnmadd.d|impl
-encode|fnmadd.d f1, f2, f3, f4|223170CF|fnmadd.d f1,f2,f3,f4|R-Type|fnmadd.d|impl
+decode|0x223170c3|223170C3|fmadd.d f1,f2,f3,f4|R4-Type|fmadd.d|impl
+encode|fmadd.d f1, f2, f3, f4|223170C3|fmadd.d f1,f2,f3,f4|R4-Type|fmadd.d|impl
+decode|0x223170c7|223170C7|fmsub.d f1,f2,f3,f4|R4-Type|fmsub.d|impl
+encode|fmsub.d f1, f2, f3, f4|223170C7|fmsub.d f1,f2,f3,f4|R4-Type|fmsub.d|impl
+decode|0x223170cb|223170CB|fnmsub.d f1,f2,f3,f4|R4-Type|fnmsub.d|impl
+encode|fnmsub.d f1, f2, f3, f4|223170CB|fnmsub.d f1,f2,f3,f4|R4-Type|fnmsub.d|impl
+decode|0x223170cf|223170CF|fnmadd.d f1,f2,f3,f4|R4-Type|fnmadd.d|impl
+encode|fnmadd.d f1, f2, f3, f4|223170CF|fnmadd.d f1,f2,f3,f4|R4-Type|fnmadd.d|impl
 decode|0x023170d3|023170D3|fadd.d f1,f2,f3|R-Type|fadd.d|impl
 encode|fadd.d f1, f2, f3|023170D3|fadd.d f1,f2,f3|R-Type|fadd.d|impl
 decode|0x0a3170d3|0A3170D3|fsub.d f1,f2,f3|R-Type|fsub.d|impl
@@ -202,14 +202,14 @@ decode|0x00414087|00414087|flq f1,x2,4|I-Type|flq|impl
 encode|flq f1, x2, 4|00414087|flq f1,x2,4|I-Type|flq|impl
 decode|0x00114227|00114227|fsq f1,4(x2)|S-Type|fsq|impl
 encode|fsq f1, 4, x2|00114227|fsq f1,4(x2)|S-Type|fsq|impl
-decode|0x263170c3|263170C3|fmadd.q f1,f2,f3,f4|R-Type|fmadd.q|impl
-encode|fmadd.q f1, f2, f3, f4|263170C3|fmadd.q f1,f2,f3,f4|R-Type|fmadd.q|impl
-decode|0x263170c7|263170C7|fmsub.q f1,f2,f3,f4|R-Type|fmsub.q|impl
-encode|fmsub.q f1, f2, f3, f4|263170C7|fmsub.q f1,f2,f3,f4|R-Type|fmsub.q|impl
-decode|0x263170cb|263170CB|fnmsub.q f1,f2,f3,f4|R-Type|fnmsub.q|impl
-encode|fnmsub.q f1, f2, f3, f4|263170CB|fnmsub.q f1,f2,f3,f4|R-Type|fnmsub.q|impl
-decode|0x263170cf|263170CF|fnmadd.q f1,f2,f3,f4|R-Type|fnmadd.q|impl
-encode|fnmadd.q f1, f2, f3, f4|263170CF|fnmadd.q f1,f2,f3,f4|R-Type|fnmadd.q|impl
+decode|0x263170c3|263170C3|fmadd.q f1,f2,f3,f4|R4-Type|fmadd.q|impl
+encode|fmadd.q f1, f2, f3, f4|263170C3|fmadd.q f1,f2,f3,f4|R4-Type|fmadd.q|impl
+decode|0x263170c7|263170C7|fmsub.q f1,f2,f3,f4|R4-Type|fmsub.q|impl
+encode|fmsub.q f1, f2, f3, f4|263170C7|fmsub.q f1,f2,f3,f4|R4-Type|fmsub.q|impl
+decode|0x263170cb|263170CB|fnmsub.q f1,f2,f3,f4|R4-Type|fnmsub.q|impl
+encode|fnmsub.q f1, f2, f3, f4|263170CB|fnmsub.q f1,f2,f3,f4|R4-Type|fnmsub.q|impl
+decode|0x263170cf|263170CF|fnmadd.q f1,f2,f3,f4|R4-Type|fnmadd.q|impl
+encode|fnmadd.q f1, f2, f3, f4|263170CF|fnmadd.q f1,f2,f3,f4|R4-Type|fnmadd.q|impl
 decode|0x063170d3|063170D3|fadd.q f1,f2,f3|R-Type|fadd.q|impl
 encode|fadd.q f1, f2, f3|063170D3|fadd.q f1,f2,f3|R-Type|fadd.q|impl
 decode|0x0e3170d3|0E3170D3|fsub.q f1,f2,f3|R-Type|fsub.q|impl

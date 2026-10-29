@@ -5,6 +5,7 @@
 #include "Core/IType.hh"
 #include "Core/JType.hh"
 #include "Core/RType.hh"
+#include "Core/R4Type.hh"
 #include "Core/SType.hh"
 #include "Core/UType.hh"
 #include "Core/CType.hh"
@@ -17,6 +18,8 @@ std::unique_ptr<IBaseInstType> makeByFormat(InstFormat fmt, Args &&...args)
     switch(fmt) {
     case InstFormat::R:
         return std::make_unique<RType>(fmt, std::forward<Args>(args)...);
+    case InstFormat::R4:
+        return std::make_unique<R4Type>(fmt, std::forward<Args>(args)...);
     case InstFormat::I:
         return std::make_unique<IType>(fmt, std::forward<Args>(args)...);
     case InstFormat::J:
@@ -82,6 +85,7 @@ const InstTypeFactory::name2FormatOpcode_u &InstTypeFactory::getName2FormatOpcod
     static const name2FormatOpcode_u OPC_CACHE= [] {
         name2FormatOpcode_u m;
         registerTable(m, RType::G_INST_TABLE, InstFormat::R);
+        registerTable(m, R4Type::G_INST_TABLE, InstFormat::R4);
         registerTable(m, IType::G_INST_TABLE, InstFormat::I);
         registerTable(m, JType::G_INST_TABLE, InstFormat::J);
         registerTable(m, UType::G_INST_TABLE, InstFormat::U);

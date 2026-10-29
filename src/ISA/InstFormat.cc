@@ -44,7 +44,7 @@ constexpr std::array<InstField, 7> G_R_FP_FIELDS {
      }
 };
 
-constexpr std::array<InstField, 7> G_R_R4_FIELDS {
+constexpr std::array<InstField, 7> G_R4_FIELDS {
     {
      { .name_= "rs3"sv, .startBit_= 27, .endBit_= 31, .desc_= "rs3"sv },
      { .name_= "fmt"sv, .startBit_= 25, .endBit_= 26, .desc_= "fmt"sv },
@@ -56,12 +56,11 @@ constexpr std::array<InstField, 7> G_R_R4_FIELDS {
      }
 };
 
-// Indexed by RShape (BASE=0 .. R4=3).
-constexpr std::array<std::span<const InstField>, 4> G_R_SHAPE_FIELDS {
+// Indexed by RShape (BASE=0, AMO=1, FP=2).
+constexpr std::array<std::span<const InstField>, 3> G_R_SHAPE_FIELDS {
     std::span<const InstField>(G_R_FIELDS),
     std::span<const InstField>(G_R_AMO_FIELDS),
     std::span<const InstField>(G_R_FP_FIELDS),
-    std::span<const InstField>(G_R_R4_FIELDS),
 };
 
 constexpr std::array<InstField, 5> G_I_FIELDS {
@@ -157,8 +156,8 @@ constexpr std::array<InstField, 6> G_J_FIELDS {
      }
 };
 
-// Indexed by InstFormat (R=0 .. C=6).
-constexpr std::array<std::span<const InstField>, 7> G_FMT_FIELDS {
+// Indexed by InstFormat (R=0 .. C=6, R4=7).
+constexpr std::array<std::span<const InstField>, 8> G_FMT_FIELDS {
     std::span<const InstField>(G_R_FIELDS),
     std::span<const InstField>(G_I_FIELDS),
     std::span<const InstField>(G_S_FIELDS),
@@ -166,6 +165,7 @@ constexpr std::array<std::span<const InstField>, 7> G_FMT_FIELDS {
     std::span<const InstField>(G_U_FIELDS),
     std::span<const InstField>(G_J_FIELDS),
     std::span<const InstField>(G_C_FIELDS),
+    std::span<const InstField>(G_R4_FIELDS),
 };
 
 // Indexed by ItypeImmShape (IMM12=0, SHIFT=1, FENCE=2, CSR=3).
@@ -201,6 +201,7 @@ std::string_view InstFormatName(InstFormat fmt) noexcept
     case InstFormat::U: return "U-Type";
     case InstFormat::J: return "J-Type";
     case InstFormat::C: return "C-Type";
+    case InstFormat::R4:return "R4-Type";
     default:            return "UNKNOW";
     }
 }
@@ -246,13 +247,5 @@ RShape DetectRShape(uint32_t opc) noexcept
 {
     if(OpcMap::AMO == opc) return RShape::AMO;
     if(OpcMap::OP_FP == opc) return RShape::FP;
-
-    if(OpcMap::MADD == opc
-       || OpcMap::MSUB == opc
-       || OpcMap::NMSUB == opc
-       || OpcMap::NMADD == opc) {
-        return RShape::R4;
-    }
-
     return RShape::BASE;
 }

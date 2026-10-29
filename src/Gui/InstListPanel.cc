@@ -75,7 +75,7 @@ uint32_t DefaultWord(const util::InstCatalog &entry) noexcept
 
     switch(entry.format_) {
     case InstFormat::R: {
-        switch(DetectRShape(OPC)) {                                                // Match RType PACK_KEY shapes (AMO/OP_FP/R4); classic OP uses funct7<<25.
+        switch(DetectRShape(OPC)) {                                                // Match RType PACK_KEY shapes (AMO/OP_FP); classic OP uses funct7<<25.
         case RShape::AMO: res= (PAY >> 3) << 27 | (PAY & 0x7U) << 12 | OPC; break; // PAY = (funct5 << 3) | funct3 → funct5@[31:27], aq/rl left 0
         case RShape::FP:  {
             // PAY = (f7 << 8) | (rs2 << 3) | f3key, f7 = (funct5 << 2) | fmt
@@ -84,12 +84,11 @@ uint32_t DefaultWord(const util::InstCatalog &entry) noexcept
             const uint32_t F3 = PAY & 0x7U;
             res               = F7 << 25 | RS2 << 20 | F3 << 12 | OPC;
         } break;
-        case RShape::R4: res= (PAY & 0x3U) << 25 | 0x7U << 12 | OPC; break; // PAY = fmt; rm=0b111 (dyn) so the sample matches encode expects
-        default:         res= (PAY >> 3) << 25 | (PAY & 0x7U) << 12 | OPC; break;
+        default: res= (PAY >> 3) << 25 | (PAY & 0x7U) << 12 | OPC; break;
         }
     } break;
-
-    case InstFormat::I: {
+    case InstFormat::R4: res= (PAY & 0x3U) << 25 | 0x7U << 12 | OPC; break; // PAY = fmt; rm=0b111 (dyn) so the sample matches R4Type encode expects
+    case InstFormat::I:  {
         if(OpcMap::SYSTEM == OPC) {
             res= PAY <= 1U ? PAY << 20 | OPC : (PAY >> 8 & 0x7U) << 12 | OPC; // ecall/ebreak: PAY is imm12 (0/1). Zicsr: PAY is f3<<8.
         } else if(PAY > 0x7U) {                                               // else-if: SYSTEM always owns res, must not fall through

@@ -47,7 +47,7 @@ namespace {
 
         const auto FMT= pType->GetInstFormat();
 
-        std::span<const InstField> meta= GetInstFields(FMT);
+        std::span<const InstField> meta= GetInstFields(FMT); // R4 uses G_R4_FIELDS via InstFormat index
         if(InstFormat::I == FMT) {
             const auto &l= pType->GetInstLayout();
             meta         = GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
