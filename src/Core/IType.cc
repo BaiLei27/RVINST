@@ -80,7 +80,7 @@ void IType::Parse()
 {
     const auto IMM= Layout_.I.imm0tB;
     switch(DetectIImmShape(Layout_.I.opc, Layout_.I.fct3)) {
-    case ItypeImmShape::SHIFT: {
+    case IImmShape::SHIFT: {
         // OP_IMM: up to 7-bit shamt (RV128); OP_IMM_64: 6-bit; OP_IMM_32: 5-bit
         if(OpcMap::OP_IMM == Layout_.I.opc) {
             setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x7FU, IMM >> 7 });
@@ -90,7 +90,7 @@ void IType::Parse()
             setBitsField({ Layout_.I.opc, Layout_.I.rd, Layout_.I.fct3, Layout_.I.rs1, IMM & 0x1FU, IMM >> 5 });
         }
     } break;
-    case ItypeImmShape::FENCE:
+    case IImmShape::FENCE:
         setBitsField({ Layout_.I.opc,
                        Layout_.I.rd,
                        Layout_.I.fct3,
@@ -125,8 +125,8 @@ void IType::mnemonicHelper()
             return;
         }
         // Zicsr: csrr* rd, csr, rs1/uimm â€?known G CSRs by name, else 0xNNN
-        auto rd= isa::LookupRegName(Layout_.I.rd, HasSetABI_);
-        const uint16_t CSRN= static_cast<uint16_t>(Layout_.I.imm0tB & 0xFFFU);
+        auto rd                  = isa::LookupRegName(Layout_.I.rd, HasSetABI_);
+        const uint16_t CSRN      = static_cast<uint16_t>(Layout_.I.imm0tB & 0xFFFU);
         const std::string CSR_STR= [&] {
             if(auto n= isa::LookupCSRName(CSRN)) return std::string(*n);
             return std::format("0x{:x}", CSRN);
@@ -140,7 +140,7 @@ void IType::mnemonicHelper()
         return;
     }
 
-    if(ItypeImmShape::FENCE == SHAPE) {
+    if(IImmShape::FENCE == SHAPE) {
         if(1 == Layout_.I.fct3 || IS_SPECIAL_FENCE_IMM(Layout_.I.imm0tB)) {
             if(InstAssembly_.size() > 1) InstAssembly_.resize(1);
             return;
@@ -154,12 +154,15 @@ void IType::mnemonicHelper()
     const bool FP_LOAD= OpcMap::LOAD_FP == OPC;
     auto rd           = FP_LOAD ? isa::LookupFregName(Layout_.I.rd, HasSetABI_)
                                 : isa::LookupRegName(Layout_.I.rd, HasSetABI_);
-    auto rs1= isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
+    auto rs1          = isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
     std::string immStr;
-    if(ItypeImmShape::SHIFT == SHAPE) {
+    if(IImmShape::SHIFT == SHAPE) {
         uint32_t shamtMask= 0x1FU;
-        if(OpcMap::OP_IMM == OPC) shamtMask= 0x7FU;
-        else if(OpcMap::OP_IMM_64 == OPC) shamtMask= 0x3FU;
+        if(OpcMap::OP_IMM == OPC) {
+            shamtMask= 0x7FU;
+        } else if(OpcMap::OP_IMM_64 == OPC) {
+            shamtMask= 0x3FU;
+        }
         immStr= std::to_string(Layout_.I.imm0tB & shamtMask);
     } else {
         immStr= std::to_string(decodeIImm12(Layout_.I.imm0tB));
@@ -247,7 +250,7 @@ util::Expected_u<const InstLayout *> IType::Assembly()
     if(OpcMap::OP_IMM == OPC || OpcMap::OP_IMM_32 == OPC || OpcMap::OP_IMM_64 == OPC) {
         Layout_.I.fct3  = PAYLOAD;
         const auto SHAPE= DetectIImmShape(OPC, Layout_.I.fct3);
-        Layout_.I.imm0tB= ItypeImmShape::SHIFT == SHAPE ? PAYLOAD >> 3 << 5 : 0;
+        Layout_.I.imm0tB= IImmShape::SHIFT == SHAPE ? PAYLOAD >> 3 << 5 : 0;
 
         if(InstAssembly_.size() >= 4) {
             if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.I.rd= *rd;
@@ -255,7 +258,7 @@ util::Expected_u<const InstLayout *> IType::Assembly()
 
             int32_t imm {};
             if(util::ParseInt(InstAssembly_.at(3), imm)) {
-                if(ItypeImmShape::SHIFT == SHAPE) {
+                if(IImmShape::SHIFT == SHAPE) {
                     uint32_t shamtMask= 0x1FU;
                     uint32_t functMask= 0xFE0U;
                     if(OpcMap::OP_IMM == OPC) {
@@ -305,8 +308,8 @@ auto IType::calculateKeyID() -> KeyT
     case OpcMap::OP_IMM_64: {
         // imm[10] only â€?wider shamts must not disturb the key
         const uint8_t FUNCT=
-            ItypeImmShape::SHIFT == DetectIImmShape(Layout_.I.opc, Layout_.I.fct3)
-                ? (Layout_.I.imm0tB >> 10 & 1 ? 0x20 : 0)
+            IImmShape::SHIFT == DetectIImmShape(Layout_.I.opc, Layout_.I.fct3)
+                ? (Layout_.I.imm0tB >> 10 & 1 ? 0x20 : 0) // NOLINT
                 : 0;
         Key_= OP_IMM_K(FUNCT, Layout_.I.fct3, Layout_.I.opc);
     } break;
@@ -322,7 +325,7 @@ auto IType::calculateKeyID() -> KeyT
         Key_= 0 == Layout_.I.fct3 ? SYSTEM_K(Layout_.I.imm0tB, Layout_.I.opc)
                                   : SYSTEM_K(static_cast<uint16_t>(Layout_.I.fct3) << 8, Layout_.I.opc);
         break;
-    default:             Key_= OP_K(Layout_.I.fct3, Layout_.I.opc); break;
+    default: Key_= OP_K(Layout_.I.fct3, Layout_.I.opc); break;
     }
 
     return Key_;

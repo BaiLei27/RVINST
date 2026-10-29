@@ -273,13 +273,13 @@ namespace {
 
 } // namespace
 
-const InstFormatView &GetIInstFormatView(ItypeImmShape shape)
+const InstFormatView &GetIInstFormatView(IImmShape shape)
 {
     static const InstFormatView K_I {
         .typeName_ = InstFormatName(InstFormat::I),
         .fmt_      = InstFormat::I,
         .asmTokens_= G_I_ASM,
-        .fields_   = GetIInstFields(ItypeImmShape::IMM12),
+        .fields_   = GetIInstFields(IImmShape::IMM12),
         .binaryRel_= G_I_BIN_REL,
         .asmRel_   = G_I_ASM_REL,
         .keyFields_= G_I_KEY,
@@ -288,7 +288,7 @@ const InstFormatView &GetIInstFormatView(ItypeImmShape shape)
         .typeName_ = InstFormatName(InstFormat::I),
         .fmt_      = InstFormat::I,
         .asmTokens_= G_I_ASM,
-        .fields_   = GetIInstFields(ItypeImmShape::SHIFT),
+        .fields_   = GetIInstFields(IImmShape::SHIFT),
         .binaryRel_= G_I_SHIFT_BIN_REL,
         .asmRel_   = G_I_SHIFT_ASM_REL,
         .keyFields_= G_I_SHIFT_KEY,
@@ -297,7 +297,7 @@ const InstFormatView &GetIInstFormatView(ItypeImmShape shape)
         .typeName_ = InstFormatName(InstFormat::I),
         .fmt_      = InstFormat::I,
         .asmTokens_= G_I_FENCE_ASM,
-        .fields_   = GetIInstFields(ItypeImmShape::FENCE),
+        .fields_   = GetIInstFields(IImmShape::FENCE),
         .binaryRel_= G_I_FENCE_BIN_REL,
         .asmRel_   = G_I_FENCE_ASM_REL,
         .keyFields_= G_I_KEY,
@@ -306,27 +306,27 @@ const InstFormatView &GetIInstFormatView(ItypeImmShape shape)
         .typeName_ = InstFormatName(InstFormat::I),
         .fmt_      = InstFormat::I,
         .asmTokens_= G_I_CSR_ASM,
-        .fields_   = GetIInstFields(ItypeImmShape::CSR),
+        .fields_   = GetIInstFields(IImmShape::CSR),
         .binaryRel_= G_I_CSR_BIN_REL,
         .asmRel_   = G_I_CSR_ASM_REL,
         .keyFields_= G_I_KEY,
     };
 
     switch(shape) {
-    case ItypeImmShape::SHIFT: return K_I_SHIFT;
-    case ItypeImmShape::FENCE: return K_I_FENCE;
-    case ItypeImmShape::CSR:   return K_I_CSR;
-    default:                   return K_I;
+    case IImmShape::SHIFT: return K_I_SHIFT;
+    case IImmShape::FENCE: return K_I_FENCE;
+    case IImmShape::CSR:   return K_I_CSR;
+    default:               return K_I;
     }
 }
 
-const InstFormatView &GetRInstFormatView(RtypeShape shape)
+const InstFormatView &GetRInstFormatView(RShape shape)
 {
     static const InstFormatView K_R {
         .typeName_ = InstFormatName(InstFormat::R),
         .fmt_      = InstFormat::R,
         .asmTokens_= G_R_ASM,
-        .fields_   = GetRInstFields(RtypeShape::BASE),
+        .fields_   = GetRInstFields(RShape::BASE),
         .binaryRel_= G_R_BIN_REL,
         .asmRel_   = G_R_ASM_REL,
         .keyFields_= G_R_KEY,
@@ -335,7 +335,7 @@ const InstFormatView &GetRInstFormatView(RtypeShape shape)
         .typeName_ = InstFormatName(InstFormat::R),
         .fmt_      = InstFormat::R,
         .asmTokens_= G_R_ASM,
-        .fields_   = GetRInstFields(RtypeShape::AMO),
+        .fields_   = GetRInstFields(RShape::AMO),
         .binaryRel_= G_R_AMO_BIN_REL,
         .asmRel_   = G_R_AMO_ASM_REL,
         .keyFields_= G_R_AMO_KEY,
@@ -344,7 +344,7 @@ const InstFormatView &GetRInstFormatView(RtypeShape shape)
         .typeName_ = InstFormatName(InstFormat::R),
         .fmt_      = InstFormat::R,
         .asmTokens_= G_R_ASM,
-        .fields_   = GetRInstFields(RtypeShape::FP),
+        .fields_   = GetRInstFields(RShape::FP),
         .binaryRel_= G_R_FP_BIN_REL,
         .asmRel_   = G_R_FP_ASM_REL,
         .keyFields_= G_R_FP_KEY,
@@ -353,17 +353,17 @@ const InstFormatView &GetRInstFormatView(RtypeShape shape)
         .typeName_ = InstFormatName(InstFormat::R),
         .fmt_      = InstFormat::R,
         .asmTokens_= G_R_R4_ASM,
-        .fields_   = GetRInstFields(RtypeShape::R4),
+        .fields_   = GetRInstFields(RShape::R4),
         .binaryRel_= G_R_R4_BIN_REL,
         .asmRel_   = G_R_R4_ASM_REL,
         .keyFields_= G_R_R4_KEY,
     };
 
     switch(shape) {
-    case RtypeShape::AMO: return K_R_AMO;
-    case RtypeShape::FP:  return K_R_FP;
-    case RtypeShape::R4:  return K_R_R4;
-    default:              return K_R;
+    case RShape::AMO: return K_R_AMO;
+    case RShape::FP:  return K_R_FP;
+    case RShape::R4:  return K_R_R4;
+    default:          return K_R;
     }
 }
 
@@ -417,8 +417,8 @@ const InstFormatView &GetInstFormatView(InstFormat fmt)
     static const InstFormatView K_UNKNOWN {};
 
     switch(fmt) {
-    case InstFormat::R: return GetRInstFormatView(RtypeShape::BASE);
-    case InstFormat::I: return GetIInstFormatView(ItypeImmShape::IMM12);
+    case InstFormat::R: return GetRInstFormatView(RShape::BASE);
+    case InstFormat::I: return GetIInstFormatView(IImmShape::IMM12);
     case InstFormat::J: return K_J;
     case InstFormat::U: return K_U;
     case InstFormat::S: return K_S;

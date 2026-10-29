@@ -61,7 +61,7 @@ public:
 
     bool Contains(std::string_view name) const noexcept { return Name2IdxInfo_.contains(name); }
 
-    void PrintCode2NameMap() const noexcept
+    void PrintCode2NameMap() const
     {
         std::string buf;
         buf.reserve(128 + Code2NameInfo_.size() * 192);
@@ -73,7 +73,7 @@ public:
             return;
         }
 
-        for(const auto &[key, name_info]: Code2NameInfo_) {
+        for(const auto &[key, name2info]: Code2NameInfo_) {
             std::format_to(out,
                            "--------------------------------------------------------------------------------------------\n"
                            "  Code (functKey): 0x{:04X}\n"
@@ -81,15 +81,15 @@ public:
                            "  XLEN Architecture: {}\n"
                            "  Manual URL: {}\n",
                            key,
-                           name_info.name_,
-                           name_info.XLEN_,
-                           name_info.manual_);
+                           name2info.name_,
+                           name2info.XLEN_,
+                           name2info.manual_);
         }
         std::format_to(out, "==============================================================================================\n\n");
         std::print("{}", buf);
     }
 
-    void PrintName2IndexMap() const noexcept
+    void PrintName2IndexMap() const
     {
         std::string buf;
         buf.reserve(128 + Name2IdxInfo_.size() * 192);
@@ -101,7 +101,7 @@ public:
             return;
         }
 
-        for(const auto &[name, index_info]: Name2IdxInfo_) {
+        for(const auto &[name, index2info]: Name2IdxInfo_) {
             std::format_to(out,
                            "--------------------------------------------------------------------------------------------\n"
                            "  Instruction Name: {}\n"
@@ -110,10 +110,10 @@ public:
                            "  Opcode: 0x{:02X}\n"
                            "  Manual URL: {}\n",
                            name,
-                           index_info.XLEN_,
-                           index_info.keyID_,
-                           index_info.opcode_,
-                           index_info.manual_);
+                           index2info.XLEN_,
+                           index2info.keyID_,
+                           index2info.opcode_,
+                           index2info.manual_);
         }
         std::format_to(out, "==============================================================================================\n\n");
         std::print("{}", buf);

@@ -10,10 +10,10 @@ namespace isa {
 
 constexpr uint16_t G_REG_NUMBER= 32;
 
-using strPair_u   = std::pair<std::string_view, std::string_view>;
-using RegFileTable= std::array<strPair_u, G_REG_NUMBER>;
+using strPair_u     = std::pair<std::string_view, std::string_view>;
+using RegFileTable_u= std::array<strPair_u, G_REG_NUMBER>;
 
-constexpr RegFileTable G_INDEX_REGS_ABI= {
+constexpr RegFileTable_u G_INDEX_REGS_ABI= {
     { { "x0", "zero" },
      { "x1", "ra" },
      { "x2", "sp" },
@@ -57,7 +57,7 @@ static_assert(G_REG_NUMBER == G_INDEX_REGS_ABI.size());
                                              std::string_view fallback= "?") noexcept;
 
 // Floating-point register file (f0–f31) and ABI aliases (ft*/fs*/fa*).
-constexpr RegFileTable G_INDEX_FREGS_ABI= {
+constexpr RegFileTable_u G_INDEX_FREGS_ABI= {
     { { "f0", "ft0" },
      { "f1", "ft1" },
      { "f2", "ft2" },
@@ -101,12 +101,12 @@ static_assert(G_REG_NUMBER == G_INDEX_FREGS_ABI.size());
                                               std::string_view fallback= "?") noexcept;
 
 // Unprivileged CSRs for RV32/64G (FP + Zicntr). Sorted by num_ for binary search.
-struct CsrEntry {
+struct CSREntry {
     uint16_t num_ {};
     std::string_view name_;
 };
 
-constexpr std::array<CsrEntry, 9> G_UCSR_TABLE {
+constexpr std::array<CSREntry, 9> G_UCSR_TABLE {
     {
      { .num_= 0x001, .name_= "fflags" },
      { .num_= 0x002, .name_= "frm" },

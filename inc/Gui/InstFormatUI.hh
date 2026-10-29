@@ -29,8 +29,8 @@ public:
     const util::InstFormatView *pView_ {};
     int resultRowIndex_ {};
     InstFormat fmt_ { InstFormat::UNKNOWN };
-    ItypeImmShape iShape_ { ItypeImmShape::IMM12 };
-    RtypeShape rShape_ { RtypeShape::BASE };
+    IImmShape iShape_ { IImmShape::IMM12 };
+    RShape rShape_ { RShape::BASE };
     bool hasHexImm_ {};
 
 public:

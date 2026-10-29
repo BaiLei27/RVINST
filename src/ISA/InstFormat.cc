@@ -1,4 +1,5 @@
 #include <array>
+#include <utility>
 
 #include "ISA/InstFormat.hh"
 
@@ -55,7 +56,7 @@ constexpr std::array<InstField, 7> G_R_R4_FIELDS {
      }
 };
 
-// Indexed by RtypeShape (BASE=0 .. R4=3).
+// Indexed by RShape (BASE=0 .. R4=3).
 constexpr std::array<std::span<const InstField>, 4> G_R_SHAPE_FIELDS {
     std::span<const InstField>(G_R_FIELDS),
     std::span<const InstField>(G_R_AMO_FIELDS),
@@ -207,12 +208,12 @@ std::string_view InstFormatName(InstFormat fmt) noexcept
 std::span<const InstField> GetInstFields(InstFormat fmt)
 {
     const auto IDX= static_cast<int>(fmt);
-    if(IDX < 0 || IDX >= static_cast<int>(G_FMT_FIELDS.size())) return {};
+    if(IDX < 0 || std::cmp_greater_equal(IDX, G_FMT_FIELDS.size())) return {};
 
     return G_FMT_FIELDS[IDX];
 }
 
-std::span<const InstField> GetIInstFields(ItypeImmShape shape) noexcept
+std::span<const InstField> GetIInstFields(IImmShape shape) noexcept
 {
     const auto IDX= static_cast<size_t>(shape);
     if(IDX >= G_I_SHAPE_FIELDS.size()) return {};
@@ -220,20 +221,20 @@ std::span<const InstField> GetIInstFields(ItypeImmShape shape) noexcept
     return G_I_SHAPE_FIELDS[IDX];
 }
 
-ItypeImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept
+IImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept
 {
     // MISC_MEM: f3=0/1 fence*; f3=2 is RV128I LQ (I-imm), not fence layout
-    if(OpcMap::MISC_MEM == opc && f3 <= 1) return ItypeImmShape::FENCE;
+    if(OpcMap::MISC_MEM == opc && f3 <= 1) return IImmShape::FENCE;
     // SYSTEM: f3=0 ecall/ebreak (imm12); f3≠0 Zicsr (csr address in [31:20])
-    if(OpcMap::SYSTEM == opc && 0 != f3) return ItypeImmShape::CSR;
+    if(OpcMap::SYSTEM == opc && 0 != f3) return IImmShape::CSR;
     if((OpcMap::OP_IMM == opc || OpcMap::OP_IMM_32 == opc || OpcMap::OP_IMM_64 == opc)
        && (1 == f3 || 5 == f3)) {
-        return ItypeImmShape::SHIFT;
+        return IImmShape::SHIFT;
     }
-    return ItypeImmShape::IMM12;
+    return IImmShape::IMM12;
 }
 
-std::span<const InstField> GetRInstFields(RtypeShape shape) noexcept
+std::span<const InstField> GetRInstFields(RShape shape) noexcept
 {
     const auto IDX= static_cast<size_t>(shape);
     if(IDX >= G_R_SHAPE_FIELDS.size()) return {};
@@ -241,12 +242,17 @@ std::span<const InstField> GetRInstFields(RtypeShape shape) noexcept
     return G_R_SHAPE_FIELDS[IDX];
 }
 
-RtypeShape DetectRShape(uint32_t opc) noexcept
+RShape DetectRShape(uint32_t opc) noexcept
 {
-    if(OpcMap::AMO == opc) return RtypeShape::AMO;
-    if(OpcMap::OP_FP == opc) return RtypeShape::FP;
-    if(OpcMap::MADD == opc || OpcMap::MSUB == opc || OpcMap::NMSUB == opc || OpcMap::NMADD == opc) {
-        return RtypeShape::R4;
+    if(OpcMap::AMO == opc) return RShape::AMO;
+    if(OpcMap::OP_FP == opc) return RShape::FP;
+
+    if(OpcMap::MADD == opc
+       || OpcMap::MSUB == opc
+       || OpcMap::NMSUB == opc
+       || OpcMap::NMADD == opc) {
+        return RShape::R4;
     }
-    return RtypeShape::BASE;
+
+    return RShape::BASE;
 }

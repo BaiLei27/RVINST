@@ -60,12 +60,12 @@ int CliApp::Run(int argc, char *pArgv[])
     }
 
     if(subcommand.empty()) {
-        OutputFormatter fmt(detectOutputMode(false));
+        OutputFormatter fmt(DetectOutputMode(false));
         fmt.PrintHelp();
         return 0;
     }
 
-    OutputMode mode= detectOutputMode(forceJson);
+    OutputMode mode= DetectOutputMode(forceJson);
     Commands cmd({ .hasABI_= hasABI, .outputMode_= mode }, saveHistory);
 
     auto fail= [&mode](std::string_view msg) {

@@ -56,7 +56,7 @@ enum OpcMap : uint8_t { // RISC-V base opcode map, inst[1:0] === 0b11
     OP_64    = 0x7B, // 11_110_11 (RV128I draft; was custom-3)
     RESERVE_5= 0x7F, // 11_111_11
 };
-enum class ItypeImmShape : uint8_t {
+enum class IImmShape : uint8_t {
     IMM12,
     SHIFT,
     FENCE,
@@ -64,7 +64,7 @@ enum class ItypeImmShape : uint8_t {
 };
 
 /// R-family layout variants (same InstFormat::R, different bitfield labels).
-enum class RtypeShape : uint8_t {
+enum class RShape : uint8_t {
     BASE, // OP/OP-32/OP-64: classic funct7
     AMO,  // AMO: funct5 | aq | rl
     FP,   // OP-FP: funct5 | fmt (not a flat funct7)
@@ -86,6 +86,16 @@ union InstLayout {
         uint32_t fct7: 7;
     } R;
 
+    struct { // R4 fused multiply-add (rs3|funct2 occupy the funct7 slot)
+        uint32_t opc: 7;
+        uint32_t rd : 5;
+        uint32_t rm : 3; // funct3 / rounding mode
+        uint32_t rs1: 5;
+        uint32_t rs2: 5;
+        uint32_t fmt: 2; // funct2: 00=S, 01=D, 10=H, 11=Q
+        uint32_t rs3: 5;
+    } R4;
+
     struct { // AMO: funct5|aq|rl occupy the funct7 slot
         uint32_t opc : 7;
         uint32_t rd  : 5;
@@ -96,6 +106,16 @@ union InstLayout {
         uint32_t aq  : 1;
         uint32_t fct5: 5;
     } A;
+
+    struct { // OP-FP: funct5|fmt occupy the funct7 slot (Ch.20/21)
+        uint32_t opc : 7;
+        uint32_t rd  : 5;
+        uint32_t rm  : 3; // funct3 / rounding mode
+        uint32_t rs1 : 5;
+        uint32_t rs2 : 5;
+        uint32_t fmt : 2; // 00=S, 01=D, 10=H, 11=Q
+        uint32_t fct5: 5;
+    } FP;
 
     struct { // I(opcode:[0:6] | rd:[7:11] | funct3:[12:14] | rs1:[15:19] | imm0tB:[20:31])
         uint32_t opc   : 7;
@@ -140,29 +160,9 @@ union InstLayout {
         uint32_t imm14  : 1;  // imm20
     } J;
 
-    struct { // R4 fused multiply-add (rs3|funct2 occupy the funct7 slot)
-        uint32_t opc : 7;
-        uint32_t rd  : 5;
-        uint32_t rm  : 3; // funct3 / rounding mode
-        uint32_t rs1 : 5;
-        uint32_t rs2 : 5;
-        uint32_t fmt : 2; // funct2: 00=S, 01=D, 10=H, 11=Q
-        uint32_t rs3 : 5;
-    } R4;
-
-    struct { // OP-FP: funct5|fmt occupy the funct7 slot (Ch.20/21)
-        uint32_t opc : 7;
-        uint32_t rd  : 5;
-        uint32_t rm  : 3; // funct3 / rounding mode
-        uint32_t rs1 : 5;
-        uint32_t rs2 : 5;
-        uint32_t fmt : 2; // 00=S, 01=D, 10=H, 11=Q
-        uint32_t fct5: 5;
-    } FP;
-
     // C: 16-bit RVC in entity_[15:0]; reuse R slot as bitfield view (see CType.cc).
     struct {
-        uint32_t op : 2; // inst[1:0] quadrant
+        uint32_t opc: 2; // inst[1:0] quadrant
         uint32_t b2 : 14;
     } C;
 
@@ -185,10 +185,10 @@ struct InstField {
 
 [[nodiscard]] std::string_view InstFormatName(InstFormat fmt) noexcept;
 [[nodiscard]] std::span<const InstField> GetInstFields(InstFormat fmt);
-[[nodiscard]] ItypeImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept;
-[[nodiscard]] std::span<const InstField> GetIInstFields(ItypeImmShape shape) noexcept;
+[[nodiscard]] IImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept;
+[[nodiscard]] std::span<const InstField> GetIInstFields(IImmShape shape) noexcept;
 
-[[nodiscard]] RtypeShape DetectRShape(uint32_t opc) noexcept;
-[[nodiscard]] std::span<const InstField> GetRInstFields(RtypeShape shape) noexcept;
+[[nodiscard]] RShape DetectRShape(uint32_t opc) noexcept;
+[[nodiscard]] std::span<const InstField> GetRInstFields(RShape shape) noexcept;
 
 // Date:25/12/21/22:34

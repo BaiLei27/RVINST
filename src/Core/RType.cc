@@ -9,7 +9,7 @@ constexpr uint8_t G_RM_DYN= 7;
 
 [[nodiscard]] bool nameStartsWith(std::string_view name, std::string_view prefix)
 {
-    return name.size() >= prefix.size() && name.substr(0, prefix.size()) == prefix;
+    return name.starts_with(prefix);
 }
 
 [[nodiscard]] bool nameContains(std::string_view name, std::string_view needle)
@@ -33,40 +33,43 @@ constexpr uint8_t G_RM_DYN= 7;
 }
 
 enum class FpOperandKind : uint8_t {
-    BinFp,    // rd,rs1,rs2 all f
-    UnaryFp,  // rd,rs1 f (fsqrt)
-    FpToInt,  // rd x, rs1 f
-    IntToFp,  // rd f, rs1 x
-    Cmp,      // rd x, rs1/rs2 f
-    R4,       // rd,rs1,rs2,rs3 f
-    IntAlu,   // integer R
+    BIN_FP,    // rd,rs1,rs2 all f
+    UNARY_FP,  // rd,rs1 f (fsqrt)
+    FP_TO_INT, // rd x, rs1 f
+    INT_TO_FP, // rd f, rs1 x
+    CMP,       // rd x, rs1/rs2 f
+    R4,        // rd,rs1,rs2,rs3 f
+    INT_ALU,   // integer R
 };
 
 [[nodiscard]] FpOperandKind classifyFpName(std::string_view name) noexcept
 {
-    if(nameStartsWith(name, "fmadd") || nameStartsWith(name, "fmsub") || nameStartsWith(name, "fnmadd")
+    if(nameStartsWith(name, "fmadd")
+       || nameStartsWith(name, "fmsub")
+       || nameStartsWith(name, "fnmadd")
        || nameStartsWith(name, "fnmsub")) {
         return FpOperandKind::R4;
     }
-    if(nameStartsWith(name, "fsqrt")) return FpOperandKind::UnaryFp;
+    if(nameStartsWith(name, "fsqrt")) return FpOperandKind::UNARY_FP;
     if(nameStartsWith(name, "feq") || nameStartsWith(name, "flt") || nameStartsWith(name, "fle")) {
-        return FpOperandKind::Cmp;
+        return FpOperandKind::CMP;
     }
-    if(nameStartsWith(name, "fclass") || nameStartsWith(name, "fmv.x.")) return FpOperandKind::FpToInt;
-    if(nameStartsWith(name, "fmv.") && nameContains(name, ".x")) return FpOperandKind::IntToFp;
+    if(nameStartsWith(name, "fclass") || nameStartsWith(name, "fmv.x.")) return FpOperandKind::FP_TO_INT;
+    if(nameStartsWith(name, "fmv.") && nameContains(name, ".x")) return FpOperandKind::INT_TO_FP;
     if(nameStartsWith(name, "fcvt.")) {
-        // fcvt.<int>.<fp> â†?FpToInt; fcvt.<fp>.<int> â†?IntToFp; fcvt.<fp>.<fp> â†?UnaryFp
+        // fcvt.<int>.<fp> ? FP_TO_INT; fcvt.<fp>.<int> ? INT_TO_FP; fcvt.<fp>.<fp> ? UNARY_FP
         if(nameContains(name, ".w.") || nameContains(name, ".wu.") || nameContains(name, ".l.")
            || nameContains(name, ".lu.")) {
-            return FpOperandKind::FpToInt;
+            return FpOperandKind::FP_TO_INT;
         }
         if(name.ends_with(".w") || name.ends_with(".wu") || name.ends_with(".l") || name.ends_with(".lu")) {
-            return FpOperandKind::IntToFp;
+            return FpOperandKind::INT_TO_FP;
         }
-        return FpOperandKind::UnaryFp;
+        return FpOperandKind::UNARY_FP;
     }
-    if(nameStartsWith(name, "f")) return FpOperandKind::BinFp;
-    return FpOperandKind::IntAlu;
+    if(nameStartsWith(name, "f")) return FpOperandKind::BIN_FP;
+
+    return FpOperandKind::INT_ALU;
 }
 
 } // namespace
@@ -112,7 +115,7 @@ bool RType::fpUsesRm(uint8_t f7) noexcept
 void RType::Parse()
 {
     switch(DetectRShape(Layout_.R.opc)) {
-    case RtypeShape::AMO:
+    case RShape::AMO:
         setBitsField({ Layout_.A.opc,
                        Layout_.A.rd,
                        Layout_.A.fct3,
@@ -122,7 +125,7 @@ void RType::Parse()
                        Layout_.A.aq,
                        Layout_.A.fct5 });
         break;
-    case RtypeShape::FP:
+    case RShape::FP:
         setBitsField({ Layout_.FP.opc,
                        Layout_.FP.rd,
                        Layout_.FP.rm,
@@ -131,7 +134,7 @@ void RType::Parse()
                        Layout_.FP.fmt,
                        Layout_.FP.fct5 });
         break;
-    case RtypeShape::R4:
+    case RShape::R4:
         setBitsField({ Layout_.R4.opc,
                        Layout_.R4.rd,
                        Layout_.R4.rm,
@@ -196,40 +199,40 @@ void RType::mnemonicHelper()
         appendOperands({ " ", rd, ",", rs1, ",", rs2, ",", rs3 });
         return;
     }
-    case FpOperandKind::BinFp: {
+    case FpOperandKind::BIN_FP: {
         auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
         auto rs2= isa::LookupFregName(Layout_.R.rs2, HasSetABI_);
         appendOperands({ " ", rd, ",", rs1, ",", rs2 });
         return;
     }
-    case FpOperandKind::UnaryFp: {
+    case FpOperandKind::UNARY_FP: {
         auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
         appendOperands({ " ", rd, ",", rs1 });
         return;
     }
-    case FpOperandKind::FpToInt: {
+    case FpOperandKind::FP_TO_INT: {
         auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
         appendOperands({ " ", rd, ",", rs1 });
         return;
     }
-    case FpOperandKind::IntToFp: {
+    case FpOperandKind::INT_TO_FP: {
         auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupRegName(Layout_.R.rs1, HasSetABI_);
         appendOperands({ " ", rd, ",", rs1 });
         return;
     }
-    case FpOperandKind::Cmp: {
+    case FpOperandKind::CMP: {
         auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
         auto rs2= isa::LookupFregName(Layout_.R.rs2, HasSetABI_);
         appendOperands({ " ", rd, ",", rs1, ",", rs2 });
         return;
     }
-    case FpOperandKind::IntAlu:
-    default: break;
+    case FpOperandKind::INT_ALU:
+    default:                     break;
     }
 
     auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
@@ -296,32 +299,32 @@ util::Expected_u<const InstLayout *> RType::Assembly()
 
         const auto KIND= classifyFpName(NAME);
         switch(KIND) {
-        case FpOperandKind::BinFp:
+        case FpOperandKind::BIN_FP:
             if(InstAssembly_.size() >= 4U) {
                 if(auto rd= isa::LookupFregIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
                 if(auto rs1= isa::LookupFregIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
                 if(auto rs2= isa::LookupFregIdx(InstAssembly_.at(3))) Layout_.R.rs2= *rs2;
             }
             break;
-        case FpOperandKind::UnaryFp:
+        case FpOperandKind::UNARY_FP:
             if(InstAssembly_.size() >= 3U) {
                 if(auto rd= isa::LookupFregIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
                 if(auto rs1= isa::LookupFregIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
             }
             break;
-        case FpOperandKind::FpToInt:
+        case FpOperandKind::FP_TO_INT:
             if(InstAssembly_.size() >= 3U) {
                 if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
                 if(auto rs1= isa::LookupFregIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
             }
             break;
-        case FpOperandKind::IntToFp:
+        case FpOperandKind::INT_TO_FP:
             if(InstAssembly_.size() >= 3U) {
                 if(auto rd= isa::LookupFregIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
                 if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
             }
             break;
-        case FpOperandKind::Cmp:
+        case FpOperandKind::CMP:
             if(InstAssembly_.size() >= 4U) {
                 if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
                 if(auto rs1= isa::LookupFregIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
@@ -364,7 +367,7 @@ auto RType::calculateKeyID() -> KeyT
         const uint8_t F7   = Layout_.R.fct7;
         const uint8_t RS2  = fpRs2IsSelect(F7) ? Layout_.R.rs2 : 0;
         const uint8_t F3KEY= fpUsesRm(F7) ? 0 : Layout_.R.fct3;
-        return Key_= FP_K(F7, RS2, F3KEY);
+        return Key_        = FP_K(F7, RS2, F3KEY);
     }
     return Key_= OP_K(Layout_.R.fct7, Layout_.R.fct3, Layout_.R.opc);
 }

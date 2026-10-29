@@ -3,7 +3,6 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
-#include <version>
 
 #include "Util/ErrorHandle.hh"
 #include "Util/InputHistoryMgr.hh"

@@ -91,8 +91,8 @@ struct InstFormatView {
     return "bit-tone-key";
 }
 
-[[nodiscard]] const InstFormatView &GetIInstFormatView(ItypeImmShape shape);
-[[nodiscard]] const InstFormatView &GetRInstFormatView(RtypeShape shape);
+[[nodiscard]] const InstFormatView &GetIInstFormatView(IImmShape shape);
+[[nodiscard]] const InstFormatView &GetRInstFormatView(RShape shape);
 [[nodiscard]] const InstFormatView &GetInstFormatView(InstFormat fmt);
 
 } // namespace util

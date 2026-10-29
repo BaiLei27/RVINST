@@ -11,16 +11,16 @@
 namespace isa {
 namespace {
 
-    using AbiMap= std::flat_map<std::string_view, uint16_t>;
+    using AbiMap_u= std::flat_map<std::string_view, uint16_t>;
 
-    [[nodiscard]] constexpr std::optional<strPair_u> PARSE_REGFILE_NAME(const RegFileTable &table,
+    [[nodiscard]] constexpr std::optional<strPair_u> PARSE_REGFILE_NAME(const RegFileTable_u &table,
                                                                         size_t idx) noexcept
     {
         if(idx >= table.size()) return std::nullopt;
         return table[idx];
     }
 
-    [[nodiscard]] constexpr std::string_view LOOKUP_REGFILE_NAME(const RegFileTable &table,
+    [[nodiscard]] constexpr std::string_view LOOKUP_REGFILE_NAME(const RegFileTable_u &table,
                                                                  size_t regIdx,
                                                                  bool hasSetABI,
                                                                  std::string_view fallback) noexcept
@@ -30,16 +30,18 @@ namespace {
         return hasSetABI ? e.second : e.first;
     }
 
-    [[nodiscard]] bool AllOfCtype(std::string_view target, int (*pred)(int)) noexcept
+    [[nodiscard]] bool AllOfCtype(std::string_view target, int (*pPred)(int)) noexcept
     {
-        return std::ranges::all_of(target, [pred](unsigned char c) { return 0 != pred(c); });
+        return std::ranges::all_of(target, [pPred](unsigned char c) { return 0 != pPred(c); });
     }
 
     [[nodiscard]] std::optional<uint16_t> ParseU16(std::string_view target, int base) noexcept
     {
-        uint16_t result     = 0;
-        const auto [PTR, EC]= std::from_chars(target.data(), target.data() + target.size(), result, base);
-        if(std::errc {} == EC && PTR == target.data() + target.size()) {
+        uint16_t result {};
+        const auto *pBegin= target.data();
+        const auto *pEnd  = pBegin + target.size(); // NOLINT
+        auto [pParsed, ec]= std::from_chars(pBegin, pEnd, result, base);
+        if(std::errc {} == ec && pParsed == pEnd) {
             return result;
         }
         return std::nullopt;
@@ -52,20 +54,20 @@ namespace {
         });
     }
 
-    [[nodiscard]] AbiMap MakeAbiMap(const RegFileTable &table,
-                                    std::initializer_list<std::pair<std::string_view, uint16_t>> extras= {})
+    [[nodiscard]] AbiMap_u MakeAbiMap(const RegFileTable_u &table,
+                                      std::initializer_list<std::pair<std::string_view, uint16_t>> extras= {})
     {
-        AbiMap m;
+        AbiMap_u m;
         for(uint16_t i= 0; i < G_REG_NUMBER; ++i) {
             m.emplace(table[i].second, i);
         }
-        for(const auto &e: extras) {
-            m.emplace(e.first, e.second);
+        for(const auto &[k, v]: extras) {
+            m.emplace(k, v);
         }
         return m;
     }
 
-    [[nodiscard]] std::optional<uint16_t> FindAbi(const AbiMap &map, std::string_view name) noexcept
+    [[nodiscard]] std::optional<uint16_t> FindAbi(const AbiMap_u &map, std::string_view name) noexcept
     {
         if(const auto IT= map.find(name); IT != map.end()) return IT->second;
         return std::nullopt;
@@ -84,25 +86,27 @@ namespace {
     }
 
     /// ABI name -> index; built once. "s0"/"fp" alias x8 (table stores "s0/fp").
-    [[nodiscard]] const AbiMap &AbiName2RegIdx()
+    [[nodiscard]] const AbiMap_u &AbiName2RegIdx()
     {
-        static const AbiMap S_MAP= MakeAbiMap(G_INDEX_REGS_ABI, {
-                                                                    { "s0", 8 },
-                                                                    { "fp", 8 }
+        static const AbiMap_u S_MAP= MakeAbiMap(G_INDEX_REGS_ABI,
+                                                {
+                                                    { "s0", 8 },
+                                                    { "fp", 8 }
         });
+
         return S_MAP;
     }
 
-    [[nodiscard]] const AbiMap &AbiName2FregIdx()
+    [[nodiscard]] const AbiMap_u &AbiName2FregIdx()
     {
-        static const AbiMap S_MAP= MakeAbiMap(G_INDEX_FREGS_ABI);
+        static const AbiMap_u S_MAP= MakeAbiMap(G_INDEX_FREGS_ABI);
         return S_MAP;
     }
 
-    [[nodiscard]] const AbiMap &CsrName2Num()
+    [[nodiscard]] const AbiMap_u &CsrName2Num()
     {
         static const auto S_MAP= [] {
-            AbiMap m;
+            AbiMap_u m;
             for(const auto &e: G_UCSR_TABLE) {
                 m.emplace(e.name_, e.num_);
             }
@@ -113,7 +117,7 @@ namespace {
 
     consteval bool CSR_TABLE_SORTED_BY_NUM() noexcept
     {
-        for(std::size_t i= 1; i < G_UCSR_TABLE.size(); ++i) {
+        for(size_t i= 1; i < G_UCSR_TABLE.size(); ++i) {
             if(G_UCSR_TABLE[i].num_ <= G_UCSR_TABLE[i - 1].num_) return false;
         }
         return true;
@@ -147,7 +151,7 @@ std::string_view LookupFregName(size_t regIdx, bool hasSetABI, std::string_view 
 
 std::optional<std::string_view> LookupCSRName(uint16_t num) noexcept
 {
-    const auto IT= std::ranges::lower_bound(G_UCSR_TABLE, num, {}, &CsrEntry::num_);
+    const auto *const IT= std::ranges::lower_bound(G_UCSR_TABLE, num, {}, &CSREntry::num_);
     if(IT != G_UCSR_TABLE.end() && IT->num_ == num) return IT->name_;
     return std::nullopt;
 }

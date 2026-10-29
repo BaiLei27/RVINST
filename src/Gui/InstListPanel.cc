@@ -52,7 +52,7 @@ constexpr std::array<std::pair<std::string_view, std::uint8_t>, 25> G_XLEN_SLOT 
      }
 };
 
-[[nodiscard]] constexpr std::size_t MODULE_SLOT(std::string_view xlen) noexcept
+[[nodiscard]] constexpr size_t MODULE_SLOT(std::string_view xlen) noexcept
 {
     for(const auto &[TAG, SLOT]: G_XLEN_SLOT) {
         if(TAG == xlen) return SLOT;
@@ -63,100 +63,109 @@ constexpr std::array<std::pair<std::string_view, std::uint8_t>, 25> G_XLEN_SLOT 
 /**
  * @brief Pack a minimal sample word from the table key so Decode() can resolve the
  * mnemonic without a full assembly line.
- *
  * SYSTEM: ecall/ebreak keep imm12 in PAY; Zicsr keys use (f3<<8) — put f3 in funct3.
  * C: rebuild a 16-bit encoding whose resolveDecodeKey matches the catalog key.
  */
-uint32_t defaultWord(const util::InstCatalog &entry) noexcept
+uint32_t DefaultWord(const util::InstCatalog &entry) noexcept
 {
     const uint32_t KEY= entry.functKey_;
     const uint32_t OPC= KEY & 0x7FU;
     const uint32_t PAY= KEY >> 7;
+    uint32_t res {};
 
     switch(entry.format_) {
     case InstFormat::R: {
-        // Match RType PACK_KEY shapes (AMO/OP_FP/R4); classic OP uses funct7<<25.
-        switch(DetectRShape(OPC)) {
-        case RtypeShape::AMO:
-            // PAY = (funct5 << 3) | funct3 → funct5@[31:27], aq/rl left 0
-            return (PAY >> 3) << 27 | (PAY & 0x7U) << 12 | OPC;
-        case RtypeShape::FP: {
+        switch(DetectRShape(OPC)) {                                                // Match RType PACK_KEY shapes (AMO/OP_FP/R4); classic OP uses funct7<<25.
+        case RShape::AMO: res= (PAY >> 3) << 27 | (PAY & 0x7U) << 12 | OPC; break; // PAY = (funct5 << 3) | funct3 → funct5@[31:27], aq/rl left 0
+        case RShape::FP:  {
             // PAY = (f7 << 8) | (rs2 << 3) | f3key, f7 = (funct5 << 2) | fmt
             const uint32_t F7 = PAY >> 8;
             const uint32_t RS2= (PAY >> 3) & 0x1FU;
             const uint32_t F3 = PAY & 0x7U;
-            return F7 << 25 | RS2 << 20 | F3 << 12 | OPC;
+            res               = F7 << 25 | RS2 << 20 | F3 << 12 | OPC;
+        } break;
+        case RShape::R4: res= (PAY & 0x3U) << 25 | 0x7U << 12 | OPC; break; // PAY = fmt; rm=0b111 (dyn) so the sample matches encode expects
+        default:         res= (PAY >> 3) << 25 | (PAY & 0x7U) << 12 | OPC; break;
         }
-        case RtypeShape::R4:
-            // PAY = fmt; rm=0b111 (dyn) so the sample matches encode expects
-            return (PAY & 0x3U) << 25 | 0x7U << 12 | OPC;
-        default:
-            return (PAY >> 3) << 25 | (PAY & 0x7U) << 12 | OPC;
-        }
-    }
+    } break;
+
     case InstFormat::I: {
         if(OpcMap::SYSTEM == OPC) {
-            // ecall/ebreak: PAY is imm12 (0/1). Zicsr: PAY is f3<<8.
-            if(PAY <= 1U) return PAY << 20 | OPC;
-            return (PAY >> 8 & 0x7U) << 12 | OPC;
+            res= PAY <= 1U ? PAY << 20 | OPC : (PAY >> 8 & 0x7U) << 12 | OPC; // ecall/ebreak: PAY is imm12 (0/1). Zicsr: PAY is f3<<8.
+        } else if(PAY > 0x7U) {                                               // else-if: SYSTEM always owns res, must not fall through
+            res= (PAY >> 3) << 25 | (PAY & 0x7U) << 12 | OPC;
+        } else {
+            res= (PAY & 0x7U) << 12 | OPC;
         }
-        if(PAY > 0x7U) return (PAY >> 3) << 25 | (PAY & 0x7U) << 12 | OPC;
-        return (PAY & 0x7U) << 12 | OPC;
-    }
-    case InstFormat::S:
-    case InstFormat::B: return (PAY & 0x7U) << 12 | OPC;
-    case InstFormat::C: {
-        const uint8_t Q  = static_cast<uint8_t>(PAY & 0x3U);
-        const uint8_t F3 = static_cast<uint8_t>(PAY >> 8 & 0x7U);
-        const uint8_t SUB= static_cast<uint8_t>(PAY >> 2 & 0x3FU);
-        uint16_t c       = static_cast<uint16_t>(Q) | static_cast<uint16_t>(F3) << 13;
+    } break;
 
-        if(0U == Q) {
+    case InstFormat::S:
+    case InstFormat::B: res= (PAY & 0x7U) << 12 | OPC; break;
+    case InstFormat::C: {
+        const uint8_t Q  = PAY & 0x3U;
+        const uint8_t F3 = PAY >> 8 & 0x7U;
+        const uint8_t SUB= PAY >> 2 & 0x3FU;
+
+        uint32_t c= Q | F3 << 13; // fits 16-bit range; no narrowing needed
+
+        switch(Q) {
             // CIW/CL/CS: keep non-zero so BitField_.none() is false; F3=3/7 → sub=1 (LD/SD).
-            if(0U == F3) c|= static_cast<uint16_t>(1U << 5); // nzuimm ≠ 0 for c.addi4spn
-            else c|= static_cast<uint16_t>(1U << 2) | static_cast<uint16_t>(1U << 7);
-        } else if(1U == Q) {
-            if(0U == F3 && 1U == SUB) {
-                // c.nop: rd=0, imm=0
+            // nzuimm ≠ 0 for c.addi4spn
+        case 0U: c|= (0U == F3) ? (1U << 5) : (1U << 2 | 1U << 7); break;
+        case 1U: {
+            if(0U == F3 && 1U == SUB) { // c.nop: rd=0, imm=0
+
             } else if(3U == F3 && 1U == SUB) {
-                c|= static_cast<uint16_t>(2U << 7); // c.addi16sp (rd=x2)
-                c|= static_cast<uint16_t>(1U << 2);
+                c|= 2U << 7; // c.addi16sp (rd=x2)
+                c|= 1U << 2;
             } else if(4U == F3) {
-                if(8U == SUB) {
-                    c|= static_cast<uint16_t>(2U << 10); // c.andi
-                    c|= static_cast<uint16_t>(1U << 2);
-                } else if(SUB <= 1U) {
-                    if(1U == SUB) c|= static_cast<uint16_t>(1U << 12); // c.srai
-                    c|= static_cast<uint16_t>(1U << 2);
-                } else {
-                    c|= static_cast<uint16_t>(static_cast<uint16_t>(SUB >> 2) << 10);
-                    c|= static_cast<uint16_t>(static_cast<uint16_t>(SUB & 0x3U) << 5);
-                    c|= static_cast<uint16_t>(1U << 7) | static_cast<uint16_t>(1U << 2);
+                switch(SUB) {
+                case 8U: {
+                    c|= 2U << 10;
+                    c|= 1U << 2;
+                } break; // c.andi
+
+                case 0U: c|= 1U << 2; break;
+                case 1U: {
+                    c|= 1U << 12;
+                    c|= 1U << 2;
+                } break; // c.srai
+
+                default: {
+                    c|= (SUB >> 2) << 10;
+                    c|= (SUB & 0x3U) << 5; // keep parens: & binds looser than <<
+                    c|= 1U << 7 | 1U << 2;
+                } break;
                 }
             } else {
-                c|= static_cast<uint16_t>(1U << 7) | static_cast<uint16_t>(1U << 2);
+                c|= 1U << 7 | 1U << 2;
             }
-        } else if(2U == Q) {
-            if(4U == F3) {
-                if(0U == SUB) c|= static_cast<uint16_t>(1U << 7); // c.jr
-                else if(4U == SUB) {
-                    c|= static_cast<uint16_t>(1U << 7) | static_cast<uint16_t>(1U << 2); // c.mv
-                } else if(2U == SUB) {
-                    c|= static_cast<uint16_t>(1U << 12); // c.ebreak
-                } else if(1U == SUB) {
-                    c|= static_cast<uint16_t>(1U << 12) | static_cast<uint16_t>(1U << 7); // c.jalr
-                } else if(3U == SUB) {
-                    c|= static_cast<uint16_t>(1U << 12) | static_cast<uint16_t>(1U << 7)
-                        | static_cast<uint16_t>(1U << 2); // c.add
-                }
-            } else {
-                c|= static_cast<uint16_t>(1U << 7) | static_cast<uint16_t>(1U << 2);
-            }
+            break;
         }
-        return c;
+        case 2U: {
+            if(4U == F3) {
+                switch(SUB) {
+                case 0U: c|= 1U << 7; break;                      // c.jr
+                case 1U: c|= 1U << 12 | 1U << 7; break;           // c.jalr
+                case 2U: c|= 1U << 12; break;                     // c.ebreak
+                case 3U: c|= 1U << 12 | 1U << 7 | 1U << 2; break; // c.add
+                case 4U: c|= 1U << 7 | 1U << 2; break;            // c.mv
+                default: break;                                   // undefined encoding: leave c unchanged
+                }
+            } else {
+                c|= 1U << 7 | 1U << 2;
+            }
+        } break;
+
+        default: break; // Q == 3: undefined encoding, leave c unchanged
+        }
+        res= c;
+    } break;
+
+    default: res= OPC; break;
     }
-    default: return OPC;
-    }
+
+    return res;
 }
 
 } // namespace
@@ -183,8 +192,11 @@ void InstListPanel::setButtonActive(bool active)
 void InstListPanel::onToggled()
 {
     if(SyncingBtn_ || !PBtn_) return;
-    if(PBtn_->get_active()) showWindow();
-    else hideWindow();
+    if(PBtn_->get_active()) {
+        showWindow();
+    } else {
+        hideWindow();
+    }
 }
 
 void InstListPanel::showWindow()
@@ -246,7 +258,7 @@ void InstListPanel::build()
         if(SLOT < byModule.size()) byModule[SLOT].push_back(entry);
     }
 
-    for(std::size_t i= 0; i < G_MODULE_ORDER.size(); ++i) {
+    for(size_t i= 0; i < G_MODULE_ORDER.size(); ++i) {
         const auto &entries= byModule[i];
 
         auto *pExpander= Gtk::make_managed<Gtk::Expander>(std::string { G_MODULE_ORDER[i] });
@@ -261,7 +273,7 @@ void InstListPanel::build()
 
         for(const auto &entry: entries) {
             const std::string_view NAME= entry.name_;
-            const uint32_t WORD        = defaultWord(entry);
+            const uint32_t WORD        = DefaultWord(entry);
 
             auto *pBtn= Gtk::make_managed<Gtk::Button>();
             pBtn->set_halign(Gtk::Align::FILL);

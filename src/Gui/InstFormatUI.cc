@@ -22,9 +22,9 @@ std::string formatAsmImm(std::string_view text, bool hex)
 
     std::int64_t value {};
     const auto *const BEGIN= text.data();
-    const auto *const END  = BEGIN + text.size();
-    auto [ptr, ec]         = std::from_chars(BEGIN, END, value);
-    if(ec != std::errc() || ptr != END) return std::string(text);
+    const auto *const END  = BEGIN + text.size(); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    auto [pParsed, ec]     = std::from_chars(BEGIN, END, value);
+    if(ec != std::errc() || pParsed != END) return std::string(text);
 
     if(value < 0) return std::format("-0x{:x}", -value);
     return std::format("0x{:x}", value);
@@ -311,11 +311,11 @@ void InstFormatUI::applyView(const util::InstFormatView &view)
 
 void InstFormatUI::setupHover()
 {
-    for(auto &[name, pAsm]: asmFieldWidgets_) {
-        pAsm->SetupHover(name, *pView_, binaryFieldWidgets_);
+    for(auto &[NAME, pAsm]: asmFieldWidgets_) {
+        pAsm->SetupHover(NAME, *pView_, binaryFieldWidgets_);
     }
-    for(auto &[name, pBin]: binaryFieldWidgets_) {
-        pBin->SetupHover(name, *pView_, binaryFieldWidgets_, asmFieldWidgets_);
+    for(auto &[NAME, pBin]: binaryFieldWidgets_) {
+        pBin->SetupHover(NAME, *pView_, binaryFieldWidgets_, asmFieldWidgets_);
     }
 }
 
@@ -326,26 +326,28 @@ void InstFormatUI::UpdateDisplay(const Instruction &inst)
     const auto *pType= inst.GetTypePtr();
     if(!pType) return;
 
-    const auto FMT= pType->GetInstFormat();
-    auto iShape   = ItypeImmShape::IMM12;
-    auto rShape   = RtypeShape::BASE;
-    if(InstFormat::I == FMT) {
-        const auto &L= pType->GetInstLayout();
-        iShape       = DetectIImmShape(L.I.opc, L.I.fct3);
-    } else if(InstFormat::R == FMT) {
-        const auto &L= pType->GetInstLayout();
-        rShape       = DetectRShape(L.R.opc);
-    }
+    const auto FMT    = pType->GetInstFormat();
+    auto iShape       = IImmShape::IMM12;
+    auto rShape       = RShape::BASE;
+    const auto &layout= pType->GetInstLayout();
 
-    const bool SHAPE_CHANGED=
-        (InstFormat::I == FMT && iShape != iShape_) || (InstFormat::R == FMT && rShape != rShape_);
-    if(FMT != fmt_ || SHAPE_CHANGED) {
+    if(InstFormat::I == FMT) {
+        iShape= DetectIImmShape(layout.I.opc, layout.I.fct3);
+    } else if(InstFormat::R == FMT) {
+        rShape= DetectRShape(layout.R.opc);
+    }
+    bool hasShapeChanged= (InstFormat::I == FMT && iShape != iShape_) || (InstFormat::R == FMT && rShape != rShape_);
+    if(FMT != fmt_ || hasShapeChanged) {
         fmt_   = FMT;
         iShape_= iShape;
         rShape_= rShape;
-        if(InstFormat::I == FMT) applyView(util::GetIInstFormatView(iShape));
-        else if(InstFormat::R == FMT) applyView(util::GetRInstFormatView(rShape));
-        else applyView(util::GetInstFormatView(FMT));
+        if(InstFormat::I == FMT) {
+            applyView(util::GetIInstFormatView(iShape));
+        } else if(InstFormat::R == FMT) {
+            applyView(util::GetRInstFormatView(rShape));
+        } else {
+            applyView(util::GetInstFormatView(FMT));
+        }
     }
 
     updateHeader(inst);
@@ -395,8 +397,8 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
     const auto *pType= inst.GetTypePtr();
     if(!pType) return;
 
-    for(auto &[name, pAsm]: asmFieldWidgets_) {
-        if(pAsm && pAsm->GetLabel() && name != "mnemonic") pAsm->GetLabel()->set_text("");
+    for(auto &[NAME, pAsm]: asmFieldWidgets_) {
+        if(pAsm && pAsm->GetLabel() && NAME != "mnemonic") pAsm->GetLabel()->set_text("");
     }
 
     const auto &parts= pType->GetInstAssembly();
@@ -422,9 +424,11 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
     // C-Type view only exposes a mnemonic chip — fold the full operand list into it.
     if(1 == pView_->asmTokens_.size() && pView_->asmTokens_.front() == "mnemonic") {
         auto it= asmFieldWidgets_.find(std::string_view { "mnemonic" });
-        if(it != asmFieldWidgets_.end() && it->second->GetLabel()) {
+        if(it != asmFieldWidgets_.end() && it->second->GetLabel()) { // NOLINT
             std::string full;
-            for(const auto &p: parts) full+= p;
+            for(const auto &p: parts) {
+                full+= p;
+            }
             it->second->GetLabel()->set_text(full);
         }
     }
@@ -472,7 +476,7 @@ std::string InstFormatUI::GetAssemblyContent() const
         if(it == asmFieldWidgets_.end() || !it->second->GetLabel()) continue; // NOLINT
 
         result+= it->second->GetLabel()->get_text().raw();
-        if(token == "mnemonic") result+= " ";
+        if(token == "mnemonic") result+= ' ';
     }
     return result;
 }

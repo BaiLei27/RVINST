@@ -77,7 +77,7 @@ CoutSuppressor::~CoutSuppressor()
     if(OldBuf_) std::cout.rdbuf(OldBuf_);
 }
 
-OutputMode detectOutputMode(bool forceJson)
+OutputMode DetectOutputMode(bool forceJson)
 {
     if(forceJson) return OutputMode::JSON;
 

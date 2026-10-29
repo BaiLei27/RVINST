@@ -106,7 +106,7 @@ std::unique_ptr<IBaseInstType> InstTypeFactory::CreateType(std::vector<std::stri
     auto match= matchInstName(instName);
     if(!match) return nullptr;
 
-    const auto &[FMT, _1]= *match;
+    const auto FMT= match->first;
     return makeByFormat(FMT, std::move(instAssembly), hasSetABI);
 }
 

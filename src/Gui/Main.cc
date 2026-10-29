@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
         window= std::make_unique<RISCVInstWindow>();
         app->add_window(*window);
         window->signal_close_request().connect(
-            [&]() {
+            [&] {
                 window.reset();
                 return true;
             },
