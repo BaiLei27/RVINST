@@ -9,6 +9,7 @@ enum class FieldTone : uint8_t {
     RD,
     RS1,
     RS2,
+    RS3, // R4 rs3 — blue, distinct from rs2
     IMM
 };
 
@@ -63,7 +64,8 @@ struct InstFormatView {
     if(name == "succ") return FieldTone::RS1;
     // fence diagram also has succ (purple); use imm blue so rs1 is distinct
     if(name == "rs1") return HAS_NAMED_FIELD(fields, "succ") ? FieldTone::IMM : FieldTone::RS1;
-    if(name == "rs2" || name == "rs3" || name == "fm") return FieldTone::RS2;
+    if(name == "rs2" || name == "fm") return FieldTone::RS2;
+    if(name == "rs3") return FieldTone::RS3;
     if(name.starts_with("imm") || name == "shamt" || name == "csr") return FieldTone::IMM;
     // funct5/fmt/aq/rl/rm are decode-key / encoding fields → KEY tone
     return FieldTone::KEY;
@@ -75,6 +77,7 @@ struct InstFormatView {
     if(token == "rd" || token == "pred") return FieldTone::RD;
     if(token == "rs1" || token == "succ") return FieldTone::RS1;
     if(token == "rs2") return FieldTone::RS2;
+    if(token == "rs3") return FieldTone::RS3;
     if(token == "imm" || token == "csr") return FieldTone::IMM;
     return FieldTone::KEY;
 }
@@ -86,6 +89,7 @@ struct InstFormatView {
     case FieldTone::RD:  return "bit-tone-rd";
     case FieldTone::RS1: return "bit-tone-rs1";
     case FieldTone::RS2: return "bit-tone-rs2";
+    case FieldTone::RS3: return "bit-tone-rs3";
     case FieldTone::IMM: return "bit-tone-imm";
     }
     return "bit-tone-key";

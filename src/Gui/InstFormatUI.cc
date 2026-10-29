@@ -338,7 +338,6 @@ void InstFormatUI::UpdateDisplay(const Instruction &inst)
     } else if(InstFormat::C == FMT) {
         cShape= DetectCShape(layout.entity_);
     }
-
     const bool HAS_SHAPE_CHANGED= (InstFormat::I == FMT && iShape != iShape_)
                                || (InstFormat::R == FMT && rShape != rShape_)
                                || (InstFormat::C == FMT && cShape != cShape_);
@@ -440,6 +439,60 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
             it->second->GetLabel()->set_text(full);
         }
     }
+
+    // Hide unused operand chips (e.g. FP fclass has no rs2) and orphan punctuation.
+    // asmOwned_ order matches view.asmTokens_.
+    const auto &tokens= pView_->asmTokens_;
+    const size_t N    = std::min(tokens.size(), asmOwned_.size());
+    std::vector<bool> visible(N, true);
+    auto isOperand= [](std::string_view t) {
+        return t != "," && t != "(" && t != ")";
+    };
+    auto hasText= [&](size_t i) {
+        auto *pLbl= asmOwned_[i] ? asmOwned_[i]->GetLabel() : nullptr;
+        return pLbl && !pLbl->get_text().empty();
+    };
+    for(size_t i= 0; i < N; ++i) {
+        if(isOperand(tokens[i])) visible[i]= hasText(i);
+    }
+    for(size_t i= 0; i < N; ++i) {
+        if(tokens[i] != ",") continue;
+        bool left {}, right {};
+        for(size_t l= i; l-- > 0;) {
+            if(!isOperand(tokens[l])) continue;
+            left= visible[l];
+            break;
+        }
+        for(size_t r= i + 1; r < N; ++r) {
+            if(!isOperand(tokens[r])) continue;
+            right= visible[r];
+            break;
+        }
+        visible[i]= left && right;
+    }
+    for(size_t i= 0; i < N; ++i) {
+        if(tokens[i] == "(") {
+            bool keep {};
+            for(size_t k= i + 1; k < N && tokens[k] != ")"; ++k) {
+                if(isOperand(tokens[k]) && visible[k]) {
+                    keep= true;
+                    break;
+                }
+            }
+            visible[i]= keep;
+        } else if(tokens[i] == ")") {
+            bool keep {};
+            for(size_t k= i; k-- > 0;) {
+                if(tokens[k] == "(") break;
+                if(isOperand(tokens[k]) && visible[k]) {
+                    keep= true;
+                    break;
+                }
+            }
+            visible[i]= keep;
+        }
+        if(asmOwned_[i] && asmOwned_[i]->GetRoot()) asmOwned_[i]->GetRoot()->set_visible(visible[i]);
+    }
 }
 
 void InstFormatUI::updateBinaryDisplay(const Instruction &inst)
@@ -470,7 +523,10 @@ void InstFormatUI::updateHexDisplay(const Instruction &inst)
 std::string InstFormatUI::GetAssemblyContent() const
 {
     std::string result;
-    for(const auto &token: pView_->asmTokens_) {
+    for(size_t i= 0; i < pView_->asmTokens_.size() && i < asmOwned_.size(); ++i) {
+        const auto &token= pView_->asmTokens_[i];
+        if(asmOwned_[i] && asmOwned_[i]->GetRoot() && !asmOwned_[i]->GetRoot()->get_visible()) continue;
+
         if(token == ",") {
             result+= ", ";
             continue;

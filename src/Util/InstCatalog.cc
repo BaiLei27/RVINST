@@ -5,11 +5,27 @@
 #include "Core/IType.hh"
 #include "Core/JType.hh"
 #include "Core/RType.hh"
+#include "Core/R4Type.hh"
 #include "Core/SType.hh"
 #include "Core/UType.hh"
 #include "Util/InstCatalog.hh"
 
 namespace util {
+namespace {
+
+    // Lowercase alnum only: "R4-Type" / "r-4" → "r4type" / "r4".
+    [[nodiscard]] std::string NormalizeFormatToken(std::string_view s)
+    {
+        std::string out;
+        out.reserve(s.size());
+        for(const auto &c: s) {
+            if('-' == c || '_' == c || ' ' == c) continue;
+            out.push_back(static_cast<char>(std::tolower(c)));
+        }
+        return out;
+    }
+
+} // namespace
 
 std::vector<InstCatalog> GetAllInstructions(std::optional<InstFormat> filter)
 {
@@ -24,6 +40,7 @@ std::vector<InstCatalog> GetAllInstructions(std::optional<InstFormat> filter)
     };
 
     if(!filter || InstFormat::R == *filter) addTable(RType::G_INST_TABLE, InstFormat::R);
+    if(!filter || InstFormat::R4 == *filter) addTable(R4Type::G_INST_TABLE, InstFormat::R4);
     if(!filter || InstFormat::I == *filter) addTable(IType::G_INST_TABLE, InstFormat::I);
     if(!filter || InstFormat::S == *filter) addTable(SType::G_INST_TABLE, InstFormat::S);
     if(!filter || InstFormat::B == *filter) addTable(BType::G_INST_TABLE, InstFormat::B);
@@ -36,25 +53,19 @@ std::vector<InstCatalog> GetAllInstructions(std::optional<InstFormat> filter)
 
 std::optional<InstFormat> StringToFormat(std::string_view s)
 {
-    if(s.size() == 1 || (s.size() >= 2 && (s[1] == '-' || std::tolower(static_cast<char>(s[1])) == 't'))) {
-        switch(std::toupper(static_cast<char>(s.front()))) {
-        case 'R': return InstFormat::R;
-        case 'I': return InstFormat::I;
-        case 'S': return InstFormat::S;
-        case 'B': return InstFormat::B;
-        case 'U': return InstFormat::U;
-        case 'J': return InstFormat::J;
-        case 'C': return InstFormat::C;
-        default:  break;
-        }
-    }
-    if(s == "r" || s == "R") return InstFormat::R;
-    if(s == "i" || s == "I") return InstFormat::I;
-    if(s == "s" || s == "S") return InstFormat::S;
-    if(s == "b" || s == "B") return InstFormat::B;
-    if(s == "u" || s == "U") return InstFormat::U;
-    if(s == "j" || s == "J") return InstFormat::J;
-    if(s == "c" || s == "C") return InstFormat::C;
+    if(s.empty()) return std::nullopt;
+
+    const std::string N= NormalizeFormatToken(s);
+
+    // R4 before R: "r4" / "r4type" must not collapse to InstFormat::R
+    if("r4" == N || "r4type" == N || "r4t" == N) return InstFormat::R4;
+    if("r" == N || "rtype" == N || "rt" == N) return InstFormat::R;
+    if("i" == N || "itype" == N || "it" == N) return InstFormat::I;
+    if("s" == N || "stype" == N || "st" == N) return InstFormat::S;
+    if("b" == N || "btype" == N || "bt" == N) return InstFormat::B;
+    if("u" == N || "utype" == N || "ut" == N) return InstFormat::U;
+    if("j" == N || "jtype" == N || "jt" == N) return InstFormat::J;
+    if("c" == N || "ctype" == N || "ct" == N) return InstFormat::C;
 
     return std::nullopt;
 }

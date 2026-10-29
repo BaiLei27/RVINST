@@ -383,6 +383,11 @@ label.manual-link,
     border-color: @bit_rs2_border;
 }
 
+.bit-tone-rs3 {
+    background-color: @bit_imm;
+    border-color: @bit_imm_border;
+}
+
 .bit-tone-imm {
     background-color: @bit_imm;
     border-color: @bit_imm_border;
@@ -473,6 +478,13 @@ label.manual-link,
     background-color: @bit_rs2;
     border-color: @bit_rs2_border;
     color: #9a3412;
+}
+
+.instruction-label.bit-tone-rs3,
+.register-label.bit-tone-rs3 {
+    background-color: @bit_imm;
+    border-color: @bit_imm_border;
+    color: #1d4ed8;
 }
 
 .instruction-label.bit-tone-imm,

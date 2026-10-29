@@ -134,6 +134,7 @@ target_sources(${backend} PRIVATE
     src/Core/IBaseInstType.cc
     src/ISA/InstFormat.cc
     src/Core/RType.cc
+    src/Core/R4Type.cc
     src/Core/IType.cc
     src/Core/JType.cc
     src/Core/UType.cc
