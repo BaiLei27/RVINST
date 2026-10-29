@@ -127,11 +127,6 @@ RISCVInstWindow::RISCVInstWindow()
 RISCVInstWindow::~RISCVInstWindow()
 {
     if(pHistoryPopover_) pHistoryPopover_->unparent();
-    if(pSettings_ && pSettings_->GetSaveHistOn()) {
-        if(auto saved= fileMgr_.SaveHistory(history_); !saved) {
-            std::println("history save failed: {}", saved.error().Msg());
-        }
-    }
 }
 
 void RISCVInstWindow::initInstFormatUI()
@@ -379,7 +374,17 @@ void RISCVInstWindow::popupInputHistory()
 
 void RISCVInstWindow::pushInputHistory(std::string_view text)
 {
+    // File log accumulates the deduped set (first-seen order), unbounded;
+    // the in-memory ring stays capped for the popover. Only append on first
+    // occurrence so repeats do not inflate the file.
+    const bool FIRST_SEEN= std::none_of(history_.GetEntries().begin(), history_.GetEntries().end(),
+                                        [&](const std::string &e) { return e == text; });
     history_.Push(text);
+    if(FIRST_SEEN && pSettings_ && pSettings_->GetSaveHistOn()) {
+        if(auto saved= fileMgr_.AppendHistory(text); !saved) {
+            std::println("history append failed: {}", saved.error().Msg());
+        }
+    }
     rebuildHistoryList();
 }
 

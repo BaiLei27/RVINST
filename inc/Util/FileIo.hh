@@ -44,6 +44,8 @@ public:
 
     Expected_u<void> LoadHistory(InputHistoryMgr &hist) const;
     Expected_u<void> SaveHistory(const InputHistoryMgr &hist) const;
+    // Append one line to the history log (opens append mode; caller dedupes).
+    Expected_u<void> AppendHistory(std::string_view line) const;
 
 private:
     static Expected_u<std::ifstream> openInput(const fs::path &path);

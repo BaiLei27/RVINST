@@ -89,4 +89,23 @@ Expected_u<void> FileIo::SaveHistory(const InputHistoryMgr &hist) const
     return {};
 }
 
+Expected_u<void> FileIo::AppendHistory(std::string_view line) const
+{
+    std::error_code ec;
+    fs::create_directories(DataDir_, ec);
+    if(ec) {
+        return Unexpected(Error::InvalidArg(std::format("cannot create data dir: {}", ec.message())));
+    }
+
+    const fs::path LOG= HistoryLogPath();
+    std::ofstream out(LOG, std::ios::app);
+    if(!out) {
+        return Unexpected(
+            Error::InvalidArg(std::format("cannot open history log: {}", LOG.generic_string())));
+    }
+
+    out << line << '\n';
+    return {};
+}
+
 } // namespace util
