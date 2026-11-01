@@ -8,12 +8,12 @@ namespace {
 
 int failures= 0;
 
-#define CHECK(cond, ...)                                                             \
-    do {                                                                             \
-        if(!(cond)) {                                                                \
-            ++failures;                                                              \
+#define CHECK(cond, ...)                                                                 \
+    do {                                                                                 \
+        if(!(cond)) {                                                                    \
+            ++failures;                                                                  \
             std::println("FAIL {}:{} {}", __FILE__, __LINE__, std::format(__VA_ARGS__)); \
-        }                                                                            \
+        }                                                                                \
     } while(false)
 
 } // namespace

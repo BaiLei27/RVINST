@@ -1,9 +1,13 @@
+#include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <iomanip>
 #include <print>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -30,15 +34,15 @@ struct InstCase {
     std::string status_ { "impl" }; // impl | todo
 };
 
-std::string toUpper(std::string s)
+std::string ToUpper(std::string s)
 {
-    for(char &c: s) {
-        if(c >= 'a' && c <= 'z') c= static_cast<char>(c - 'a' + 'A');
-    }
+    std::ranges::transform(s, s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::toupper(c));
+    });
     return s;
 }
 
-std::string jsonField(std::string_view json, std::string_view key)
+std::string JsonField(std::string_view json, std::string_view key)
 {
     const auto NEEDLE= std::format("\"{}\"", key);
     auto pos         = json.find(NEEDLE);
@@ -54,27 +58,19 @@ std::string jsonField(std::string_view json, std::string_view key)
     return std::string(json.substr(pos, END - pos));
 }
 
-std::string quoteArg(std::string_view s)
+// Shell/CLI argument quoting via std::quoted (escapes " and \).
+std::string QuoteArg(std::string_view s)
 {
-    std::string out;
-    out.reserve(s.size() + 2);
-    out.push_back('"');
-    for(char c: s) {
-        if('"' == c) {
-            out+= "\\\"";
-        } else {
-            out.push_back(c);
-        }
-    }
-    out.push_back('"');
-    return out;
+    std::ostringstream oss;
+    oss << std::quoted(std::string { s });
+    return std::move(oss).str();
 }
 
 #ifdef _WIN32
 
-std::string runProcess(const std::filesystem::path &exe,
-                                     std::string_view kind,
-                                     std::string_view input)
+std::string RunProcess(const std::filesystem::path &exe,
+                       std::string_view kind,
+                       std::string_view input)
 {
     SECURITY_ATTRIBUTES sa {};
     sa.nLength       = sizeof(sa);
@@ -91,13 +87,16 @@ std::string runProcess(const std::filesystem::path &exe,
     si.hStdError = pHWrite;
     si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
 
-    const auto EXE_W= exe.wstring();
-    std::wstring cmd=
-        L"\"" + EXE_W + L"\" --json " + std::wstring(kind.begin(), kind.end()) + L" "
-        + L"\"" + std::wstring(input.begin(), input.end()) + L"\"";
+    // Prefer std::format over R"(...)": quotes conflict with raw-string delimiters, and
+    // kind/input still need interpolation. Escaped L"\"{}\"" stays clear here.
+    const auto EXE_W      = exe.wstring();
+    const std::wstring CMD= std::format(L"\"{}\" --json {} \"{}\"",
+                                        EXE_W,
+                                        std::wstring(kind.begin(), kind.end()),
+                                        std::wstring(input.begin(), input.end()));
 
     PROCESS_INFORMATION pi {};
-    std::vector<wchar_t> mutableCmd(cmd.begin(), cmd.end());
+    std::vector<wchar_t> mutableCmd(CMD.begin(), CMD.end());
     mutableCmd.push_back(L'\0');
 
     const BOOL OK= CreateProcessW(EXE_W.c_str(),
@@ -133,12 +132,11 @@ std::string runProcess(const std::filesystem::path &exe,
 #else
 
 std::string runProcess(const std::filesystem::path &exe,
-                                     std::string_view kind,
-                                     std::string_view input)
+                       std::string_view kind,
+                       std::string_view input)
 {
-    const auto CMD=
-        std::format("{} --json {} {}", quoteArg(exe.string()), kind, quoteArg(input));
-    FILE *pPipe= popen(CMD.c_str(), "r");
+    const auto CMD= std::format("{} --json {} {}", QuoteArg(exe.string()), kind, QuoteArg(input));
+    FILE *pPipe   = popen(CMD.c_str(), "r");
     if(!pPipe) return {};
 
     std::string out;
@@ -229,7 +227,7 @@ private:
                 continue;
             }
             if(!std::getline(ss, c.status_) || c.status_.empty()) c.status_= "impl";
-            c.expectHex_= tst::toUpper(std::move(c.expectHex_));
+            c.expectHex_= tst::ToUpper(std::move(c.expectHex_));
             Cases_.emplace_back(std::move(c));
         }
 
@@ -244,12 +242,12 @@ private:
     {
         const bool IS_TODO= (c.status_ == "todo");
         const auto LABEL  = std::format("{} {}", c.kind_, c.input_);
-        const auto CLI_OUT= tst::runProcess(CliPath_, c.kind_, c.input_);
+        const auto CLI_OUT= tst::RunProcess(CliPath_, c.kind_, c.input_);
 
-        const auto HEX= tst::toUpper(tst::jsonField(CLI_OUT, "hex"));
-        const auto ASM= tst::jsonField(CLI_OUT, "assembly");
-        const auto FMT= tst::jsonField(CLI_OUT, "format");
-        const auto MAN= tst::jsonField(CLI_OUT, "manual");
+        const auto HEX= tst::ToUpper(tst::JsonField(CLI_OUT, "hex"));
+        const auto ASM= tst::JsonField(CLI_OUT, "assembly");
+        const auto FMT= tst::JsonField(CLI_OUT, "format");
+        const auto MAN= tst::JsonField(CLI_OUT, "manual");
 
         std::vector<std::string> errs;
         if(CLI_OUT.empty()) errs.emplace_back("empty CLI output");
@@ -290,13 +288,13 @@ private:
     }
 };
 
-int main(int argc, char *pArgv[])
+int main(int argc, char *argv[])
 {
     if(argc < 3) {
-        std::println(stderr, "Usage: {} <RVINST_cli> <inst_sets.txt>", pArgv[0]);
+        std::println(stderr, "Usage: {} <RVINST_cli> <inst_sets.txt>", argv[0]);
         return 2;
     }
 
-    InstTester tester(pArgv[1], pArgv[2]);
+    InstTester tester(argv[1], argv[2]);
     return tester.Run();
 }
