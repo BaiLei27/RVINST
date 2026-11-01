@@ -1,5 +1,69 @@
+#include <string>
+
 #include "Core/RType.hh"
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
+
+namespace {
+
+constexpr uint8_t G_RM_DYN= 7;
+
+[[nodiscard]] bool nameStartsWith(std::string_view name, std::string_view prefix)
+{
+    return name.starts_with(prefix);
+}
+
+[[nodiscard]] bool nameContains(std::string_view name, std::string_view needle)
+{
+    return std::string_view::npos != name.find(needle);
+}
+
+// OP-FP: rs2 encodes a variant (fsqrt/fcvt/fmv/fclass), not a source operand.
+[[nodiscard]] bool fpRs2IsSelect(uint8_t f7) noexcept
+{
+    switch(f7 & ~0x3U) {
+    case 0x20: // fcvt between FP formats
+    case 0x2C: // fsqrt
+    case 0x60: // fcvt to int
+    case 0x68: // fcvt from int
+    case 0x70: // fmv.x.* / fclass
+    case 0x78: // fmv.*.x
+        return true;
+    default: return false;
+    }
+}
+
+enum class FpOperandKind : uint8_t {
+    BIN_FP,    // rd,rs1,rs2 all f
+    UNARY_FP,  // rd,rs1 f (fsqrt)
+    FP_TO_INT, // rd x, rs1 f
+    INT_TO_FP, // rd f, rs1 x
+    CMP,       // rd x, rs1/rs2 f
+    INT_ALU,   // integer R
+};
+
+[[nodiscard]] FpOperandKind classifyFpName(std::string_view name) noexcept
+{
+    if(nameStartsWith(name, "fsqrt")) return FpOperandKind::UNARY_FP;
+    if(nameStartsWith(name, "feq") || nameStartsWith(name, "flt") || nameStartsWith(name, "fle")) {
+        return FpOperandKind::CMP;
+    }
+    if(nameStartsWith(name, "fclass") || nameStartsWith(name, "fmv.x.")) return FpOperandKind::FP_TO_INT;
+    if(nameStartsWith(name, "fmv.") && nameContains(name, ".x")) return FpOperandKind::INT_TO_FP;
+    if(nameStartsWith(name, "fcvt.")) {
+        // fcvt.<int>.<fp> ? FP_TO_INT; fcvt.<fp>.<int> ? INT_TO_FP; fcvt.<fp>.<fp> ? UNARY_FP
+        if(nameContains(name, ".w.") || nameContains(name, ".wu.") || nameContains(name, ".l.")
+           || nameContains(name, ".lu.")) {
+            return FpOperandKind::FP_TO_INT;
+        }
+        if(name.ends_with(".w") || name.ends_with(".wu") || name.ends_with(".l") || name.ends_with(".lu")) {
+            return FpOperandKind::INT_TO_FP;
+        }
+        return FpOperandKind::UNARY_FP;
+    }
+    return nameStartsWith(name, "f") ? FpOperandKind::BIN_FP : FpOperandKind::INT_ALU;
+}
+
+} // namespace
 
 RType::RType(InstFormat format, uint32_t inst, bool hasSetABI)
     : IBaseInstType(format, inst, hasSetABI)
@@ -13,14 +77,58 @@ RType::RType(InstFormat format, std::vector<std::string> instAssembly, bool hasS
     init();
 }
 
+bool RType::isAmoName(std::string_view name) noexcept
+{
+    return nameStartsWith(name, "amo") || nameStartsWith(name, "lr.") || nameStartsWith(name, "sc.");
+}
+
+bool RType::fpUsesRm(uint8_t f7) noexcept
+{
+    switch(f7 & ~0x3U) {
+    case 0x00: // fadd
+    case 0x04: // fsub
+    case 0x08: // fmul
+    case 0x0C: // fdiv
+    case 0x20: // fcvt fmt
+    case 0x2C: // fsqrt
+    case 0x60: // fcvt to int
+    case 0x68: // fcvt from int
+        return true;
+    default: return false;
+    }
+}
+
 void RType::Parse()
 {
-    setBitsField({ Layout_.R.opc,
-                   Layout_.R.rd,
-                   Layout_.R.fct3,
-                   Layout_.R.rs1,
-                   Layout_.R.rs2,
-                   Layout_.R.fct7 });
+    switch(DetectRShape(Layout_.R.opc)) {
+    case RShape::AMO:
+        setBitsField({ Layout_.A.opc,
+                       Layout_.A.rd,
+                       Layout_.A.fct3,
+                       Layout_.A.rs1,
+                       Layout_.A.rs2,
+                       Layout_.A.rl,
+                       Layout_.A.aq,
+                       Layout_.A.fct5 });
+        break;
+    case RShape::FP:
+        setBitsField({ Layout_.FP.opc,
+                       Layout_.FP.rd,
+                       Layout_.FP.rm,
+                       Layout_.FP.rs1,
+                       Layout_.FP.rs2,
+                       Layout_.FP.fmt,
+                       Layout_.FP.fct5 });
+        break;
+    default:
+        setBitsField({ Layout_.R.opc,
+                       Layout_.R.rd,
+                       Layout_.R.fct3,
+                       Layout_.R.rs1,
+                       Layout_.R.rs2,
+                       Layout_.R.fct7 });
+        break;
+    }
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nfunct7: {}\nrs1: {}\nrs2: {}\nrd: {}",
                  GetInstOpcode(),
@@ -29,31 +137,169 @@ void RType::Parse()
                  +Layout_.R.fct7,
                  +Layout_.R.rs1,
                  +Layout_.R.rs2,
-                 +Layout_.R.rd); // s.x <==> static_cast<int>(s.x)
+                 +Layout_.R.rd);
 #endif
 }
 
 void RType::mnemonicHelper()
 {
-    auto rd = isa::LOOKUP_REG_NAME(Layout_.R.rd, HasSetABI_); // actually reg mnemonic only 5b (max: 31),never overflow
-    auto rs1= isa::LOOKUP_REG_NAME(Layout_.R.rs1, HasSetABI_);
-    auto rs2= isa::LOOKUP_REG_NAME(Layout_.R.rs2, HasSetABI_);
+    const auto NAME= !InstAssembly_.empty() ? std::string_view { InstAssembly_[0] }
+                                            : LookupNameAndInfo().name_;
+
+    if(OpcMap::AMO == Layout_.R.opc || isAmoName(NAME)) {
+        auto rd = isa::LookupRegName(Layout_.A.rd, HasSetABI_);
+        auto rs1= isa::LookupRegName(Layout_.A.rs1, HasSetABI_);
+        if(nameStartsWith(NAME, "lr.")) {
+            appendOperands({ " ", rd, ",", "(", rs1, ")" });
+        } else {
+            auto rs2= isa::LookupRegName(Layout_.A.rs2, HasSetABI_);
+            appendOperands({ " ", rd, ",", rs2, ",", "(", rs1, ")" });
+        }
+        if(Layout_.A.aq || Layout_.A.rl) {
+            std::string tagged { NAME };
+            if(!tagged.ends_with(".aq") && !tagged.ends_with(".rl")) {
+                if(Layout_.A.aq) tagged+= ".aq";
+                if(Layout_.A.rl) tagged+= ".rl";
+            }
+            if(!InstAssembly_.empty()) InstAssembly_[0]= std::move(tagged);
+        }
+        return;
+    }
+
+    const auto KIND= classifyFpName(NAME);
+    switch(KIND) {
+    case FpOperandKind::BIN_FP: {
+        auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
+        auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
+        auto rs2= isa::LookupFregName(Layout_.R.rs2, HasSetABI_);
+        appendOperands({ " ", rd, ",", rs1, ",", rs2 });
+        return;
+    }
+    case FpOperandKind::UNARY_FP: {
+        auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
+        auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
+        appendOperands({ " ", rd, ",", rs1 });
+        return;
+    }
+    case FpOperandKind::FP_TO_INT: {
+        auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
+        auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
+        appendOperands({ " ", rd, ",", rs1 });
+        return;
+    }
+    case FpOperandKind::INT_TO_FP: {
+        auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
+        auto rs1= isa::LookupRegName(Layout_.R.rs1, HasSetABI_);
+        appendOperands({ " ", rd, ",", rs1 });
+        return;
+    }
+    case FpOperandKind::CMP: {
+        auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
+        auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
+        auto rs2= isa::LookupFregName(Layout_.R.rs2, HasSetABI_);
+        appendOperands({ " ", rd, ",", rs1, ",", rs2 });
+        return;
+    }
+    case FpOperandKind::INT_ALU:
+    default:                     break;
+    }
+
+    auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
+    auto rs1= isa::LookupRegName(Layout_.R.rs1, HasSetABI_);
+    auto rs2= isa::LookupRegName(Layout_.R.rs2, HasSetABI_);
     appendOperands({ " ", rd, ",", rs1, ",", rs2 });
 }
 
 util::Expected_u<const InstLayout *> RType::Assembly()
 {
-    const auto &info= LookupIdxAndInfo();
-
+    const auto &info  = LookupIdxAndInfo();
     Layout_.R.opc     = info.opcode_;
     const auto PAYLOAD= KEY_PAYLOAD(info.keyID_);
-    Layout_.R.fct7    = PAYLOAD >> 3;
-    Layout_.R.fct3    = PAYLOAD;
+    const auto NAME   = InstAssembly_.empty() ? std::string_view {} : std::string_view { InstAssembly_[0] };
+
+    if(OpcMap::AMO == info.opcode_) {
+        Layout_.A.fct5= PAYLOAD >> 3;
+        Layout_.A.fct3= PAYLOAD;
+        Layout_.A.aq  = 0;
+        Layout_.A.rl  = 0;
+
+        if(InstAssembly_.size() >= 3U) {
+            if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.A.rd= *rd;
+            if(nameStartsWith(NAME, "lr.")) {
+                std::string_view base= InstAssembly_.at(2);
+                if(base.starts_with('(') && base.ends_with(')')) {
+                    base= base.substr(1, base.size() - 2);
+                }
+                if(auto rs1= isa::LookupRegIdx(base)) Layout_.A.rs1= *rs1;
+                Layout_.A.rs2= 0;
+            } else if(InstAssembly_.size() >= 4U) {
+                if(auto rs2= isa::LookupRegIdx(InstAssembly_.at(2))) Layout_.A.rs2= *rs2;
+                std::string_view base= InstAssembly_.at(3);
+                if(base.starts_with('(') && base.ends_with(')')) {
+                    base= base.substr(1, base.size() - 2);
+                }
+                if(auto rs1= isa::LookupRegIdx(base)) Layout_.A.rs1= *rs1;
+            }
+        }
+        mnemonicHelper();
+        return &Layout_;
+    }
+
+    if(OpcMap::OP_FP == info.opcode_) {
+        const uint8_t F7 = PAYLOAD >> 8;
+        const uint8_t RS2= PAYLOAD >> 3 & 0x1F;
+        const uint8_t F3 = PAYLOAD & 7;
+        Layout_.R.fct7   = F7;
+        Layout_.R.rs2    = RS2;
+        Layout_.R.fct3   = fpUsesRm(F7) ? G_RM_DYN : F3;
+
+        const auto KIND= classifyFpName(NAME);
+        switch(KIND) {
+        case FpOperandKind::BIN_FP:
+            if(InstAssembly_.size() >= 4U) {
+                if(auto rd= isa::LookupFregIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
+                if(auto rs1= isa::LookupFregIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
+                if(auto rs2= isa::LookupFregIdx(InstAssembly_.at(3))) Layout_.R.rs2= *rs2;
+            }
+            break;
+        case FpOperandKind::UNARY_FP:
+            if(InstAssembly_.size() >= 3U) {
+                if(auto rd= isa::LookupFregIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
+                if(auto rs1= isa::LookupFregIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
+            }
+            break;
+        case FpOperandKind::FP_TO_INT:
+            if(InstAssembly_.size() >= 3U) {
+                if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
+                if(auto rs1= isa::LookupFregIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
+            }
+            break;
+        case FpOperandKind::INT_TO_FP:
+            if(InstAssembly_.size() >= 3U) {
+                if(auto rd= isa::LookupFregIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
+                if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
+            }
+            break;
+        case FpOperandKind::CMP:
+            if(InstAssembly_.size() >= 4U) {
+                if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) Layout_.R.rd= *rd;
+                if(auto rs1= isa::LookupFregIdx(InstAssembly_.at(2))) Layout_.R.rs1= *rs1;
+                if(auto rs2= isa::LookupFregIdx(InstAssembly_.at(3))) Layout_.R.rs2= *rs2;
+            }
+            break;
+        default: break;
+        }
+        mnemonicHelper();
+        return &Layout_;
+    }
+
+    Layout_.R.fct7= PAYLOAD >> 3;
+    Layout_.R.fct3= PAYLOAD;
 
     if(InstAssembly_.size() >= 4U) {
-        auto rdOpt = isa::LOOKUP_REG_IDX(InstAssembly_.at(1));
-        auto rs1Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(2));
-        auto rs2Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(3));
+        auto rdOpt = isa::LookupRegIdx(InstAssembly_.at(1));
+        auto rs1Opt= isa::LookupRegIdx(InstAssembly_.at(2));
+        auto rs2Opt= isa::LookupRegIdx(InstAssembly_.at(3));
         if(rdOpt && rs1Opt && rs2Opt) {
             Layout_.R.rd = *rdOpt;
             Layout_.R.rs1= *rs1Opt;
@@ -67,6 +313,15 @@ util::Expected_u<const InstLayout *> RType::Assembly()
 
 auto RType::calculateKeyID() -> KeyT
 {
+    if(OpcMap::AMO == Layout_.R.opc) {
+        return Key_= AMO_K(Layout_.A.fct5, Layout_.A.fct3, Layout_.A.opc);
+    }
+    if(OpcMap::OP_FP == Layout_.R.opc) {
+        const uint8_t F7   = Layout_.R.fct7;
+        const uint8_t RS2  = fpRs2IsSelect(F7) ? Layout_.R.rs2 : 0;
+        const uint8_t F3KEY= fpUsesRm(F7) ? 0 : Layout_.R.fct3;
+        return Key_        = FP_K(F7, RS2, F3KEY);
+    }
     return Key_= OP_K(Layout_.R.fct7, Layout_.R.fct3, Layout_.R.opc);
 }
 

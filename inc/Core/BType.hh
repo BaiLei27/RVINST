@@ -7,12 +7,12 @@ class BType: public IBaseInstType {
 public:
     constexpr static std::array<InstInfo, 6> G_INST_TABLE= {
         {
-         { .name_= "beq", .XLEN_= "RV32I", .keyID_= PACK_KEY(0, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
-         { .name_= "bne", .XLEN_= "RV32I", .keyID_= PACK_KEY(1, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
-         { .name_= "blt", .XLEN_= "RV32I", .keyID_= PACK_KEY(4, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
-         { .name_= "bge", .XLEN_= "RV32I", .keyID_= PACK_KEY(5, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
-         { .name_= "bltu", .XLEN_= "RV32I", .keyID_= PACK_KEY(6, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
-         { .name_= "bgeu", .XLEN_= "RV32I", .keyID_= PACK_KEY(7, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "beq", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x00, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "bne", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x01, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "blt", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x04, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "bge", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x05, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "bltu", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x06, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
+         { .name_= "bgeu", .XLEN_= "RV32I", .keyID_= PACK_KEY(0x07, OpcMap::BRANCH), .opcode_= OpcMap::BRANCH },
          }
     };
 

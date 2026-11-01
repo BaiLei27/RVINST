@@ -1,5 +1,5 @@
 #include "Core/SType.hh"
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
 
 namespace {
@@ -12,7 +12,7 @@ int32_t decodeSImm12(const InstLayout &l)
 
 void encodeSImm12(InstLayout &l, int32_t imm)
 {
-    const uint32_t S_IMM= imm & 0xFFFU;
+    const uint32_t S_IMM= imm & 0xFFF;
 
     l.S.imm0t4= S_IMM;
     l.S.imm5tB= S_IMM >> 5;
@@ -66,9 +66,13 @@ void SType::Parse()
 
 void SType::mnemonicHelper()
 {
-    auto rs2          = isa::LOOKUP_REG_NAME(Layout_.S.rs2, HasSetABI_);
-    auto rs1          = isa::LOOKUP_REG_NAME(Layout_.S.rs1, HasSetABI_);
-    std::string immStr= std::to_string(decodeSImm12(Layout_));
+    const bool FP_STORE= OpcMap::STORE_FP == Layout_.S.opc;
+
+    auto rs2   = FP_STORE ? isa::LookupFregName(Layout_.S.rs2, HasSetABI_)
+                          : isa::LookupRegName(Layout_.S.rs2, HasSetABI_);
+    auto rs1   = isa::LookupRegName(Layout_.S.rs1, HasSetABI_);
+    auto immStr= std::to_string(decodeSImm12(Layout_));
+
     appendOperands({ " ", rs2, ",", immStr, "(", rs1, ")" });
 }
 
@@ -79,26 +83,31 @@ util::Expected_u<const InstLayout *> SType::Assembly()
     Layout_.S.opc = info.opcode_;
     Layout_.S.fct3= KEY_PAYLOAD(info.keyID_);
 
-    if(InstAssembly_.size() >= 4U) {
-        if(auto rs2Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
+    const bool FP_STORE= OpcMap::STORE_FP == Layout_.S.opc;
+    auto setRs2        = [&](std::string_view tok) {
+        if(FP_STORE) {
+            if(auto rs2Opt= isa::LookupFregIdx(tok)) Layout_.S.rs2= *rs2Opt;
+        } else if(auto rs2Opt= isa::LookupRegIdx(tok)) {
             Layout_.S.rs2= *rs2Opt;
         }
+    };
+
+    if(InstAssembly_.size() >= 4U) {
+        setRs2(InstAssembly_.at(1));
         int32_t imm {};
         if(util::ParseInt(InstAssembly_.at(2), imm)) {
             encodeSImm12(Layout_, imm);
         }
-        if(auto rs1Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(3))) {
+        if(auto rs1Opt= isa::LookupRegIdx(InstAssembly_.at(3))) {
             Layout_.S.rs1= *rs1Opt;
         }
     } else if(InstAssembly_.size() >= 3U) {
-        if(auto rs2Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
-            Layout_.S.rs2= *rs2Opt;
-        }
+        setRs2(InstAssembly_.at(1));
         int32_t imm {};
         std::string baseReg;
         if(parseStoreAddr(InstAssembly_.at(2), imm, baseReg)) {
             encodeSImm12(Layout_, imm);
-            if(auto rs1Opt= isa::LOOKUP_REG_IDX(baseReg)) {
+            if(auto rs1Opt= isa::LookupRegIdx(baseReg)) {
                 Layout_.S.rs1= *rs1Opt;
             }
         }

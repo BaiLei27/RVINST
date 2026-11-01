@@ -30,7 +30,7 @@
 #     (performance):
 #           <perf> {Optimization-related, such as improving performance, experience}
 #     (tests):
-#           <test> {Adding test cases}
+#           <tst> {Adding test cases}
 #     (chore):
 #           <chr> {Changed the build process, or added dependencies, tools, etc.}
 #     (revert):

@@ -29,7 +29,10 @@ public:
     const util::InstFormatView *pView_ {};
     int resultRowIndex_ {};
     InstFormat fmt_ { InstFormat::UNKNOWN };
-    ItypeImmShape iShape_ { ItypeImmShape::IMM12 };
+    IImmShape iShape_ { IImmShape::IMM12 };
+    RShape rShape_ { RShape::BASE };
+
+    CShape cShape_ { CShape::CI };
     bool hasHexImm_ {};
 
 public:

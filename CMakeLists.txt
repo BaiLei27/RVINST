@@ -8,7 +8,7 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(RVINST
-    VERSION "0.1.3"
+    VERSION "0.9.3"
     DESCRIPTION "Copyright (c) 2026 Swan BaiLei27"
     HOMEPAGE_URL "https://github.com/BaiLei27/RVINST.git"
     LANGUAGES CXX
@@ -129,15 +129,18 @@ target_sources(${backend} PRIVATE
     src/Util/FileIo.cc
     src/Util/InputHistoryMgr.cc
     src/Util/InputParse.cc
+    src/Util/InstCatalog.cc
     src/Util/InstFormatView.cc
     src/Core/IBaseInstType.cc
     src/ISA/InstFormat.cc
     src/Core/RType.cc
+    src/Core/R4Type.cc
     src/Core/IType.cc
     src/Core/JType.cc
     src/Core/UType.cc
     src/Core/SType.cc
     src/Core/BType.cc
+    src/Core/CType.cc
     src/Core/InstTypeFactory.cc
     src/Core/Instruction.cc
     inc/Util/config.hpp.in
@@ -147,13 +150,14 @@ target_sources(${backend} PUBLIC
     FILE_SET HEADERS
     BASE_DIRS inc
     FILES
-    inc/ISA/Regs.hpp
+    inc/ISA/Regs.hh
     inc/ISA/InstFormat.hh
     inc/Util/BiLookupTable.hpp
     inc/Util/ErrorHandle.hh
     inc/Util/FileIo.hh
     inc/Util/InputHistoryMgr.hh
     inc/Util/InputParse.hh
+    inc/Util/InstCatalog.hh
     inc/Util/InstFormatView.hh
     inc/Core/IBaseInstType.hh
     inc/Core/RType.hh
@@ -162,6 +166,7 @@ target_sources(${backend} PUBLIC
     inc/Core/UType.hh
     inc/Core/SType.hh
     inc/Core/BType.hh
+    inc/Core/CType.hh
     inc/Core/InstTypeFactory.hh
     inc/Core/Instruction.hh
 )

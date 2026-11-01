@@ -117,7 +117,7 @@ const BiLookupTable<IBaseInstType::KeyT> *
     BiLookupTable<KeyT>::intMapName_u code2info;
     BiLookupTable<KeyT>::strMapIndex_u name2info;
 
-    auto reserveFlat= [](auto &fm, std::size_t n) {
+    auto reserveFlat= [](auto &fm, size_t n) {
         auto ex { std::move(fm).extract() };
         ex.keys.reserve(n);
         ex.values.reserve(n);
@@ -128,7 +128,8 @@ const BiLookupTable<IBaseInstType::KeyT> *
     reserveFlat(name2info, entries.size());
 
     for(const auto &entry: entries) {
-        if(0U == entry.opcode_ || entry.XLEN_.empty() || entry.name_.empty()) continue;
+        if(entry.XLEN_.empty() || entry.name_.empty()) continue;
+        if(0U == entry.opcode_ && !entry.name_.starts_with("c.")) continue;
 
         std::string manualURL;
         manualURL.reserve(baseURL.size() + entry.name_.size());

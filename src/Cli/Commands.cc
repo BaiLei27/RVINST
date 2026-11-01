@@ -8,7 +8,7 @@
     #define RVINST_NATIVE_WIN 1
 #endif
 
-#if defined(RVINST_NATIVE_WIN)
+#ifdef RVINST_NATIVE_WIN
     #include <io.h>      // _isatty / _fileno
     #include <windows.h> // console input events
 #else
@@ -16,7 +16,7 @@
     #include <unistd.h>  // isatty
 #endif
 
-#include "ISA/Regs.hpp"
+#include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
 #include "Cli/Commands.hh"
 
@@ -90,14 +90,14 @@ util::Expected_u<void> Commands::Encode(std::string_view input)
 
 util::Expected_u<void> Commands::Reg(std::string_view query)
 {
-    auto idxOpt= isa::LOOKUP_REG_IDX(query);
+    auto idxOpt= isa::LookupRegIdx(query);
 
     if(!idxOpt) { // try parsing as a number
         std::string s(query);
         uint16_t v {};
         const char *end     = s.data() + s.size(); // NOLINT
-        const auto [ptr, ec]= std::from_chars(s.data(), end, v, 10);
-        if(std::errc() == ec && ptr == end && v < 32) idxOpt= v;
+        const auto [PTR, EC]= std::from_chars(s.data(), end, v, 10);
+        if(std::errc() == EC && PTR == end && v < 32) idxOpt= v;
     }
 
     if(!idxOpt || *idxOpt >= 32) {
@@ -110,7 +110,7 @@ util::Expected_u<void> Commands::Reg(std::string_view query)
 
 util::Expected_u<void> Commands::List(std::optional<InstFormat> filter)
 {
-    auto entries= getAllInstructions(filter);
+    auto entries= util::GetAllInstructions(filter);
     if(entries.empty()) {
         return util::Unexpected(util::Error::InvalidArg("no instructions found for the given filter"));
     }
@@ -155,7 +155,7 @@ void Commands::replHistory()
 util::Expected_u<void> Commands::ProcessFile(std::string_view path)
 {
     return util::FileIo::ForEachLine(path, [this](std::string_view raw) {
-        const auto TRIMMED= util::TRIM_ASCII_WS(raw);
+        const auto TRIMMED= util::TrimAsciiWs(raw);
         if(TRIMMED.empty()) return;
 
         History_.Push(TRIMMED); // shared with manual input: browsable + :hist
@@ -206,7 +206,7 @@ namespace {
         fflush(stdout);
     }
 
-#if defined(RVINST_NATIVE_WIN)
+#ifdef RVINST_NATIVE_WIN
     // Native Win32 (MSVC / MSYS2 clang64|ucrt64|mingw): arrows are VK_* events.
     class ScopedRawMode {
     public:
@@ -238,8 +238,8 @@ namespace {
         while(true) {
             INPUT_RECORD rec {};
             DWORD n= 0;
-            if(!ReadConsoleInputW(GetStdHandle(STD_INPUT_HANDLE), &rec, 1, &n)) return false;
-            if(KEY_EVENT != rec.EventType || !rec.Event.KeyEvent.bKeyDown) continue;
+            if(!ReadConsoleInputW(GetStdHandle(STD_INPUT_HANDLE), &rec, 1, &n)) return false; // NOLINT
+            if(KEY_EVENT != rec.EventType || !rec.Event.KeyEvent.bKeyDown) continue;          // NOLINT
             const auto &key= rec.Event.KeyEvent;
             if(VK_RETURN == key.wVirtualKeyCode) {
                 std::println();
@@ -361,7 +361,7 @@ int Commands::replLoop()
             break;
         }
 
-        const auto TRIMMED= util::TRIM_ASCII_WS(line);
+        const auto TRIMMED= util::TrimAsciiWs(line);
         if(TRIMMED.empty()) continue;
 
         History_.Push(TRIMMED); // remember the command for Up/Down keys
@@ -427,7 +427,7 @@ int Commands::replLoop()
             if(verb == "list") {
                 std::optional<InstFormat> filter;
                 if(arg.starts_with("--type ")) {
-                    filter= stringToFormat(arg.substr(7));
+                    filter= util::StringToFormat(arg.substr(7));
                 }
                 if(auto r= List(filter); !r) {
                     Fmt_.PrintError(std::string(r.error().Msg()));

@@ -88,7 +88,8 @@ const std::bitset<32> &Instruction::GetBitField() const { return BitField_; }
 
 std::string Instruction::GetHexStr() const
 {
-    return std::format("{:08X}", BitField_.to_ulong());
+    const uint32_t W= BitField_.to_ulong();
+    return 3 != (W & 0x3) ? std::format("{:04X}", W & 0xFFFF) : std::format("{:08X}", W);
 }
 
 std::string Instruction::GetBinStr() const { return BitField_.to_string(); }
@@ -101,9 +102,7 @@ std::string_view Instruction::GetName() const { return Name_; }
 
 std::string_view Instruction::GetFormat() const noexcept
 {
-    if(!Type_) return "UNKNOW";
-
-    return InstFormatName(Type_->GetInstFormat());
+    return !Type_ ? "UNKNOW" : InstFormatName(Type_->GetInstFormat());
 }
 
 util::Expected_u<void> Instruction::Decode()
@@ -113,7 +112,9 @@ util::Expected_u<void> Instruction::Decode()
             std::format("unsupported instruction: 0x{:08X}", BitField_.to_ulong())));
     }
 
-    if(BitField_.none()) {
+    // Word-decode of all-zero (e.g. C sample 0x0000) must not take the Assembly
+    // path — that path requires InstAssembly_ tokens and would throw on .at(0).
+    if(BitField_.none() && !Type_->GetInstAssembly().empty()) {
         const auto LAYOUT= Type_->Assembly();
         if(!LAYOUT) return util::Unexpected(LAYOUT.error());
 

@@ -3,7 +3,6 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
-#include <version>
 
 #include "Util/ErrorHandle.hh"
 #include "Util/InputHistoryMgr.hh"
@@ -40,7 +39,7 @@ public:
     fs::path HistoryLogPath(std::string_view name= "inputHist.log"sv) const;
 
     // Stream each line; onLine must not retain the view past the call.
-    static Expected_u<void> ForEachLine(std::string_view path, LineCallback_u onLine);
+    static Expected_u<void> ForEachLine(std::string_view path, const LineCallback_u &onLine);
 
     Expected_u<void> LoadHistory(InputHistoryMgr &hist) const;
     Expected_u<void> SaveHistory(const InputHistoryMgr &hist) const;
@@ -49,7 +48,7 @@ public:
 
 private:
     static Expected_u<std::ifstream> openInput(const fs::path &path);
-    static Expected_u<void> streamLines(const fs::path &path, LineCallback_u onLine);
+    static Expected_u<void> streamLines(const fs::path &path, const LineCallback_u &onLine);
 };
 
 } // namespace util

@@ -16,7 +16,7 @@ bool HasIntPrefix(std::string_view s) noexcept
         || s.starts_with("0B");
 }
 
-std::string_view TRIM_ASCII_WS(std::string_view s) noexcept
+std::string_view TrimAsciiWs(std::string_view s) noexcept
 {
     const auto START= s.find_first_not_of(" \t\r\n");
     if(std::string_view::npos == START) return {};

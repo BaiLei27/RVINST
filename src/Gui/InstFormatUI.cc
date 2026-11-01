@@ -11,8 +11,8 @@ namespace {
 
 bool isImmAsmToken(std::string_view token) noexcept
 {
-    // Covers "imm", "imm7" (shift) and "shamt"; never "immediate"-style prose.
-    return token == "shamt" || token.starts_with("imm");
+    // Covers "imm", "imm7" (shift), "shamt", and CSR address "csr".
+    return token == "shamt" || token == "csr" || token.starts_with("imm");
 }
 
 /// Core always emits decimal immediates; Gui optionally shows them as hex.
@@ -22,12 +22,11 @@ std::string formatAsmImm(std::string_view text, bool hex)
 
     std::int64_t value {};
     const auto *const BEGIN= text.data();
-    const auto *const END  = BEGIN + text.size();
-    auto [ptr, ec]         = std::from_chars(BEGIN, END, value);
-    if(ec != std::errc() || ptr != END) return std::string(text);
+    const auto *const END  = BEGIN + text.size(); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    auto [pParsed, ec]     = std::from_chars(BEGIN, END, value);
+    if(ec != std::errc() || pParsed != END) return std::string(text);
 
-    if(value < 0) return std::format("-0x{:x}", -value);
-    return std::format("0x{:x}", value);
+    return value < 0 ? std::format("-0x{:x}", -value) : std::format("0x{:x}", value);
 }
 
 } // namespace
@@ -311,11 +310,11 @@ void InstFormatUI::applyView(const util::InstFormatView &view)
 
 void InstFormatUI::setupHover()
 {
-    for(auto &[name, pAsm]: asmFieldWidgets_) {
-        pAsm->SetupHover(name, *pView_, binaryFieldWidgets_);
+    for(auto &[NAME, pAsm]: asmFieldWidgets_) {
+        pAsm->SetupHover(NAME, *pView_, binaryFieldWidgets_);
     }
-    for(auto &[name, pBin]: binaryFieldWidgets_) {
-        pBin->SetupHover(name, *pView_, binaryFieldWidgets_, asmFieldWidgets_);
+    for(auto &[NAME, pBin]: binaryFieldWidgets_) {
+        pBin->SetupHover(NAME, *pView_, binaryFieldWidgets_, asmFieldWidgets_);
     }
 }
 
@@ -326,18 +325,36 @@ void InstFormatUI::UpdateDisplay(const Instruction &inst)
     const auto *pType= inst.GetTypePtr();
     if(!pType) return;
 
-    const auto FMT= pType->GetInstFormat();
-    auto shape    = ItypeImmShape::IMM12;
-    if(InstFormat::I == FMT) {
-        const auto &L= pType->GetInstLayout();
-        shape        = DetectIImmShape(L.I.opc, L.I.fct3);
-    }
+    const auto FMT    = pType->GetInstFormat();
+    auto iShape       = IImmShape::IMM12;
+    auto rShape       = RShape::BASE;
+    auto cShape       = CShape::CI;
+    const auto &layout= pType->GetInstLayout();
 
-    if(FMT != fmt_ || (InstFormat::I == FMT && shape != iShape_)) {
+    if(InstFormat::I == FMT) {
+        iShape= DetectIImmShape(layout.I.opc, layout.I.fct3);
+    } else if(InstFormat::R == FMT) {
+        rShape= DetectRShape(layout.R.opc);
+    } else if(InstFormat::C == FMT) {
+        cShape= DetectCShape(layout.entity_);
+    }
+    const bool HAS_SHAPE_CHANGED= (InstFormat::I == FMT && iShape != iShape_)
+                               || (InstFormat::R == FMT && rShape != rShape_)
+                               || (InstFormat::C == FMT && cShape != cShape_);
+    if(FMT != fmt_ || HAS_SHAPE_CHANGED) {
         fmt_   = FMT;
-        iShape_= shape;
-        applyView(InstFormat::I == FMT ? util::GetIInstFormatView(shape)
-                                       : util::GetInstFormatView(FMT));
+        iShape_= iShape;
+        rShape_= rShape;
+        cShape_= cShape;
+        if(InstFormat::I == FMT) {
+            applyView(util::GetIInstFormatView(iShape));
+        } else if(InstFormat::R == FMT) {
+            applyView(util::GetRInstFormatView(rShape));
+        } else if(InstFormat::C == FMT) {
+            applyView(util::GetCInstFormatView(cShape));
+        } else {
+            applyView(util::GetInstFormatView(FMT));
+        }
     }
 
     updateHeader(inst);
@@ -387,8 +404,8 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
     const auto *pType= inst.GetTypePtr();
     if(!pType) return;
 
-    for(auto &[name, pAsm]: asmFieldWidgets_) {
-        if(pAsm && pAsm->GetLabel() && name != "mnemonic") pAsm->GetLabel()->set_text("");
+    for(auto &[NAME, pAsm]: asmFieldWidgets_) {
+        if(pAsm && pAsm->GetLabel() && NAME != "mnemonic") pAsm->GetLabel()->set_text("");
     }
 
     const auto &parts= pType->GetInstAssembly();
@@ -409,6 +426,72 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
             const auto &part= parts[j++];
             it->second->GetLabel()->set_text(isImmAsmToken(token) ? formatAsmImm(part, hasHexImm_) : part);
         }
+    }
+
+    // C-Type view only exposes a mnemonic chip — fold the full operand list into it.
+    if(1 == pView_->asmTokens_.size() && pView_->asmTokens_.front() == "mnemonic") {
+        auto it= asmFieldWidgets_.find(std::string_view { "mnemonic" });
+        if(it != asmFieldWidgets_.end() && it->second->GetLabel()) { // NOLINT
+            std::string full;
+            for(const auto &p: parts) {
+                full+= p;
+            }
+            it->second->GetLabel()->set_text(full);
+        }
+    }
+
+    // Hide unused operand chips (e.g. FP fclass has no rs2) and orphan punctuation.
+    // asmOwned_ order matches view.asmTokens_.
+    const auto &tokens= pView_->asmTokens_;
+    const size_t N    = std::min(tokens.size(), asmOwned_.size());
+    std::vector<bool> visible(N, true);
+    auto isOperand= [](std::string_view t) {
+        return t != "," && t != "(" && t != ")";
+    };
+    auto hasText= [&](size_t i) {
+        auto *pLbl= asmOwned_[i] ? asmOwned_[i]->GetLabel() : nullptr;
+        return pLbl && !pLbl->get_text().empty();
+    };
+    for(size_t i= 0; i < N; ++i) {
+        if(isOperand(tokens[i])) visible[i]= hasText(i);
+    }
+    for(size_t i= 0; i < N; ++i) {
+        if(tokens[i] != ",") continue;
+        bool left {}, right {};
+        for(size_t l= i; l-- > 0;) {
+            if(!isOperand(tokens[l])) continue;
+            left= visible[l];
+            break;
+        }
+        for(size_t r= i + 1; r < N; ++r) {
+            if(!isOperand(tokens[r])) continue;
+            right= visible[r];
+            break;
+        }
+        visible[i]= left && right;
+    }
+    for(size_t i= 0; i < N; ++i) {
+        if(tokens[i] == "(") {
+            bool keep {};
+            for(size_t k= i + 1; k < N && tokens[k] != ")"; ++k) {
+                if(isOperand(tokens[k]) && visible[k]) {
+                    keep= true;
+                    break;
+                }
+            }
+            visible[i]= keep;
+        } else if(tokens[i] == ")") {
+            bool keep {};
+            for(size_t k= i; k-- > 0;) {
+                if(tokens[k] == "(") break;
+                if(isOperand(tokens[k]) && visible[k]) {
+                    keep= true;
+                    break;
+                }
+            }
+            visible[i]= keep;
+        }
+        if(asmOwned_[i] && asmOwned_[i]->GetRoot()) asmOwned_[i]->GetRoot()->set_visible(visible[i]);
     }
 }
 
@@ -440,7 +523,10 @@ void InstFormatUI::updateHexDisplay(const Instruction &inst)
 std::string InstFormatUI::GetAssemblyContent() const
 {
     std::string result;
-    for(const auto &token: pView_->asmTokens_) {
+    for(size_t i= 0; i < pView_->asmTokens_.size() && i < asmOwned_.size(); ++i) {
+        const auto &token= pView_->asmTokens_[i];
+        if(asmOwned_[i] && asmOwned_[i]->GetRoot() && !asmOwned_[i]->GetRoot()->get_visible()) continue;
+
         if(token == ",") {
             result+= ", ";
             continue;
@@ -454,7 +540,7 @@ std::string InstFormatUI::GetAssemblyContent() const
         if(it == asmFieldWidgets_.end() || !it->second->GetLabel()) continue; // NOLINT
 
         result+= it->second->GetLabel()->get_text().raw();
-        if(token == "mnemonic") result+= " ";
+        if(token == "mnemonic") result+= ' ';
     }
     return result;
 }

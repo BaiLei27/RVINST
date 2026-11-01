@@ -64,7 +64,7 @@ void FileLoader::processLines(std::string_view path)
 {
     std::unique_ptr<Instruction> last;
     auto streamed= util::FileIo::ForEachLine(path, [this, &last](std::string_view raw) {
-        const auto TRIMMED= util::TRIM_ASCII_WS(raw);
+        const auto TRIMMED= util::TrimAsciiWs(raw);
         if(TRIMMED.empty()) return;
 
         auto parsed= util::ClassifyInstInput(TRIMMED);

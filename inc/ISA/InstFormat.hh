@@ -6,12 +6,14 @@
 
 enum class InstFormat : int8_t { // Instruction format enumeration
     UNKNOWN= -1,
-    R, // Register-Register
-    I, // Immediate-Register
-    S, // Store instruction
-    B, // Branch instruction
-    U, // Upper immediate (lui/auipc)
-    J, // Jump instruction (jal)
+    R,  // Register-Register
+    I,  // Immediate-Register
+    S,  // Store instruction
+    B,  // Branch instruction
+    U,  // Upper immediate (lui/auipc)
+    J,  // Jump instruction (jal)
+    C,  // Compressed 16-bit (RVC; inst[1:0] != 0b11)
+    R4, // R-family fused multiply-add (fmadd/fmsub/fnmadd/fnmsub; rs3|fmt in [27:31]/[25:26])
 };
 
 enum OpcMap : uint8_t { // RISC-V base opcode map, inst[1:0] === 0b11
@@ -42,7 +44,7 @@ enum OpcMap : uint8_t { // RISC-V base opcode map, inst[1:0] === 0b11
     NMADD    = 0x4F, // 10_011_11
     OP_FP    = 0x53, // 10_100_11
     OP_V     = 0x57, // 10_101_11
-    CUSTOM_2 = 0x5B, // 10_110_11
+    OP_IMM_64= 0x5B, // 10_110_11 (RV128I draft; was custom-2)
     RESERVE_3= 0x5F, // 10_111_11
 
     // inst[6:5] = 11
@@ -52,13 +54,34 @@ enum OpcMap : uint8_t { // RISC-V base opcode map, inst[1:0] === 0b11
     JAL      = 0x6F, // 11_011_11
     SYSTEM   = 0x73, // 11_100_11
     OP_VE    = 0x77, // 11_101_11
-    CUSTOM_3 = 0x7B, // 11_110_11
+    OP_64    = 0x7B, // 11_110_11 (RV128I draft; was custom-3)
     RESERVE_5= 0x7F, // 11_111_11
 };
-enum class ItypeImmShape : uint8_t {
+enum class IImmShape : uint8_t {
     IMM12,
     SHIFT,
-    FENCE
+    FENCE,
+    CSR, // SYSTEM funct3≠0: imm[11:0] is the CSR address
+};
+
+/// R-type layout variants (InstFormat::R only; R4 is InstFormat::R4).
+enum class RShape : uint8_t {
+    BASE, // OP/OP-32/OP-64: classic funct7
+    AMO,  // AMO: funct5 | aq | rl
+    FP,   // OP-FP: funct5 | fmt (not a flat funct7)
+};
+
+/// RVC layout variants (Ch.27 Table 1; same InstFormat::C, different bitfield labels).
+enum class CShape : uint8_t {
+    CR,  // register
+    CI,  // immediate
+    CSS, // stack-relative store
+    CIW, // wide immediate
+    CL,  // load
+    CS,  // store
+    CA,  // arithmetic
+    CB,  // branch / shift / andi
+    CJ,  // jump
 };
 
 // NOLINTBEGIN
@@ -75,6 +98,37 @@ union InstLayout {
         uint32_t rs2 : 5;
         uint32_t fct7: 7;
     } R;
+
+    struct { // R4 fused multiply-add (rs3|funct2 occupy the funct7 slot)
+        uint32_t opc: 7;
+        uint32_t rd : 5;
+        uint32_t rm : 3; // funct3 / rounding mode
+        uint32_t rs1: 5;
+        uint32_t rs2: 5;
+        uint32_t fmt: 2; // funct2: 00=S, 01=D, 10=H, 11=Q
+        uint32_t rs3: 5;
+    } R4;
+
+    struct { // AMO: funct5|aq|rl occupy the funct7 slot (InstFormat::R + RShape::AMO)
+        uint32_t opc : 7;
+        uint32_t rd  : 5;
+        uint32_t fct3: 3;
+        uint32_t rs1 : 5;
+        uint32_t rs2 : 5;
+        uint32_t rl  : 1; // [25]
+        uint32_t aq  : 1; // [26]
+        uint32_t fct5: 5; // [31:27]
+    } A;
+
+    struct { // OP-FP: funct5|fmt occupy the funct7 slot (InstFormat::R + RShape::FP)
+        uint32_t opc : 7;
+        uint32_t rd  : 5;
+        uint32_t rm  : 3; // funct3 / rounding mode
+        uint32_t rs1 : 5;
+        uint32_t rs2 : 5;
+        uint32_t fmt : 2; // [26:25] 00=S, 01=D, 10=H, 11=Q
+        uint32_t fct5: 5; // [31:27]
+    } FP;
 
     struct { // I(opcode:[0:6] | rd:[7:11] | funct3:[12:14] | rs1:[15:19] | imm0tB:[20:31])
         uint32_t opc   : 7;
@@ -119,6 +173,82 @@ union InstLayout {
         uint32_t imm14  : 1;  // imm20
     } J;
 
+    // RVC (Ch.27): 16-bit encodings in entity_[15:0]; opc = inst[1:0] quadrant (≠ 0b11).
+    // Coarse view matches GetInstFields(C); CR..CJ overlay the nine formats in Table 1.
+    struct {
+        uint32_t opc: 2;  // inst[1:0]
+        uint32_t b2 : 14; // inst[15:2]
+    } C;
+
+    struct { // CR: funct4 | rd/rs1 | rs2 | opc
+        uint32_t opc : 2;
+        uint32_t rs2 : 5;
+        uint32_t rd  : 5; // also rs1
+        uint32_t fct4: 4;
+    } CR;
+
+    struct { // CI: funct3 | imm | rd/rs1 | imm | opc
+        uint32_t opc   : 2;
+        uint32_t imm0t4: 5; // inst[6:2]
+        uint32_t rd    : 5; // also rs1
+        uint32_t imm5  : 1; // inst[12]
+        uint32_t fct3  : 3;
+    } CI;
+
+    struct { // CSS: funct3 | imm | rs2 | opc
+        uint32_t opc : 2;
+        uint32_t rs2 : 5;
+        uint32_t imm6: 6; // inst[12:7]
+        uint32_t fct3: 3;
+    } CSS;
+
+    struct { // CIW: funct3 | imm | rd' | opc
+        uint32_t opc : 2;
+        uint32_t rd3 : 3; // rd' → x8..x15
+        uint32_t imm8: 8; // inst[12:5]
+        uint32_t fct3: 3;
+    } CIW;
+
+    struct { // CL: funct3 | imm | rs1' | imm | rd' | opc
+        uint32_t opc  : 2;
+        uint32_t rd3  : 3; // rd'
+        uint32_t immLo: 2; // inst[6:5]
+        uint32_t rs13 : 3; // rs1'
+        uint32_t immHi: 3; // inst[12:10]
+        uint32_t fct3 : 3;
+    } CL;
+
+    struct { // CS: funct3 | imm | rs1' | imm | rs2' | opc
+        uint32_t opc  : 2;
+        uint32_t rs23 : 3; // rs2'
+        uint32_t immLo: 2; // inst[6:5]
+        uint32_t rs13 : 3; // rs1'
+        uint32_t immHi: 3; // inst[12:10]
+        uint32_t fct3 : 3;
+    } CS;
+
+    struct { // CA: funct6 | rd'/rs1' | funct2 | rs2' | opc
+        uint32_t opc : 2;
+        uint32_t rs23: 3; // rs2'
+        uint32_t fct2: 2;
+        uint32_t rd3 : 3; // rd'/rs1'
+        uint32_t fct6: 6;
+    } CA;
+
+    struct { // CB: funct3 | offset | rd'/rs1' | offset | opc
+        uint32_t opc  : 2;
+        uint32_t offLo: 5; // inst[6:2]
+        uint32_t rd3  : 3; // rd'/rs1'
+        uint32_t offHi: 3; // inst[12:10]
+        uint32_t fct3 : 3;
+    } CB;
+
+    struct { // CJ: funct3 | jump target | opc
+        uint32_t opc   : 2;
+        uint32_t target: 11; // inst[12:2]
+        uint32_t fct3  : 3;
+    } CJ;
+
     // Constructor: Initialize from 32-bit instruction
     InstLayout(uint32_t instruction= 0);
 
@@ -138,7 +268,13 @@ struct InstField {
 
 [[nodiscard]] std::string_view InstFormatName(InstFormat fmt) noexcept;
 [[nodiscard]] std::span<const InstField> GetInstFields(InstFormat fmt);
-[[nodiscard]] ItypeImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept;
-[[nodiscard]] std::span<const InstField> GetIInstFields(ItypeImmShape shape) noexcept;
+[[nodiscard]] IImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept;
+[[nodiscard]] std::span<const InstField> GetIInstFields(IImmShape shape) noexcept;
+
+[[nodiscard]] RShape DetectRShape(uint32_t opc) noexcept;
+[[nodiscard]] std::span<const InstField> GetRInstFields(RShape shape) noexcept;
+
+[[nodiscard]] CShape DetectCShape(uint32_t inst) noexcept; // inspects only inst[15:0]; full entity_ is fine
+[[nodiscard]] std::span<const InstField> GetCInstFields(CShape shape) noexcept;
 
 // Date:25/12/21/22:34
