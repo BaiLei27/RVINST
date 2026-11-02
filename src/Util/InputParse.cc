@@ -2,11 +2,32 @@
 #include <algorithm>
 #include <cctype>
 #include <format>
+#include <string>
 
 #include "Core/InstTypeFactory.hh"
 #include "Util/InputParse.hh"
 
 namespace util {
+
+bool ParseMemOperand(std::string_view token, int32_t &immOut, std::string &regOut)
+{
+    token             = TrimAsciiWs(token);
+    const auto L_PAREN= token.find('(');
+    const auto R_PAREN= token.find(')');
+    if(std::string_view::npos == L_PAREN || std::string_view::npos == R_PAREN
+       || R_PAREN <= L_PAREN + 1U) {
+        return false;
+    }
+
+    const auto IMM_PART= TrimAsciiWs(token.substr(0, L_PAREN));
+    regOut.assign(TrimAsciiWs(token.substr(L_PAREN + 1, R_PAREN - L_PAREN - 1)));
+    if(regOut.empty()) return false;
+    if(IMM_PART.empty()) {
+        immOut= 0;
+        return true;
+    }
+    return ParseInt(IMM_PART, immOut);
+}
 
 bool HasIntPrefix(std::string_view s) noexcept
 {

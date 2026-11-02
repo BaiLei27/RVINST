@@ -41,7 +41,7 @@ void UType::mnemonicHelper()
 {
     auto rd           = isa::LookupRegName(Layout_.U.rd, HasSetABI_);
     std::string immStr= std::to_string(Layout_.U.immCt1F);
-    appendOperands({ " ", rd, ",", immStr });
+    appendOperands({ rd, ",", immStr });
 }
 
 util::Expected_u<const InstLayout *> UType::Assembly()

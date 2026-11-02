@@ -18,19 +18,6 @@ void encodeSImm12(InstLayout &l, int32_t imm)
     l.S.imm5tB= S_IMM >> 5;
 }
 
-bool parseStoreAddr(std::string_view token, int32_t &immOut, std::string &regStrOut)
-{
-    const auto L_PAREN= token.find('(');
-    const auto R_PAREN= token.find(')');
-    if(std::string_view::npos == L_PAREN || std::string_view::npos == R_PAREN
-       || R_PAREN <= L_PAREN + 1U) {
-        return false;
-    }
-    std::string immPart(token.substr(0, L_PAREN));
-    regStrOut.assign(token.substr(L_PAREN + 1, R_PAREN - L_PAREN - 1));
-    return util::ParseInt(immPart, immOut);
-}
-
 } // namespace
 
 SType::SType(InstFormat format, uint32_t inst, bool hasSetABI)
@@ -66,14 +53,12 @@ void SType::Parse()
 
 void SType::mnemonicHelper()
 {
-    const bool FP_STORE= OpcMap::STORE_FP == Layout_.S.opc;
-
-    auto rs2   = FP_STORE ? isa::LookupFregName(Layout_.S.rs2, HasSetABI_)
-                          : isa::LookupRegName(Layout_.S.rs2, HasSetABI_);
+    auto rs2   = OpcMap::STORE_FP == Layout_.S.opc ? isa::LookupFregName(Layout_.S.rs2, HasSetABI_)
+                                                   : isa::LookupRegName(Layout_.S.rs2, HasSetABI_);
     auto rs1   = isa::LookupRegName(Layout_.S.rs1, HasSetABI_);
     auto immStr= std::to_string(decodeSImm12(Layout_));
 
-    appendOperands({ " ", rs2, ",", immStr, "(", rs1, ")" });
+    appendOperands({ rs2, ",", immStr, "(", rs1, ")" });
 }
 
 util::Expected_u<const InstLayout *> SType::Assembly()
@@ -83,9 +68,8 @@ util::Expected_u<const InstLayout *> SType::Assembly()
     Layout_.S.opc = info.opcode_;
     Layout_.S.fct3= KEY_PAYLOAD(info.keyID_);
 
-    const bool FP_STORE= OpcMap::STORE_FP == Layout_.S.opc;
-    auto setRs2        = [&](std::string_view tok) {
-        if(FP_STORE) {
+    auto setRs2= [&](std::string_view tok) {
+        if(OpcMap::STORE_FP == Layout_.S.opc) {
             if(auto rs2Opt= isa::LookupFregIdx(tok)) Layout_.S.rs2= *rs2Opt;
         } else if(auto rs2Opt= isa::LookupRegIdx(tok)) {
             Layout_.S.rs2= *rs2Opt;
@@ -105,7 +89,7 @@ util::Expected_u<const InstLayout *> SType::Assembly()
         setRs2(InstAssembly_.at(1));
         int32_t imm {};
         std::string baseReg;
-        if(parseStoreAddr(InstAssembly_.at(2), imm, baseReg)) {
+        if(util::ParseMemOperand(InstAssembly_.at(2), imm, baseReg)) {
             encodeSImm12(Layout_, imm);
             if(auto rs1Opt= isa::LookupRegIdx(baseReg)) {
                 Layout_.S.rs1= *rs1Opt;

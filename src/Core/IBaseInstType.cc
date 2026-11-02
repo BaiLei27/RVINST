@@ -79,25 +79,15 @@ const std::vector<std::string> &IBaseInstType::Disassembly()
 
 void IBaseInstType::appendOperands(std::initializer_list<std::string_view> regMnemonic)
 {
+    // Layout of InstAssembly_: [0]=mnemonic, [1]=space, [2..]=operands.
+    // Encode path (Assembly) reads fixed indexes 1..3, so the space must stay at index 1.
 
-    // for(const auto *pIt= regMnemonic.begin(); pIt != regMnemonic.end(); ++pIt) { // NOLINT
-    //     InstAssembly_.emplace_back(*pIt);
-    //     if(std::next(pIt) != regMnemonic.end()) {
-    //         InstAssembly_.emplace_back(", ");
-    //     }
-    // }
+    InstAssembly_.resize(2); // drop previous operands, keep [0] mnemonic + [1] space
+    InstAssembly_[1]= ' ';   // force [1] to the space even when re-encoding from user tokens
+    InstAssembly_.reserve(InstAssembly_.size() + regMnemonic.size());
 
-    size_t writeIdx= 1;
     for(const auto &r: regMnemonic) {
-        if(writeIdx >= InstAssembly_.size()) {
-            InstAssembly_.emplace_back(r);
-        } else {
-            InstAssembly_[writeIdx]= r;
-        }
-        ++writeIdx;
-    }
-    if(InstAssembly_.size() > writeIdx) {
-        InstAssembly_.resize(writeIdx);
+        InstAssembly_.emplace_back(r);
     }
 }
 

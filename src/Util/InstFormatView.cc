@@ -6,6 +6,7 @@ namespace {
     constexpr std::string_view G_R_ASM[] { "mnemonic", "rd", ",", "rs1", ",", "rs2" };
     constexpr std::string_view G_R4_ASM[] { "mnemonic", "rd", ",", "rs1", ",", "rs2", ",", "rs3" };
     constexpr std::string_view G_I_ASM[] { "mnemonic", "rd", ",", "rs1", ",", "imm" };
+    constexpr std::string_view G_I_LOAD_ASM[] { "mnemonic", "rd", ",", "imm", "(", "rs1", ")" };
     constexpr std::string_view G_I_CSR_ASM[] { "mnemonic", "rd", ",", "csr", ",", "rs1" };
     constexpr std::string_view G_I_FENCE_ASM[] { "mnemonic", "pred", ",", "succ" };
     constexpr std::string_view G_J_ASM[] { "mnemonic", "rd", ",", "imm" };
@@ -180,6 +181,12 @@ namespace {
         { .key_= "rs1",      .related_= G_SELF_RS1  },
         { .key_= "imm",      .related_= G_I_ASM_IMM },
     };
+    constexpr FieldRel G_I_LOAD_ASM_REL[] {
+        { .key_= "mnemonic", .related_= G_I_ASM_MNE },
+        { .key_= "rd",       .related_= G_SELF_RD   },
+        { .key_= "imm",      .related_= G_I_ASM_IMM },
+        { .key_= "rs1",      .related_= G_SELF_RS1  },
+    };
 
     constexpr FieldRel G_I_SHIFT_BIN_REL[] {
         { .key_= "opcode", .related_= G_I_SHIFT_BIN_OPC   },
@@ -294,6 +301,15 @@ const InstFormatView &GetIInstFormatView(IImmShape shape)
         .asmRel_   = G_I_ASM_REL,
         .keyFields_= G_I_KEY,
     };
+    static const InstFormatView K_I_LOAD {
+        .typeName_ = InstFormatName(InstFormat::I),
+        .fmt_      = InstFormat::I,
+        .asmTokens_= G_I_LOAD_ASM,
+        .fields_   = GetIInstFields(IImmShape::LOAD),
+        .binaryRel_= G_I_BIN_REL,
+        .asmRel_   = G_I_LOAD_ASM_REL,
+        .keyFields_= G_I_KEY,
+    };
     static const InstFormatView K_I_SHIFT {
         .typeName_ = InstFormatName(InstFormat::I),
         .fmt_      = InstFormat::I,
@@ -323,6 +339,7 @@ const InstFormatView &GetIInstFormatView(IImmShape shape)
     };
 
     switch(shape) {
+    case IImmShape::LOAD:  return K_I_LOAD;
     case IImmShape::SHIFT: return K_I_SHIFT;
     case IImmShape::FENCE: return K_I_FENCE;
     case IImmShape::CSR:   return K_I_CSR;

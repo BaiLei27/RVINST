@@ -383,8 +383,7 @@ void InstFormatUI::updateHeader(const Instruction &inst)
         const Glib::ustring HREF(MANUAL.data(), MANUAL.size());
         const Glib::ustring DISP=
             NAME.empty() ? Glib::ustring("—") : Glib::ustring(NAME.data(), NAME.size());
-        const bool IS_URL=
-            MANUAL.starts_with("http://") || MANUAL.starts_with("https://");
+        const bool IS_URL= MANUAL.starts_with("http://") || MANUAL.starts_with("https://");
         if(IS_URL) {
             const auto MARKUP=
                 std::format("<a href=\"{}\">{}</a>",

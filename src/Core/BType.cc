@@ -60,7 +60,7 @@ void BType::mnemonicHelper()
     auto rs1   = isa::LookupRegName(Layout_.B.rs1, HasSetABI_);
     auto rs2   = isa::LookupRegName(Layout_.B.rs2, HasSetABI_);
     auto immStr= std::to_string(decodeBImm13(Layout_));
-    appendOperands({ " ", rs1, ",", rs2, ",", immStr });
+    appendOperands({ rs1, ",", rs2, ",", immStr });
 }
 
 util::Expected_u<const InstLayout *> BType::Assembly()

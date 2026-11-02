@@ -54,7 +54,8 @@ template <typename T>
     } else if(s.starts_with("0b") || s.starts_with("0B")) {
         base= 2;
         s.remove_prefix(2);
-    } else if(s.starts_with('0')) {
+    } else if(s.size() > 1U && s.starts_with('0')) { // C octal only when there are digits after the leading 0; lone "0" stays decimal.
+
         base= 8;
         s.remove_prefix(1);
     }
@@ -81,6 +82,9 @@ template <typename T>
 
     return true;
 }
+
+/// Parse `imm(reg)` (e.g. `4(x1)`, `-8(sp)`). Empty imm before `(` means 0.
+[[nodiscard]] bool ParseMemOperand(std::string_view token, int32_t &immOut, std::string &regOut);
 
 } // namespace util
 

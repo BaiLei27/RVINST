@@ -150,10 +150,10 @@ void RType::mnemonicHelper()
         auto rd = isa::LookupRegName(Layout_.A.rd, HasSetABI_);
         auto rs1= isa::LookupRegName(Layout_.A.rs1, HasSetABI_);
         if(nameStartsWith(NAME, "lr.")) {
-            appendOperands({ " ", rd, ",", "(", rs1, ")" });
+            appendOperands({ rd, ",", "(", rs1, ")" });
         } else {
             auto rs2= isa::LookupRegName(Layout_.A.rs2, HasSetABI_);
-            appendOperands({ " ", rd, ",", rs2, ",", "(", rs1, ")" });
+            appendOperands({ rd, ",", rs2, ",", "(", rs1, ")" });
         }
         if(Layout_.A.aq || Layout_.A.rl) {
             std::string tagged { NAME };
@@ -172,32 +172,32 @@ void RType::mnemonicHelper()
         auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
         auto rs2= isa::LookupFregName(Layout_.R.rs2, HasSetABI_);
-        appendOperands({ " ", rd, ",", rs1, ",", rs2 });
+        appendOperands({ rd, ",", rs1, ",", rs2 });
         return;
     }
     case FpOperandKind::UNARY_FP: {
         auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
-        appendOperands({ " ", rd, ",", rs1 });
+        appendOperands({ rd, ",", rs1 });
         return;
     }
     case FpOperandKind::FP_TO_INT: {
         auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
-        appendOperands({ " ", rd, ",", rs1 });
+        appendOperands({ rd, ",", rs1 });
         return;
     }
     case FpOperandKind::INT_TO_FP: {
         auto rd = isa::LookupFregName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupRegName(Layout_.R.rs1, HasSetABI_);
-        appendOperands({ " ", rd, ",", rs1 });
+        appendOperands({ rd, ",", rs1 });
         return;
     }
     case FpOperandKind::CMP: {
         auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
         auto rs1= isa::LookupFregName(Layout_.R.rs1, HasSetABI_);
         auto rs2= isa::LookupFregName(Layout_.R.rs2, HasSetABI_);
-        appendOperands({ " ", rd, ",", rs1, ",", rs2 });
+        appendOperands({ rd, ",", rs1, ",", rs2 });
         return;
     }
     case FpOperandKind::INT_ALU:
@@ -207,7 +207,7 @@ void RType::mnemonicHelper()
     auto rd = isa::LookupRegName(Layout_.R.rd, HasSetABI_);
     auto rs1= isa::LookupRegName(Layout_.R.rs1, HasSetABI_);
     auto rs2= isa::LookupRegName(Layout_.R.rs2, HasSetABI_);
-    appendOperands({ " ", rd, ",", rs1, ",", rs2 });
+    appendOperands({ rd, ",", rs1, ",", rs2 });
 }
 
 util::Expected_u<const InstLayout *> RType::Assembly()

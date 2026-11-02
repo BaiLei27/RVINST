@@ -1,469 +1,706 @@
-# RVINST CLI — full RV32I instruction vectors (+ fence.i / Zifencei)
+# RVINST CLI -- ISA listing coverage vs G_INST_TABLE
 # Columns (pipe-separated):
 #   kind | input | expect_hex | expect_asm | expect_format | expect_manual_tail | status
 #
-# kind:   decode | encode
-# status: impl = must pass; todo = listed for coverage, failure counts as TODO (not FAIL)
+#   kind:   decode | encode
+#   status: impl = must pass; todo = listed for coverage, failure counts as TODO (not FAIL)
 #
-# Convention for sample operands (unless noted):
-#   rd=x1, rs1=x2, rs2=x3, imm=3 (I-imm) / 4 (mem) / 8 (branch/jal), uimm=1 (U)
+# impl: every G_INST_TABLE mnemonic (I/M/A/F/D/Q/C + Zicsr/Zifencei + RV128 drafts).
+#   RV32/64C overlapping encodings decode to the preferred alias
+#   (c.jal/c.flw/c.fsw/c.flwsp/c.fswsp); RV64C names covered via encode of the same hex.
+# todo: Ch.35 / related listings not yet in G_INST_TABLE -- Zfh, Zawrs, Zihintntl.
+#
+# Sample operands are spread across distinct registers and boundary immediates
+# (12-bit I/S: -2048..2047; 13-bit B: -4096..4094; 21-bit J; 20-bit U).
 
-# =============================================================================
-# R-Type  (10)
-# =============================================================================
-decode|0x003100b3|003100B3|add x1,x2,x3|R-Type|add|impl
-encode|add x1, x2, x3|003100B3|add x1,x2,x3|R-Type|add|impl
-decode|0x403100b3|403100B3|sub x1,x2,x3|R-Type|sub|impl
-encode|sub x1, x2, x3|403100B3|sub x1,x2,x3|R-Type|sub|impl
-decode|0x003110b3|003110B3|sll x1,x2,x3|R-Type|sll|impl
-encode|sll x1, x2, x3|003110B3|sll x1,x2,x3|R-Type|sll|impl
-decode|0x003120b3|003120B3|slt x1,x2,x3|R-Type|slt|impl
-encode|slt x1, x2, x3|003120B3|slt x1,x2,x3|R-Type|slt|impl
-decode|0x003130b3|003130B3|sltu x1,x2,x3|R-Type|sltu|impl
-encode|sltu x1, x2, x3|003130B3|sltu x1,x2,x3|R-Type|sltu|impl
-decode|0x003140b3|003140B3|xor x1,x2,x3|R-Type|xor|impl
-encode|xor x1, x2, x3|003140B3|xor x1,x2,x3|R-Type|xor|impl
-decode|0x003150b3|003150B3|srl x1,x2,x3|R-Type|srl|impl
-encode|srl x1, x2, x3|003150B3|srl x1,x2,x3|R-Type|srl|impl
-decode|0x403150b3|403150B3|sra x1,x2,x3|R-Type|sra|impl
-encode|sra x1, x2, x3|403150B3|sra x1,x2,x3|R-Type|sra|impl
-decode|0x003160b3|003160B3|or x1,x2,x3|R-Type|or|impl
-encode|or x1, x2, x3|003160B3|or x1,x2,x3|R-Type|or|impl
-decode|0x003170b3|003170B3|and x1,x2,x3|R-Type|and|impl
-encode|and x1, x2, x3|003170B3|and x1,x2,x3|R-Type|and|impl
+# ==== R-Type (10) ====
+decode|0x01030a33|01030A33|add x20,x6,x16|R-Type|add|impl
+encode|add x20,x6,x16|01030A33|add x20,x6,x16|R-Type|add|impl
+decode|0x409981b3|409981B3|sub x3,x19,x9|R-Type|sub|impl
+encode|sub x3,x19,x9|409981B3|sub x3,x19,x9|R-Type|sub|impl
+decode|0x008916b3|008916B3|sll x13,x18,x8|R-Type|sll|impl
+encode|sll x13,x18,x8|008916B3|sll x13,x18,x8|R-Type|sll|impl
+decode|0x002a23b3|002A23B3|slt x7,x20,x2|R-Type|slt|impl
+encode|slt x7,x20,x2|002A23B3|slt x7,x20,x2|R-Type|slt|impl
+decode|0x0190bf33|0190BF33|sltu x30,x1,x25|R-Type|sltu|impl
+encode|sltu x30,x1,x25|0190BF33|sltu x30,x1,x25|R-Type|sltu|impl
+decode|0x008ec3b3|008EC3B3|xor x7,x29,x8|R-Type|xor|impl
+encode|xor x7,x29,x8|008EC3B3|xor x7,x29,x8|R-Type|xor|impl
+decode|0x01e1d633|01E1D633|srl x12,x3,x30|R-Type|srl|impl
+encode|srl x12,x3,x30|01E1D633|srl x12,x3,x30|R-Type|srl|impl
+decode|0x4114dcb3|4114DCB3|sra x25,x9,x17|R-Type|sra|impl
+encode|sra x25,x9,x17|4114DCB3|sra x25,x9,x17|R-Type|sra|impl
+decode|0x00256433|00256433|or x8,x10,x2|R-Type|or|impl
+encode|or x8,x10,x2|00256433|or x8,x10,x2|R-Type|or|impl
+decode|0x00927fb3|00927FB3|and x31,x4,x9|R-Type|and|impl
+encode|and x31,x4,x9|00927FB3|and x31,x4,x9|R-Type|and|impl
 
-# =============================================================================
-# R-Type M (RV32M + RV64M)  — Ch.35 listings, funct7=0000001
-# =============================================================================
-decode|0x023100b3|023100B3|mul x1,x2,x3|R-Type|mul|impl
-encode|mul x1, x2, x3|023100B3|mul x1,x2,x3|R-Type|mul|impl
-decode|0x023110b3|023110B3|mulh x1,x2,x3|R-Type|mulh|impl
-encode|mulh x1, x2, x3|023110B3|mulh x1,x2,x3|R-Type|mulh|impl
-decode|0x023120b3|023120B3|mulhsu x1,x2,x3|R-Type|mulhsu|impl
-encode|mulhsu x1, x2, x3|023120B3|mulhsu x1,x2,x3|R-Type|mulhsu|impl
-decode|0x023130b3|023130B3|mulhu x1,x2,x3|R-Type|mulhu|impl
-encode|mulhu x1, x2, x3|023130B3|mulhu x1,x2,x3|R-Type|mulhu|impl
-decode|0x023140b3|023140B3|div x1,x2,x3|R-Type|div|impl
-encode|div x1, x2, x3|023140B3|div x1,x2,x3|R-Type|div|impl
-decode|0x023150b3|023150B3|divu x1,x2,x3|R-Type|divu|impl
-encode|divu x1, x2, x3|023150B3|divu x1,x2,x3|R-Type|divu|impl
-decode|0x023160b3|023160B3|rem x1,x2,x3|R-Type|rem|impl
-encode|rem x1, x2, x3|023160B3|rem x1,x2,x3|R-Type|rem|impl
-decode|0x023170b3|023170B3|remu x1,x2,x3|R-Type|remu|impl
-encode|remu x1, x2, x3|023170B3|remu x1,x2,x3|R-Type|remu|impl
-decode|0x023100bb|023100BB|mulw x1,x2,x3|R-Type|mulw|impl
-encode|mulw x1, x2, x3|023100BB|mulw x1,x2,x3|R-Type|mulw|impl
-decode|0x023140bb|023140BB|divw x1,x2,x3|R-Type|divw|impl
-encode|divw x1, x2, x3|023140BB|divw x1,x2,x3|R-Type|divw|impl
-decode|0x023150bb|023150BB|divuw x1,x2,x3|R-Type|divuw|impl
-encode|divuw x1, x2, x3|023150BB|divuw x1,x2,x3|R-Type|divuw|impl
-decode|0x023160bb|023160BB|remw x1,x2,x3|R-Type|remw|impl
-encode|remw x1, x2, x3|023160BB|remw x1,x2,x3|R-Type|remw|impl
-decode|0x023170bb|023170BB|remuw x1,x2,x3|R-Type|remuw|impl
-encode|remuw x1, x2, x3|023170BB|remuw x1,x2,x3|R-Type|remuw|impl
+# ==== R-Type M (RV32M + RV64M) (13) ====
+decode|0x03790433|03790433|mul x8,x18,x23|R-Type|mul|impl
+encode|mul x8,x18,x23|03790433|mul x8,x18,x23|R-Type|mul|impl
+decode|0x03849133|03849133|mulh x2,x9,x24|R-Type|mulh|impl
+encode|mulh x2,x9,x24|03849133|mulh x2,x9,x24|R-Type|mulh|impl
+decode|0x02bb2633|02BB2633|mulhsu x12,x22,x11|R-Type|mulhsu|impl
+encode|mulhsu x12,x22,x11|02BB2633|mulhsu x12,x22,x11|R-Type|mulhsu|impl
+decode|0x03623cb3|03623CB3|mulhu x25,x4,x22|R-Type|mulhu|impl
+encode|mulhu x25,x4,x22|03623CB3|mulhu x25,x4,x22|R-Type|mulhu|impl
+decode|0x0214c533|0214C533|div x10,x9,x1|R-Type|div|impl
+encode|div x10,x9,x1|0214C533|div x10,x9,x1|R-Type|div|impl
+decode|0x033bdab3|033BDAB3|divu x21,x23,x19|R-Type|divu|impl
+encode|divu x21,x23,x19|033BDAB3|divu x21,x23,x19|R-Type|divu|impl
+decode|0x03a96c33|03A96C33|rem x24,x18,x26|R-Type|rem|impl
+encode|rem x24,x18,x26|03A96C33|rem x24,x18,x26|R-Type|rem|impl
+decode|0x030472b3|030472B3|remu x5,x8,x16|R-Type|remu|impl
+encode|remu x5,x8,x16|030472B3|remu x5,x8,x16|R-Type|remu|impl
+decode|0x02f904bb|02F904BB|mulw x9,x18,x15|R-Type|mulw|impl
+encode|mulw x9,x18,x15|02F904BB|mulw x9,x18,x15|R-Type|mulw|impl
+decode|0x03a7cc3b|03A7CC3B|divw x24,x15,x26|R-Type|divw|impl
+encode|divw x24,x15,x26|03A7CC3B|divw x24,x15,x26|R-Type|divw|impl
+decode|0x0376513b|0376513B|divuw x2,x12,x23|R-Type|divuw|impl
+encode|divuw x2,x12,x23|0376513B|divuw x2,x12,x23|R-Type|divuw|impl
+decode|0x038de3bb|038DE3BB|remw x7,x27,x24|R-Type|remw|impl
+encode|remw x7,x27,x24|038DE3BB|remw x7,x27,x24|R-Type|remw|impl
+decode|0x0287f83b|0287F83B|remuw x16,x15,x8|R-Type|remuw|impl
+encode|remuw x16,x15,x8|0287F83B|remuw x16,x15,x8|R-Type|remuw|impl
 
-# =============================================================================
-# F Extension (RV32F + RV64F) — Ch.35 listings; rm=dyn(7) on encode
-# =============================================================================
-decode|0x00412087|00412087|flw f1,x2,4|I-Type|flw|impl
-encode|flw f1, x2, 4|00412087|flw f1,x2,4|I-Type|flw|impl
-decode|0x00112227|00112227|fsw f1,4(x2)|S-Type|fsw|impl
-encode|fsw f1, 4, x2|00112227|fsw f1,4(x2)|S-Type|fsw|impl
-decode|0x203170c3|203170C3|fmadd.s f1,f2,f3,f4|R4-Type|fmadd.s|impl
-encode|fmadd.s f1, f2, f3, f4|203170C3|fmadd.s f1,f2,f3,f4|R4-Type|fmadd.s|impl
-decode|0x203170c7|203170C7|fmsub.s f1,f2,f3,f4|R4-Type|fmsub.s|impl
-encode|fmsub.s f1, f2, f3, f4|203170C7|fmsub.s f1,f2,f3,f4|R4-Type|fmsub.s|impl
-decode|0x203170cb|203170CB|fnmsub.s f1,f2,f3,f4|R4-Type|fnmsub.s|impl
-encode|fnmsub.s f1, f2, f3, f4|203170CB|fnmsub.s f1,f2,f3,f4|R4-Type|fnmsub.s|impl
-decode|0x203170cf|203170CF|fnmadd.s f1,f2,f3,f4|R4-Type|fnmadd.s|impl
-encode|fnmadd.s f1, f2, f3, f4|203170CF|fnmadd.s f1,f2,f3,f4|R4-Type|fnmadd.s|impl
-decode|0x003170d3|003170D3|fadd.s f1,f2,f3|R-Type|fadd.s|impl
-encode|fadd.s f1, f2, f3|003170D3|fadd.s f1,f2,f3|R-Type|fadd.s|impl
-decode|0x083170d3|083170D3|fsub.s f1,f2,f3|R-Type|fsub.s|impl
-encode|fsub.s f1, f2, f3|083170D3|fsub.s f1,f2,f3|R-Type|fsub.s|impl
-decode|0x103170d3|103170D3|fmul.s f1,f2,f3|R-Type|fmul.s|impl
-encode|fmul.s f1, f2, f3|103170D3|fmul.s f1,f2,f3|R-Type|fmul.s|impl
-decode|0x183170d3|183170D3|fdiv.s f1,f2,f3|R-Type|fdiv.s|impl
-encode|fdiv.s f1, f2, f3|183170D3|fdiv.s f1,f2,f3|R-Type|fdiv.s|impl
-decode|0x580170d3|580170D3|fsqrt.s f1,f2|R-Type|fsqrt.s|impl
-encode|fsqrt.s f1, f2|580170D3|fsqrt.s f1,f2|R-Type|fsqrt.s|impl
-decode|0x203100d3|203100D3|fsgnj.s f1,f2,f3|R-Type|fsgnj.s|impl
-encode|fsgnj.s f1, f2, f3|203100D3|fsgnj.s f1,f2,f3|R-Type|fsgnj.s|impl
-decode|0x203110d3|203110D3|fsgnjn.s f1,f2,f3|R-Type|fsgnjn.s|impl
-encode|fsgnjn.s f1, f2, f3|203110D3|fsgnjn.s f1,f2,f3|R-Type|fsgnjn.s|impl
-decode|0x203120d3|203120D3|fsgnjx.s f1,f2,f3|R-Type|fsgnjx.s|impl
-encode|fsgnjx.s f1, f2, f3|203120D3|fsgnjx.s f1,f2,f3|R-Type|fsgnjx.s|impl
-decode|0x283100d3|283100D3|fmin.s f1,f2,f3|R-Type|fmin.s|impl
-encode|fmin.s f1, f2, f3|283100D3|fmin.s f1,f2,f3|R-Type|fmin.s|impl
-decode|0x283110d3|283110D3|fmax.s f1,f2,f3|R-Type|fmax.s|impl
-encode|fmax.s f1, f2, f3|283110D3|fmax.s f1,f2,f3|R-Type|fmax.s|impl
-decode|0xc00170d3|C00170D3|fcvt.w.s x1,f2|R-Type|fcvt.w.s|impl
-encode|fcvt.w.s x1, f2|C00170D3|fcvt.w.s x1,f2|R-Type|fcvt.w.s|impl
-decode|0xc01170d3|C01170D3|fcvt.wu.s x1,f2|R-Type|fcvt.wu.s|impl
-encode|fcvt.wu.s x1, f2|C01170D3|fcvt.wu.s x1,f2|R-Type|fcvt.wu.s|impl
-decode|0xe00100d3|E00100D3|fmv.x.w x1,f2|R-Type|fmv.x.w|impl
-encode|fmv.x.w x1, f2|E00100D3|fmv.x.w x1,f2|R-Type|fmv.x.w|impl
-decode|0xa03120d3|A03120D3|feq.s x1,f2,f3|R-Type|feq.s|impl
-encode|feq.s x1, f2, f3|A03120D3|feq.s x1,f2,f3|R-Type|feq.s|impl
-decode|0xa03110d3|A03110D3|flt.s x1,f2,f3|R-Type|flt.s|impl
-encode|flt.s x1, f2, f3|A03110D3|flt.s x1,f2,f3|R-Type|flt.s|impl
-decode|0xa03100d3|A03100D3|fle.s x1,f2,f3|R-Type|fle.s|impl
-encode|fle.s x1, f2, f3|A03100D3|fle.s x1,f2,f3|R-Type|fle.s|impl
-decode|0xe00110d3|E00110D3|fclass.s x1,f2|R-Type|fclass.s|impl
-encode|fclass.s x1, f2|E00110D3|fclass.s x1,f2|R-Type|fclass.s|impl
-decode|0xd00170d3|D00170D3|fcvt.s.w f1,x2|R-Type|fcvt.s.w|impl
-encode|fcvt.s.w f1, x2|D00170D3|fcvt.s.w f1,x2|R-Type|fcvt.s.w|impl
-decode|0xd01170d3|D01170D3|fcvt.s.wu f1,x2|R-Type|fcvt.s.wu|impl
-encode|fcvt.s.wu f1, x2|D01170D3|fcvt.s.wu f1,x2|R-Type|fcvt.s.wu|impl
-decode|0xf00100d3|F00100D3|fmv.w.x f1,x2|R-Type|fmv.w.x|impl
-encode|fmv.w.x f1, x2|F00100D3|fmv.w.x f1,x2|R-Type|fmv.w.x|impl
-decode|0xc02170d3|C02170D3|fcvt.l.s x1,f2|R-Type|fcvt.l.s|impl
-encode|fcvt.l.s x1, f2|C02170D3|fcvt.l.s x1,f2|R-Type|fcvt.l.s|impl
-decode|0xc03170d3|C03170D3|fcvt.lu.s x1,f2|R-Type|fcvt.lu.s|impl
-encode|fcvt.lu.s x1, f2|C03170D3|fcvt.lu.s x1,f2|R-Type|fcvt.lu.s|impl
-decode|0xd02170d3|D02170D3|fcvt.s.l f1,x2|R-Type|fcvt.s.l|impl
-encode|fcvt.s.l f1, x2|D02170D3|fcvt.s.l f1,x2|R-Type|fcvt.s.l|impl
-decode|0xd03170d3|D03170D3|fcvt.s.lu f1,x2|R-Type|fcvt.s.lu|impl
-encode|fcvt.s.lu f1, x2|D03170D3|fcvt.s.lu f1,x2|R-Type|fcvt.s.lu|impl
+# ==== R-Type RV64I (OP-32) + RV128I (OP-64) (10) ====
+decode|0x00fd8d3b|00FD8D3B|addw x26,x27,x15|R-Type|addw|impl
+encode|addw x26,x27,x15|00FD8D3B|addw x26,x27,x15|R-Type|addw|impl
+decode|0x01191a3b|01191A3B|sllw x20,x18,x17|R-Type|sllw|impl
+encode|sllw x20,x18,x17|01191A3B|sllw x20,x18,x17|R-Type|sllw|impl
+decode|0x0151563b|0151563B|srlw x12,x2,x21|R-Type|srlw|impl
+encode|srlw x12,x2,x21|0151563B|srlw x12,x2,x21|R-Type|srlw|impl
+decode|0x41e9dfbb|41E9DFBB|sraw x31,x19,x30|R-Type|sraw|impl
+encode|sraw x31,x19,x30|41E9DFBB|sraw x31,x19,x30|R-Type|sraw|impl
+decode|0x40e804bb|40E804BB|subw x9,x16,x14|R-Type|subw|impl
+encode|subw x9,x16,x14|40E804BB|subw x9,x16,x14|R-Type|subw|impl
+decode|0x00ae82fb|00AE82FB|addd x5,x29,x10|R-Type|addd|impl
+encode|addd x5,x29,x10|00AE82FB|addd x5,x29,x10|R-Type|addd|impl
+decode|0x008b1f7b|008B1F7B|slld x30,x22,x8|R-Type|slld|impl
+encode|slld x30,x22,x8|008B1F7B|slld x30,x22,x8|R-Type|slld|impl
+decode|0x008c59fb|008C59FB|srld x19,x24,x8|R-Type|srld|impl
+encode|srld x19,x24,x8|008C59FB|srld x19,x24,x8|R-Type|srld|impl
+decode|0x413c5efb|413C5EFB|srad x29,x24,x19|R-Type|srad|impl
+encode|srad x29,x24,x19|413C5EFB|srad x29,x24,x19|R-Type|srad|impl
+decode|0x41af0c7b|41AF0C7B|subd x24,x30,x26|R-Type|subd|impl
+encode|subd x24,x30,x26|41AF0C7B|subd x24,x30,x26|R-Type|subd|impl
 
+# ==== A Extension (RV32A + RV64A) (22) ====
+decode|0x01442DAF|01442DAF|amoadd.w x27,x20,(x8)|R-Type|amoadd.w|impl
+encode|amoadd.w x27,x20,(x8)|01442DAF|amoadd.w x27,x20,(x8)|R-Type|amoadd.w|impl
+decode|0x01EEB6AF|01EEB6AF|amoadd.d x13,x30,(x29)|R-Type|amoadd.d|impl
+encode|amoadd.d x13,x30,(x29)|01EEB6AF|amoadd.d x13,x30,(x29)|R-Type|amoadd.d|impl
+decode|0x090CA12F|090CA12F|amoswap.w x2,x16,(x25)|R-Type|amoswap.w|impl
+encode|amoswap.w x2,x16,(x25)|090CA12F|amoswap.w x2,x16,(x25)|R-Type|amoswap.w|impl
+decode|0x0940B4AF|0940B4AF|amoswap.d x9,x20,(x1)|R-Type|amoswap.d|impl
+encode|amoswap.d x9,x20,(x1)|0940B4AF|amoswap.d x9,x20,(x1)|R-Type|amoswap.d|impl
+decode|0x1009AEAF|1009AEAF|lr.w x29,(x19)|R-Type|lr.w|impl
+encode|lr.w x29,(x19)|1009AEAF|lr.w x29,(x19)|R-Type|lr.w|impl
+decode|0x10083DAF|10083DAF|lr.d x27,(x16)|R-Type|lr.d|impl
+encode|lr.d x27,(x16)|10083DAF|lr.d x27,(x16)|R-Type|lr.d|impl
+decode|0x186CA52F|186CA52F|sc.w x10,x6,(x25)|R-Type|sc.w|impl
+encode|sc.w x10,x6,(x25)|186CA52F|sc.w x10,x6,(x25)|R-Type|sc.w|impl
+decode|0x19B7B8AF|19B7B8AF|sc.d x17,x27,(x15)|R-Type|sc.d|impl
+encode|sc.d x17,x27,(x15)|19B7B8AF|sc.d x17,x27,(x15)|R-Type|sc.d|impl
+decode|0x20ACA82F|20ACA82F|amoxor.w x16,x10,(x25)|R-Type|amoxor.w|impl
+encode|amoxor.w x16,x10,(x25)|20ACA82F|amoxor.w x16,x10,(x25)|R-Type|amoxor.w|impl
+decode|0x20AE382F|20AE382F|amoxor.d x16,x10,(x28)|R-Type|amoxor.d|impl
+encode|amoxor.d x16,x10,(x28)|20AE382F|amoxor.d x16,x10,(x28)|R-Type|amoxor.d|impl
+decode|0x408EAB2F|408EAB2F|amoor.w x22,x8,(x29)|R-Type|amoor.w|impl
+encode|amoor.w x22,x8,(x29)|408EAB2F|amoor.w x22,x8,(x29)|R-Type|amoor.w|impl
+decode|0x405EBDAF|405EBDAF|amoor.d x27,x5,(x29)|R-Type|amoor.d|impl
+encode|amoor.d x27,x5,(x29)|405EBDAF|amoor.d x27,x5,(x29)|R-Type|amoor.d|impl
+decode|0x6055292F|6055292F|amoand.w x18,x5,(x10)|R-Type|amoand.w|impl
+encode|amoand.w x18,x5,(x10)|6055292F|amoand.w x18,x5,(x10)|R-Type|amoand.w|impl
+decode|0x6130BA2F|6130BA2F|amoand.d x20,x19,(x1)|R-Type|amoand.d|impl
+encode|amoand.d x20,x19,(x1)|6130BA2F|amoand.d x20,x19,(x1)|R-Type|amoand.d|impl
+decode|0x80ABA4AF|80ABA4AF|amomin.w x9,x10,(x23)|R-Type|amomin.w|impl
+encode|amomin.w x9,x10,(x23)|80ABA4AF|amomin.w x9,x10,(x23)|R-Type|amomin.w|impl
+decode|0x80C6BF2F|80C6BF2F|amomin.d x30,x12,(x13)|R-Type|amomin.d|impl
+encode|amomin.d x30,x12,(x13)|80C6BF2F|amomin.d x30,x12,(x13)|R-Type|amomin.d|impl
+decode|0xA1CCAC2F|A1CCAC2F|amomax.w x24,x28,(x25)|R-Type|amomax.w|impl
+encode|amomax.w x24,x28,(x25)|A1CCAC2F|amomax.w x24,x28,(x25)|R-Type|amomax.w|impl
+decode|0xA0E1B52F|A0E1B52F|amomax.d x10,x14,(x3)|R-Type|amomax.d|impl
+encode|amomax.d x10,x14,(x3)|A0E1B52F|amomax.d x10,x14,(x3)|R-Type|amomax.d|impl
+decode|0xC093AD2F|C093AD2F|amominu.w x26,x9,(x7)|R-Type|amominu.w|impl
+encode|amominu.w x26,x9,(x7)|C093AD2F|amominu.w x26,x9,(x7)|R-Type|amominu.w|impl
+decode|0xC1EAB22F|C1EAB22F|amominu.d x4,x30,(x21)|R-Type|amominu.d|impl
+encode|amominu.d x4,x30,(x21)|C1EAB22F|amominu.d x4,x30,(x21)|R-Type|amominu.d|impl
+decode|0xE05628AF|E05628AF|amomaxu.w x17,x5,(x12)|R-Type|amomaxu.w|impl
+encode|amomaxu.w x17,x5,(x12)|E05628AF|amomaxu.w x17,x5,(x12)|R-Type|amomaxu.w|impl
+decode|0xE15632AF|E15632AF|amomaxu.d x5,x21,(x12)|R-Type|amomaxu.d|impl
+encode|amomaxu.d x5,x21,(x12)|E15632AF|amomaxu.d x5,x21,(x12)|R-Type|amomaxu.d|impl
 
-# =============================================================================
-# D Extension (RV32D + RV64D) — Ch.35 listings
-# =============================================================================
-decode|0x00413087|00413087|fld f1,x2,4|I-Type|fld|impl
-encode|fld f1, x2, 4|00413087|fld f1,x2,4|I-Type|fld|impl
-decode|0x00113227|00113227|fsd f1,4(x2)|S-Type|fsd|impl
-encode|fsd f1, 4, x2|00113227|fsd f1,4(x2)|S-Type|fsd|impl
-decode|0x223170c3|223170C3|fmadd.d f1,f2,f3,f4|R4-Type|fmadd.d|impl
-encode|fmadd.d f1, f2, f3, f4|223170C3|fmadd.d f1,f2,f3,f4|R4-Type|fmadd.d|impl
-decode|0x223170c7|223170C7|fmsub.d f1,f2,f3,f4|R4-Type|fmsub.d|impl
-encode|fmsub.d f1, f2, f3, f4|223170C7|fmsub.d f1,f2,f3,f4|R4-Type|fmsub.d|impl
-decode|0x223170cb|223170CB|fnmsub.d f1,f2,f3,f4|R4-Type|fnmsub.d|impl
-encode|fnmsub.d f1, f2, f3, f4|223170CB|fnmsub.d f1,f2,f3,f4|R4-Type|fnmsub.d|impl
-decode|0x223170cf|223170CF|fnmadd.d f1,f2,f3,f4|R4-Type|fnmadd.d|impl
-encode|fnmadd.d f1, f2, f3, f4|223170CF|fnmadd.d f1,f2,f3,f4|R4-Type|fnmadd.d|impl
-decode|0x023170d3|023170D3|fadd.d f1,f2,f3|R-Type|fadd.d|impl
-encode|fadd.d f1, f2, f3|023170D3|fadd.d f1,f2,f3|R-Type|fadd.d|impl
-decode|0x0a3170d3|0A3170D3|fsub.d f1,f2,f3|R-Type|fsub.d|impl
-encode|fsub.d f1, f2, f3|0A3170D3|fsub.d f1,f2,f3|R-Type|fsub.d|impl
-decode|0x123170d3|123170D3|fmul.d f1,f2,f3|R-Type|fmul.d|impl
-encode|fmul.d f1, f2, f3|123170D3|fmul.d f1,f2,f3|R-Type|fmul.d|impl
-decode|0x1a3170d3|1A3170D3|fdiv.d f1,f2,f3|R-Type|fdiv.d|impl
-encode|fdiv.d f1, f2, f3|1A3170D3|fdiv.d f1,f2,f3|R-Type|fdiv.d|impl
-decode|0x5a0170d3|5A0170D3|fsqrt.d f1,f2|R-Type|fsqrt.d|impl
-encode|fsqrt.d f1, f2|5A0170D3|fsqrt.d f1,f2|R-Type|fsqrt.d|impl
-decode|0x223100d3|223100D3|fsgnj.d f1,f2,f3|R-Type|fsgnj.d|impl
-encode|fsgnj.d f1, f2, f3|223100D3|fsgnj.d f1,f2,f3|R-Type|fsgnj.d|impl
-decode|0x223110d3|223110D3|fsgnjn.d f1,f2,f3|R-Type|fsgnjn.d|impl
-encode|fsgnjn.d f1, f2, f3|223110D3|fsgnjn.d f1,f2,f3|R-Type|fsgnjn.d|impl
-decode|0x223120d3|223120D3|fsgnjx.d f1,f2,f3|R-Type|fsgnjx.d|impl
-encode|fsgnjx.d f1, f2, f3|223120D3|fsgnjx.d f1,f2,f3|R-Type|fsgnjx.d|impl
-decode|0x2a3100d3|2A3100D3|fmin.d f1,f2,f3|R-Type|fmin.d|impl
-encode|fmin.d f1, f2, f3|2A3100D3|fmin.d f1,f2,f3|R-Type|fmin.d|impl
-decode|0x2a3110d3|2A3110D3|fmax.d f1,f2,f3|R-Type|fmax.d|impl
-encode|fmax.d f1, f2, f3|2A3110D3|fmax.d f1,f2,f3|R-Type|fmax.d|impl
-decode|0x401170d3|401170D3|fcvt.s.d f1,f2|R-Type|fcvt.s.d|impl
-encode|fcvt.s.d f1, f2|401170D3|fcvt.s.d f1,f2|R-Type|fcvt.s.d|impl
-decode|0x420170d3|420170D3|fcvt.d.s f1,f2|R-Type|fcvt.d.s|impl
-encode|fcvt.d.s f1, f2|420170D3|fcvt.d.s f1,f2|R-Type|fcvt.d.s|impl
-decode|0xa23120d3|A23120D3|feq.d x1,f2,f3|R-Type|feq.d|impl
-encode|feq.d x1, f2, f3|A23120D3|feq.d x1,f2,f3|R-Type|feq.d|impl
-decode|0xa23110d3|A23110D3|flt.d x1,f2,f3|R-Type|flt.d|impl
-encode|flt.d x1, f2, f3|A23110D3|flt.d x1,f2,f3|R-Type|flt.d|impl
-decode|0xa23100d3|A23100D3|fle.d x1,f2,f3|R-Type|fle.d|impl
-encode|fle.d x1, f2, f3|A23100D3|fle.d x1,f2,f3|R-Type|fle.d|impl
-decode|0xe20110d3|E20110D3|fclass.d x1,f2|R-Type|fclass.d|impl
-encode|fclass.d x1, f2|E20110D3|fclass.d x1,f2|R-Type|fclass.d|impl
-decode|0xc20170d3|C20170D3|fcvt.w.d x1,f2|R-Type|fcvt.w.d|impl
-encode|fcvt.w.d x1, f2|C20170D3|fcvt.w.d x1,f2|R-Type|fcvt.w.d|impl
-decode|0xc21170d3|C21170D3|fcvt.wu.d x1,f2|R-Type|fcvt.wu.d|impl
-encode|fcvt.wu.d x1, f2|C21170D3|fcvt.wu.d x1,f2|R-Type|fcvt.wu.d|impl
-decode|0xd20170d3|D20170D3|fcvt.d.w f1,x2|R-Type|fcvt.d.w|impl
-encode|fcvt.d.w f1, x2|D20170D3|fcvt.d.w f1,x2|R-Type|fcvt.d.w|impl
-decode|0xd21170d3|D21170D3|fcvt.d.wu f1,x2|R-Type|fcvt.d.wu|impl
-encode|fcvt.d.wu f1, x2|D21170D3|fcvt.d.wu f1,x2|R-Type|fcvt.d.wu|impl
-decode|0xc22170d3|C22170D3|fcvt.l.d x1,f2|R-Type|fcvt.l.d|impl
-encode|fcvt.l.d x1, f2|C22170D3|fcvt.l.d x1,f2|R-Type|fcvt.l.d|impl
-decode|0xc23170d3|C23170D3|fcvt.lu.d x1,f2|R-Type|fcvt.lu.d|impl
-encode|fcvt.lu.d x1, f2|C23170D3|fcvt.lu.d x1,f2|R-Type|fcvt.lu.d|impl
-decode|0xe20100d3|E20100D3|fmv.x.d x1,f2|R-Type|fmv.x.d|impl
-encode|fmv.x.d x1, f2|E20100D3|fmv.x.d x1,f2|R-Type|fmv.x.d|impl
-decode|0xd22170d3|D22170D3|fcvt.d.l f1,x2|R-Type|fcvt.d.l|impl
-encode|fcvt.d.l f1, x2|D22170D3|fcvt.d.l f1,x2|R-Type|fcvt.d.l|impl
-decode|0xd23170d3|D23170D3|fcvt.d.lu f1,x2|R-Type|fcvt.d.lu|impl
-encode|fcvt.d.lu f1, x2|D23170D3|fcvt.d.lu f1,x2|R-Type|fcvt.d.lu|impl
-decode|0xf20100d3|F20100D3|fmv.d.x f1,x2|R-Type|fmv.d.x|impl
-encode|fmv.d.x f1, x2|F20100D3|fmv.d.x f1,x2|R-Type|fmv.d.x|impl
+# ==== R4-Type fused multiply-add (12) ====
+decode|0xc9f27943|C9F27943|fmadd.s f18,f4,f31,f25|R4-Type|fmadd.s|impl
+encode|fmadd.s f18,f4,f31,f25|C9F27943|fmadd.s f18,f4,f31,f25|R4-Type|fmadd.s|impl
+decode|0xa9997c47|A9997C47|fmsub.s f24,f18,f25,f21|R4-Type|fmsub.s|impl
+encode|fmsub.s f24,f18,f25,f21|A9997C47|fmsub.s f24,f18,f25,f21|R4-Type|fmsub.s|impl
+decode|0x211aff4b|211AFF4B|fnmsub.s f30,f21,f17,f4|R4-Type|fnmsub.s|impl
+encode|fnmsub.s f30,f21,f17,f4|211AFF4B|fnmsub.s f30,f21,f17,f4|R4-Type|fnmsub.s|impl
+decode|0x8075fccf|8075FCCF|fnmadd.s f25,f11,f7,f16|R4-Type|fnmadd.s|impl
+encode|fnmadd.s f25,f11,f7,f16|8075FCCF|fnmadd.s f25,f11,f7,f16|R4-Type|fnmadd.s|impl
+decode|0xc2cff0c3|C2CFF0C3|fmadd.d f1,f31,f12,f24|R4-Type|fmadd.d|impl
+encode|fmadd.d f1,f31,f12,f24|C2CFF0C3|fmadd.d f1,f31,f12,f24|R4-Type|fmadd.d|impl
+decode|0x9394f1c7|9394F1C7|fmsub.d f3,f9,f25,f18|R4-Type|fmsub.d|impl
+encode|fmsub.d f3,f9,f25,f18|9394F1C7|fmsub.d f3,f9,f25,f18|R4-Type|fmsub.d|impl
+decode|0xaae277cb|AAE277CB|fnmsub.d f15,f4,f14,f21|R4-Type|fnmsub.d|impl
+encode|fnmsub.d f15,f4,f14,f21|AAE277CB|fnmsub.d f15,f4,f14,f21|R4-Type|fnmsub.d|impl
+decode|0xdb0475cf|DB0475CF|fnmadd.d f11,f8,f16,f27|R4-Type|fnmadd.d|impl
+encode|fnmadd.d f11,f8,f16,f27|DB0475CF|fnmadd.d f11,f8,f16,f27|R4-Type|fnmadd.d|impl
+decode|0x1e79f8c3|1E79F8C3|fmadd.q f17,f19,f7,f3|R4-Type|fmadd.q|impl
+encode|fmadd.q f17,f19,f7,f3|1E79F8C3|fmadd.q f17,f19,f7,f3|R4-Type|fmadd.q|impl
+decode|0x475b7dc7|475B7DC7|fmsub.q f27,f22,f21,f8|R4-Type|fmsub.q|impl
+encode|fmsub.q f27,f22,f21,f8|475B7DC7|fmsub.q f27,f22,f21,f8|R4-Type|fmsub.q|impl
+decode|0xee44f84b|EE44F84B|fnmsub.q f16,f9,f4,f29|R4-Type|fnmsub.q|impl
+encode|fnmsub.q f16,f9,f4,f29|EE44F84B|fnmsub.q f16,f9,f4,f29|R4-Type|fnmsub.q|impl
+decode|0x9fd775cf|9FD775CF|fnmadd.q f11,f14,f29,f19|R4-Type|fnmadd.q|impl
+encode|fnmadd.q f11,f14,f29,f19|9FD775CF|fnmadd.q f11,f14,f29,f19|R4-Type|fnmadd.q|impl
 
-# =============================================================================
-# Q Extension (RV32Q + RV64Q) — Ch.35 listings
-# =============================================================================
-decode|0x00414087|00414087|flq f1,x2,4|I-Type|flq|impl
-encode|flq f1, x2, 4|00414087|flq f1,x2,4|I-Type|flq|impl
-decode|0x00114227|00114227|fsq f1,4(x2)|S-Type|fsq|impl
-encode|fsq f1, 4, x2|00114227|fsq f1,4(x2)|S-Type|fsq|impl
-decode|0x263170c3|263170C3|fmadd.q f1,f2,f3,f4|R4-Type|fmadd.q|impl
-encode|fmadd.q f1, f2, f3, f4|263170C3|fmadd.q f1,f2,f3,f4|R4-Type|fmadd.q|impl
-decode|0x263170c7|263170C7|fmsub.q f1,f2,f3,f4|R4-Type|fmsub.q|impl
-encode|fmsub.q f1, f2, f3, f4|263170C7|fmsub.q f1,f2,f3,f4|R4-Type|fmsub.q|impl
-decode|0x263170cb|263170CB|fnmsub.q f1,f2,f3,f4|R4-Type|fnmsub.q|impl
-encode|fnmsub.q f1, f2, f3, f4|263170CB|fnmsub.q f1,f2,f3,f4|R4-Type|fnmsub.q|impl
-decode|0x263170cf|263170CF|fnmadd.q f1,f2,f3,f4|R4-Type|fnmadd.q|impl
-encode|fnmadd.q f1, f2, f3, f4|263170CF|fnmadd.q f1,f2,f3,f4|R4-Type|fnmadd.q|impl
-decode|0x063170d3|063170D3|fadd.q f1,f2,f3|R-Type|fadd.q|impl
-encode|fadd.q f1, f2, f3|063170D3|fadd.q f1,f2,f3|R-Type|fadd.q|impl
-decode|0x0e3170d3|0E3170D3|fsub.q f1,f2,f3|R-Type|fsub.q|impl
-encode|fsub.q f1, f2, f3|0E3170D3|fsub.q f1,f2,f3|R-Type|fsub.q|impl
-decode|0x163170d3|163170D3|fmul.q f1,f2,f3|R-Type|fmul.q|impl
-encode|fmul.q f1, f2, f3|163170D3|fmul.q f1,f2,f3|R-Type|fmul.q|impl
-decode|0x1e3170d3|1E3170D3|fdiv.q f1,f2,f3|R-Type|fdiv.q|impl
-encode|fdiv.q f1, f2, f3|1E3170D3|fdiv.q f1,f2,f3|R-Type|fdiv.q|impl
-decode|0x5e0170d3|5E0170D3|fsqrt.q f1,f2|R-Type|fsqrt.q|impl
-encode|fsqrt.q f1, f2|5E0170D3|fsqrt.q f1,f2|R-Type|fsqrt.q|impl
-decode|0x263100d3|263100D3|fsgnj.q f1,f2,f3|R-Type|fsgnj.q|impl
-encode|fsgnj.q f1, f2, f3|263100D3|fsgnj.q f1,f2,f3|R-Type|fsgnj.q|impl
-decode|0x263110d3|263110D3|fsgnjn.q f1,f2,f3|R-Type|fsgnjn.q|impl
-encode|fsgnjn.q f1, f2, f3|263110D3|fsgnjn.q f1,f2,f3|R-Type|fsgnjn.q|impl
-decode|0x263120d3|263120D3|fsgnjx.q f1,f2,f3|R-Type|fsgnjx.q|impl
-encode|fsgnjx.q f1, f2, f3|263120D3|fsgnjx.q f1,f2,f3|R-Type|fsgnjx.q|impl
-decode|0x2e3100d3|2E3100D3|fmin.q f1,f2,f3|R-Type|fmin.q|impl
-encode|fmin.q f1, f2, f3|2E3100D3|fmin.q f1,f2,f3|R-Type|fmin.q|impl
-decode|0x2e3110d3|2E3110D3|fmax.q f1,f2,f3|R-Type|fmax.q|impl
-encode|fmax.q f1, f2, f3|2E3110D3|fmax.q f1,f2,f3|R-Type|fmax.q|impl
-decode|0x403170d3|403170D3|fcvt.s.q f1,f2|R-Type|fcvt.s.q|impl
-encode|fcvt.s.q f1, f2|403170D3|fcvt.s.q f1,f2|R-Type|fcvt.s.q|impl
-decode|0x460170d3|460170D3|fcvt.q.s f1,f2|R-Type|fcvt.q.s|impl
-encode|fcvt.q.s f1, f2|460170D3|fcvt.q.s f1,f2|R-Type|fcvt.q.s|impl
-decode|0x423170d3|423170D3|fcvt.d.q f1,f2|R-Type|fcvt.d.q|impl
-encode|fcvt.d.q f1, f2|423170D3|fcvt.d.q f1,f2|R-Type|fcvt.d.q|impl
-decode|0x461170d3|461170D3|fcvt.q.d f1,f2|R-Type|fcvt.q.d|impl
-encode|fcvt.q.d f1, f2|461170D3|fcvt.q.d f1,f2|R-Type|fcvt.q.d|impl
-decode|0xa63120d3|A63120D3|feq.q x1,f2,f3|R-Type|feq.q|impl
-encode|feq.q x1, f2, f3|A63120D3|feq.q x1,f2,f3|R-Type|feq.q|impl
-decode|0xa63110d3|A63110D3|flt.q x1,f2,f3|R-Type|flt.q|impl
-encode|flt.q x1, f2, f3|A63110D3|flt.q x1,f2,f3|R-Type|flt.q|impl
-decode|0xa63100d3|A63100D3|fle.q x1,f2,f3|R-Type|fle.q|impl
-encode|fle.q x1, f2, f3|A63100D3|fle.q x1,f2,f3|R-Type|fle.q|impl
-decode|0xe60110d3|E60110D3|fclass.q x1,f2|R-Type|fclass.q|impl
-encode|fclass.q x1, f2|E60110D3|fclass.q x1,f2|R-Type|fclass.q|impl
-decode|0xc60170d3|C60170D3|fcvt.w.q x1,f2|R-Type|fcvt.w.q|impl
-encode|fcvt.w.q x1, f2|C60170D3|fcvt.w.q x1,f2|R-Type|fcvt.w.q|impl
-decode|0xc61170d3|C61170D3|fcvt.wu.q x1,f2|R-Type|fcvt.wu.q|impl
-encode|fcvt.wu.q x1, f2|C61170D3|fcvt.wu.q x1,f2|R-Type|fcvt.wu.q|impl
-decode|0xd60170d3|D60170D3|fcvt.q.w f1,x2|R-Type|fcvt.q.w|impl
-encode|fcvt.q.w f1, x2|D60170D3|fcvt.q.w f1,x2|R-Type|fcvt.q.w|impl
-decode|0xd61170d3|D61170D3|fcvt.q.wu f1,x2|R-Type|fcvt.q.wu|impl
-encode|fcvt.q.wu f1, x2|D61170D3|fcvt.q.wu f1,x2|R-Type|fcvt.q.wu|impl
-decode|0xc62170d3|C62170D3|fcvt.l.q x1,f2|R-Type|fcvt.l.q|impl
-encode|fcvt.l.q x1, f2|C62170D3|fcvt.l.q x1,f2|R-Type|fcvt.l.q|impl
-decode|0xc63170d3|C63170D3|fcvt.lu.q x1,f2|R-Type|fcvt.lu.q|impl
-encode|fcvt.lu.q x1, f2|C63170D3|fcvt.lu.q x1,f2|R-Type|fcvt.lu.q|impl
-decode|0xd62170d3|D62170D3|fcvt.q.l f1,x2|R-Type|fcvt.q.l|impl
-encode|fcvt.q.l f1, x2|D62170D3|fcvt.q.l f1,x2|R-Type|fcvt.q.l|impl
-decode|0xd63170d3|D63170D3|fcvt.q.lu f1,x2|R-Type|fcvt.q.lu|impl
-encode|fcvt.q.lu f1, x2|D63170D3|fcvt.q.lu f1,x2|R-Type|fcvt.q.lu|impl
-# =============================================================================
-# I-Type OP-IMM  (9)
-# =============================================================================
-decode|0x00310093|00310093|addi x1,x2,3|I-Type|addi|impl
-encode|addi x1, x2, 3|00310093|addi x1,x2,3|I-Type|addi|impl
-decode|0x00311093|00311093|slli x1,x2,3|I-Type|slli|impl
-encode|slli x1, x2, 3|00311093|slli x1,x2,3|I-Type|slli|impl
-decode|0x00312093|00312093|slti x1,x2,3|I-Type|slti|impl
-encode|slti x1, x2, 3|00312093|slti x1,x2,3|I-Type|slti|impl
-decode|0x00313093|00313093|sltiu x1,x2,3|I-Type|sltiu|impl
-encode|sltiu x1, x2, 3|00313093|sltiu x1,x2,3|I-Type|sltiu|impl
-decode|0x00314093|00314093|xori x1,x2,3|I-Type|xori|impl
-encode|xori x1, x2, 3|00314093|xori x1,x2,3|I-Type|xori|impl
-decode|0x00315093|00315093|srli x1,x2,3|I-Type|srli|impl
-encode|srli x1, x2, 3|00315093|srli x1,x2,3|I-Type|srli|impl
-# srai: imm decode/display currently wrong (shows 1027); keep architectural expect
-decode|0x40315093|40315093|srai x1,x2,3|I-Type|srai|todo
-encode|srai x1, x2, 3|40315093|srai x1,x2,3|I-Type|srai|todo
-decode|0x00316093|00316093|ori x1,x2,3|I-Type|ori|impl
-encode|ori x1, x2, 3|00316093|ori x1,x2,3|I-Type|ori|impl
-decode|0x00317093|00317093|andi x1,x2,3|I-Type|andi|impl
-encode|andi x1, x2, 3|00317093|andi x1,x2,3|I-Type|andi|impl
+# ==== F Extension â arithmetic (fadd.s/fsub.s/fmul.s/fdiv.s) ====
+decode|0x01A2FC53|01A2FC53|fadd.s f24,f5,f26|R-Type|fadd.s|impl
+encode|fadd.s f24,f5,f26|01A2FC53|fadd.s f24,f5,f26|R-Type|fadd.s|impl
+decode|0x09B3F9D3|09B3F9D3|fsub.s f19,f7,f27|R-Type|fsub.s|impl
+encode|fsub.s f19,f7,f27|09B3F9D3|fsub.s f19,f7,f27|R-Type|fsub.s|impl
+decode|0x11C2FB53|11C2FB53|fmul.s f22,f5,f28|R-Type|fmul.s|impl
+encode|fmul.s f22,f5,f28|11C2FB53|fmul.s f22,f5,f28|R-Type|fmul.s|impl
+decode|0x1909FAD3|1909FAD3|fdiv.s f21,f19,f16|R-Type|fdiv.s|impl
+encode|fdiv.s f21,f19,f16|1909FAD3|fdiv.s f21,f19,f16|R-Type|fdiv.s|impl
 
-# =============================================================================
-# I-Type LOAD  (5)  — decode OK (asm as rd,rs1,imm); encode of "rd, imm, rs1" broken
-# =============================================================================
-decode|0x00410083|00410083|lb x1,x2,4|I-Type|lb|impl
-encode|lb x1, 4, x2|00410083|lb x1,x2,4|I-Type|lb|todo
-decode|0x00411083|00411083|lh x1,x2,4|I-Type|lh|impl
-encode|lh x1, 4, x2|00411083|lh x1,x2,4|I-Type|lh|todo
-decode|0x00412083|00412083|lw x1,x2,4|I-Type|lw|impl
-encode|lw x1, 4, x2|00412083|lw x1,x2,4|I-Type|lw|todo
-decode|0x00414083|00414083|lbu x1,x2,4|I-Type|lbu|impl
-encode|lbu x1, 4, x2|00414083|lbu x1,x2,4|I-Type|lbu|todo
-decode|0x00415083|00415083|lhu x1,x2,4|I-Type|lhu|impl
-encode|lhu x1, 4, x2|00415083|lhu x1,x2,4|I-Type|lhu|todo
+# ==== F Extension â unary (fsqrt.s) ====
+decode|0x5803F1D3|5803F1D3|fsqrt.s f3,f7|R-Type|fsqrt.s|impl
+encode|fsqrt.s f3,f7|5803F1D3|fsqrt.s f3,f7|R-Type|fsqrt.s|impl
 
-# =============================================================================
-# I-Type JALR / SYSTEM / FENCE
-# =============================================================================
-decode|0x000100e7|000100E7|jalr x1,x2,0|I-Type|jalr|impl
-encode|jalr x1, x2, 0|000100E7|jalr x1,x2,0|I-Type|jalr|impl
-# fence: pred/succ sets (not generic I-type rd,rs1,imm)
+# ==== F Extension â sign injection (fsgnj/fsgnjn/fsgnjx) ====
+decode|0x21A88653|21A88653|fsgnj.s f12,f17,f26|R-Type|fsgnj.s|impl
+encode|fsgnj.s f12,f17,f26|21A88653|fsgnj.s f12,f17,f26|R-Type|fsgnj.s|impl
+decode|0x20B093D3|20B093D3|fsgnjn.s f7,f1,f11|R-Type|fsgnjn.s|impl
+encode|fsgnjn.s f7,f1,f11|20B093D3|fsgnjn.s f7,f1,f11|R-Type|fsgnjn.s|impl
+decode|0x216E2453|216E2453|fsgnjx.s f8,f28,f22|R-Type|fsgnjx.s|impl
+encode|fsgnjx.s f8,f28,f22|216E2453|fsgnjx.s f8,f28,f22|R-Type|fsgnjx.s|impl
+
+# ==== F Extension â min/max ====
+decode|0x290408D3|290408D3|fmin.s f17,f8,f16|R-Type|fmin.s|impl
+encode|fmin.s f17,f8,f16|290408D3|fmin.s f17,f8,f16|R-Type|fmin.s|impl
+decode|0x29D29953|29D29953|fmax.s f18,f5,f29|R-Type|fmax.s|impl
+encode|fmax.s f18,f5,f29|29D29953|fmax.s f18,f5,f29|R-Type|fmax.s|impl
+
+# ==== F Extension â compare (feq/flt/fle) ====
+decode|0xA0942553|A0942553|feq.s x10,f8,f9|R-Type|feq.s|impl
+encode|feq.s x10,f8,f9|A0942553|feq.s x10,f8,f9|R-Type|feq.s|impl
+decode|0xA0A21FD3|A0A21FD3|flt.s x31,f4,f10|R-Type|flt.s|impl
+encode|flt.s x31,f4,f10|A0A21FD3|flt.s x31,f4,f10|R-Type|flt.s|impl
+decode|0xA1DB8653|A1DB8653|fle.s x12,f23,f29|R-Type|fle.s|impl
+encode|fle.s x12,f23,f29|A1DB8653|fle.s x12,f23,f29|R-Type|fle.s|impl
+
+# ==== F Extension â fclass ====
+decode|0xe00a17d3|E00A17D3|fclass.s x15,f20|R-Type|fclass.s|impl
+encode|fclass.s x15,f20|E00A17D3|fclass.s x15,f20|R-Type|fclass.s|impl
+
+# ==== F Extension â fcvt ====
+decode|0xC00AF1D3|C00AF1D3|fcvt.w.s x3,f21|R-Type|fcvt.w.s|impl
+encode|fcvt.w.s x3,f21|C00AF1D3|fcvt.w.s x3,f21|R-Type|fcvt.w.s|impl
+decode|0xC01675D3|C01675D3|fcvt.wu.s x11,f12|R-Type|fcvt.wu.s|impl
+encode|fcvt.wu.s x11,f12|C01675D3|fcvt.wu.s x11,f12|R-Type|fcvt.wu.s|impl
+decode|0xC02FF6D3|C02FF6D3|fcvt.l.s x13,f31|R-Type|fcvt.l.s|impl
+encode|fcvt.l.s x13,f31|C02FF6D3|fcvt.l.s x13,f31|R-Type|fcvt.l.s|impl
+decode|0xC039F153|C039F153|fcvt.lu.s x2,f19|R-Type|fcvt.lu.s|impl
+encode|fcvt.lu.s x2,f19|C039F153|fcvt.lu.s x2,f19|R-Type|fcvt.lu.s|impl
+decode|0xD006FA53|D006FA53|fcvt.s.w f20,x13|R-Type|fcvt.s.w|impl
+encode|fcvt.s.w f20,x13|D006FA53|fcvt.s.w f20,x13|R-Type|fcvt.s.w|impl
+decode|0xD01A79D3|D01A79D3|fcvt.s.wu f19,x20|R-Type|fcvt.s.wu|impl
+encode|fcvt.s.wu f19,x20|D01A79D3|fcvt.s.wu f19,x20|R-Type|fcvt.s.wu|impl
+decode|0xD0227153|D0227153|fcvt.s.l f2,x4|R-Type|fcvt.s.l|impl
+encode|fcvt.s.l f2,x4|D0227153|fcvt.s.l f2,x4|R-Type|fcvt.s.l|impl
+decode|0xD037F1D3|D037F1D3|fcvt.s.lu f3,x15|R-Type|fcvt.s.lu|impl
+encode|fcvt.s.lu f3,x15|D037F1D3|fcvt.s.lu f3,x15|R-Type|fcvt.s.lu|impl
+
+# ==== F Extension â fmv ====
+decode|0xe00e0553|E00E0553|fmv.x.w x10,f28|R-Type|fmv.x.w|impl
+encode|fmv.x.w x10,f28|E00E0553|fmv.x.w x10,f28|R-Type|fmv.x.w|impl
+decode|0xf00e82d3|F00E82D3|fmv.w.x f5,x29|R-Type|fmv.w.x|impl
+encode|fmv.w.x f5,x29|F00E82D3|fmv.w.x f5,x29|R-Type|fmv.w.x|impl
+
+# ==== D Extension â arithmetic ====
+decode|0x03D2F253|03D2F253|fadd.d f4,f5,f29|R-Type|fadd.d|impl
+encode|fadd.d f4,f5,f29|03D2F253|fadd.d f4,f5,f29|R-Type|fadd.d|impl
+decode|0x0A7BFC53|0A7BFC53|fsub.d f24,f23,f7|R-Type|fsub.d|impl
+encode|fsub.d f24,f23,f7|0A7BFC53|fsub.d f24,f23,f7|R-Type|fsub.d|impl
+decode|0x13EAFE53|13EAFE53|fmul.d f28,f21,f30|R-Type|fmul.d|impl
+encode|fmul.d f28,f21,f30|13EAFE53|fmul.d f28,f21,f30|R-Type|fmul.d|impl
+decode|0x1BE875D3|1BE875D3|fdiv.d f11,f16,f30|R-Type|fdiv.d|impl
+encode|fdiv.d f11,f16,f30|1BE875D3|fdiv.d f11,f16,f30|R-Type|fdiv.d|impl
+
+# ==== D Extension â unary ====
+decode|0x5A0976D3|5A0976D3|fsqrt.d f13,f18|R-Type|fsqrt.d|impl
+encode|fsqrt.d f13,f18|5A0976D3|fsqrt.d f13,f18|R-Type|fsqrt.d|impl
+
+# ==== D Extension â sign injection / minmax ====
+decode|0x22FE0953|22FE0953|fsgnj.d f18,f28,f15|R-Type|fsgnj.d|impl
+encode|fsgnj.d f18,f28,f15|22FE0953|fsgnj.d f18,f28,f15|R-Type|fsgnj.d|impl
+decode|0x22709953|22709953|fsgnjn.d f18,f1,f7|R-Type|fsgnjn.d|impl
+encode|fsgnjn.d f18,f1,f7|22709953|fsgnjn.d f18,f1,f7|R-Type|fsgnjn.d|impl
+decode|0x23C8A1D3|23C8A1D3|fsgnjx.d f3,f17,f28|R-Type|fsgnjx.d|impl
+encode|fsgnjx.d f3,f17,f28|23C8A1D3|fsgnjx.d f3,f17,f28|R-Type|fsgnjx.d|impl
+decode|0x2B3D8FD3|2B3D8FD3|fmin.d f31,f27,f19|R-Type|fmin.d|impl
+encode|fmin.d f31,f27,f19|2B3D8FD3|fmin.d f31,f27,f19|R-Type|fmin.d|impl
+decode|0x2AEB9553|2AEB9553|fmax.d f10,f23,f14|R-Type|fmax.d|impl
+encode|fmax.d f10,f23,f14|2AEB9553|fmax.d f10,f23,f14|R-Type|fmax.d|impl
+
+# ==== D Extension â fcvt (cross-format) ====
+decode|0x401A78D3|401A78D3|fcvt.s.d f17,f20|R-Type|fcvt.s.d|impl
+encode|fcvt.s.d f17,f20|401A78D3|fcvt.s.d f17,f20|R-Type|fcvt.s.d|impl
+decode|0x420afed3|420AFED3|fcvt.d.s f29,f21|R-Type|fcvt.d.s|impl
+encode|fcvt.d.s f29,f21|420AFED3|fcvt.d.s f29,f21|R-Type|fcvt.d.s|impl
+
+# ==== D Extension â compare ====
+decode|0xA2C124D3|A2C124D3|feq.d x9,f2,f12|R-Type|feq.d|impl
+encode|feq.d x9,f2,f12|A2C124D3|feq.d x9,f2,f12|R-Type|feq.d|impl
+decode|0xA3331853|A3331853|flt.d x16,f6,f19|R-Type|flt.d|impl
+encode|flt.d x16,f6,f19|A3331853|flt.d x16,f6,f19|R-Type|flt.d|impl
+decode|0xA3F08553|A3F08553|fle.d x10,f1,f31|R-Type|fle.d|impl
+encode|fle.d x10,f1,f31|A3F08553|fle.d x10,f1,f31|R-Type|fle.d|impl
+
+# ==== D Extension â fclass ====
+decode|0xe20811d3|E20811D3|fclass.d x3,f16|R-Type|fclass.d|impl
+encode|fclass.d x3,f16|E20811D3|fclass.d x3,f16|R-Type|fclass.d|impl
+
+# ==== D Extension â fcvt (int) ====
+decode|0xC2047ED3|C2047ED3|fcvt.w.d x29,f8|R-Type|fcvt.w.d|impl
+encode|fcvt.w.d x29,f8|C2047ED3|fcvt.w.d x29,f8|R-Type|fcvt.w.d|impl
+decode|0xC2187C53|C2187C53|fcvt.wu.d x24,f16|R-Type|fcvt.wu.d|impl
+encode|fcvt.wu.d x24,f16|C2187C53|fcvt.wu.d x24,f16|R-Type|fcvt.wu.d|impl
+decode|0xC221F753|C221F753|fcvt.l.d x14,f3|R-Type|fcvt.l.d|impl
+encode|fcvt.l.d x14,f3|C221F753|fcvt.l.d x14,f3|R-Type|fcvt.l.d|impl
+decode|0xC23BF6D3|C23BF6D3|fcvt.lu.d x13,f23|R-Type|fcvt.lu.d|impl
+encode|fcvt.lu.d x13,f23|C23BF6D3|fcvt.lu.d x13,f23|R-Type|fcvt.lu.d|impl
+decode|0xD205F4D3|D205F4D3|fcvt.d.w f9,x11|R-Type|fcvt.d.w|impl
+encode|fcvt.d.w f9,x11|D205F4D3|fcvt.d.w f9,x11|R-Type|fcvt.d.w|impl
+decode|0xD2187953|D2187953|fcvt.d.wu f18,x16|R-Type|fcvt.d.wu|impl
+encode|fcvt.d.wu f18,x16|D2187953|fcvt.d.wu f18,x16|R-Type|fcvt.d.wu|impl
+decode|0xD227FDD3|D227FDD3|fcvt.d.l f27,x15|R-Type|fcvt.d.l|impl
+encode|fcvt.d.l f27,x15|D227FDD3|fcvt.d.l f27,x15|R-Type|fcvt.d.l|impl
+decode|0xD23CF553|D23CF553|fcvt.d.lu f10,x25|R-Type|fcvt.d.lu|impl
+encode|fcvt.d.lu f10,x25|D23CF553|fcvt.d.lu f10,x25|R-Type|fcvt.d.lu|impl
+
+# ==== D Extension â fmv ====
+decode|0xe20a00d3|E20A00D3|fmv.x.d x1,f20|R-Type|fmv.x.d|impl
+encode|fmv.x.d x1,f20|E20A00D3|fmv.x.d x1,f20|R-Type|fmv.x.d|impl
+decode|0xf2020153|F2020153|fmv.d.x f2,x4|R-Type|fmv.d.x|impl
+encode|fmv.d.x f2,x4|F2020153|fmv.d.x f2,x4|R-Type|fmv.d.x|impl
+
+# ==== Q Extension â arithmetic ====
+decode|0x074FFED3|074FFED3|fadd.q f29,f31,f20|R-Type|fadd.q|impl
+encode|fadd.q f29,f31,f20|074FFED3|fadd.q f29,f31,f20|R-Type|fadd.q|impl
+decode|0x0FA175D3|0FA175D3|fsub.q f11,f2,f26|R-Type|fsub.q|impl
+encode|fsub.q f11,f2,f26|0FA175D3|fsub.q f11,f2,f26|R-Type|fsub.q|impl
+decode|0x163DFE53|163DFE53|fmul.q f28,f27,f3|R-Type|fmul.q|impl
+encode|fmul.q f28,f27,f3|163DFE53|fmul.q f28,f27,f3|R-Type|fmul.q|impl
+decode|0x1F7FFE53|1F7FFE53|fdiv.q f28,f31,f23|R-Type|fdiv.q|impl
+encode|fdiv.q f28,f31,f23|1F7FFE53|fdiv.q f28,f31,f23|R-Type|fdiv.q|impl
+
+# ==== Q Extension â unary ====
+decode|0x5E00F353|5E00F353|fsqrt.q f6,f1|R-Type|fsqrt.q|impl
+encode|fsqrt.q f6,f1|5E00F353|fsqrt.q f6,f1|R-Type|fsqrt.q|impl
+
+# ==== Q Extension â sign injection / minmax ====
+decode|0x26FD85D3|26FD85D3|fsgnj.q f11,f27,f15|R-Type|fsgnj.q|impl
+encode|fsgnj.q f11,f27,f15|26FD85D3|fsgnj.q f11,f27,f15|R-Type|fsgnj.q|impl
+decode|0x26369AD3|26369AD3|fsgnjn.q f21,f13,f3|R-Type|fsgnjn.q|impl
+encode|fsgnjn.q f21,f13,f3|26369AD3|fsgnjn.q f21,f13,f3|R-Type|fsgnjn.q|impl
+decode|0x262B2E53|262B2E53|fsgnjx.q f28,f22,f2|R-Type|fsgnjx.q|impl
+encode|fsgnjx.q f28,f22,f2|262B2E53|fsgnjx.q f28,f22,f2|R-Type|fsgnjx.q|impl
+decode|0x2F4F8653|2F4F8653|fmin.q f12,f31,f20|R-Type|fmin.q|impl
+encode|fmin.q f12,f31,f20|2F4F8653|fmin.q f12,f31,f20|R-Type|fmin.q|impl
+decode|0x2ED29153|2ED29153|fmax.q f2,f5,f13|R-Type|fmax.q|impl
+encode|fmax.q f2,f5,f13|2ED29153|fmax.q f2,f5,f13|R-Type|fmax.q|impl
+
+# ==== Q Extension â fcvt (cross-format) ====
+decode|0x403DF8D3|403DF8D3|fcvt.s.q f17,f27|R-Type|fcvt.s.q|impl
+encode|fcvt.s.q f17,f27|403DF8D3|fcvt.s.q f17,f27|R-Type|fcvt.s.q|impl
+decode|0x460373D3|460373D3|fcvt.q.s f7,f6|R-Type|fcvt.q.s|impl
+encode|fcvt.q.s f7,f6|460373D3|fcvt.q.s f7,f6|R-Type|fcvt.q.s|impl
+decode|0x423AFA53|423AFA53|fcvt.d.q f20,f21|R-Type|fcvt.d.q|impl
+encode|fcvt.d.q f20,f21|423AFA53|fcvt.d.q f20,f21|R-Type|fcvt.d.q|impl
+decode|0x4613F8D3|4613F8D3|fcvt.q.d f17,f7|R-Type|fcvt.q.d|impl
+encode|fcvt.q.d f17,f7|4613F8D3|fcvt.q.d f17,f7|R-Type|fcvt.q.d|impl
+
+# ==== Q Extension â compare ====
+decode|0xA75126D3|A75126D3|feq.q x13,f2,f21|R-Type|feq.q|impl
+encode|feq.q x13,f2,f21|A75126D3|feq.q x13,f2,f21|R-Type|feq.q|impl
+decode|0xA69C9C53|A69C9C53|flt.q x24,f25,f9|R-Type|flt.q|impl
+encode|flt.q x24,f25,f9|A69C9C53|flt.q x24,f25,f9|R-Type|flt.q|impl
+decode|0xA7ED03D3|A7ED03D3|fle.q x7,f26,f30|R-Type|fle.q|impl
+encode|fle.q x7,f26,f30|A7ED03D3|fle.q x7,f26,f30|R-Type|fle.q|impl
+
+# ==== Q Extension â fclass ====
+decode|0xE6009953|E6009953|fclass.q x18,f1|R-Type|fclass.q|impl
+encode|fclass.q x18,f1|E6009953|fclass.q x18,f1|R-Type|fclass.q|impl
+
+# ==== Q Extension â fcvt (int) ====
+decode|0xC60F78D3|C60F78D3|fcvt.w.q x17,f30|R-Type|fcvt.w.q|impl
+encode|fcvt.w.q x17,f30|C60F78D3|fcvt.w.q x17,f30|R-Type|fcvt.w.q|impl
+decode|0xC61EF1D3|C61EF1D3|fcvt.wu.q x3,f29|R-Type|fcvt.wu.q|impl
+encode|fcvt.wu.q x3,f29|C61EF1D3|fcvt.wu.q x3,f29|R-Type|fcvt.wu.q|impl
+decode|0xC6277F53|C6277F53|fcvt.l.q x30,f14|R-Type|fcvt.l.q|impl
+encode|fcvt.l.q x30,f14|C6277F53|fcvt.l.q x30,f14|R-Type|fcvt.l.q|impl
+decode|0xC631F253|C631F253|fcvt.lu.q x4,f3|R-Type|fcvt.lu.q|impl
+encode|fcvt.lu.q x4,f3|C631F253|fcvt.lu.q x4,f3|R-Type|fcvt.lu.q|impl
+decode|0xD607F4D3|D607F4D3|fcvt.q.w f9,x15|R-Type|fcvt.q.w|impl
+encode|fcvt.q.w f9,x15|D607F4D3|fcvt.q.w f9,x15|R-Type|fcvt.q.w|impl
+decode|0xD6167753|D6167753|fcvt.q.wu f14,x12|R-Type|fcvt.q.wu|impl
+encode|fcvt.q.wu f14,x12|D6167753|fcvt.q.wu f14,x12|R-Type|fcvt.q.wu|impl
+decode|0xD62DF1D3|D62DF1D3|fcvt.q.l f3,x27|R-Type|fcvt.q.l|impl
+encode|fcvt.q.l f3,x27|D62DF1D3|fcvt.q.l f3,x27|R-Type|fcvt.q.l|impl
+decode|0xD637FC53|D637FC53|fcvt.q.lu f24,x15|R-Type|fcvt.q.lu|impl
+encode|fcvt.q.lu f24,x15|D637FC53|fcvt.q.lu f24,x15|R-Type|fcvt.q.lu|impl
+
+# ==== I-Type OP-IMM (9) â 12-bit imm; shift imm = shamt ====
+decode|0x14dd0813|14DD0813|addi x16,x26,333|I-Type|addi|impl
+encode|addi x16,x26,333|14DD0813|addi x16,x26,333|I-Type|addi|impl
+decode|0xfff52713|FFF52713|slti x14,x10,-1|I-Type|slti|impl
+encode|slti x14,x10,-1|FFF52713|slti x14,x10,-1|I-Type|slti|impl
+decode|0xffe6bd13|FFE6BD13|sltiu x26,x13,-2|I-Type|sltiu|impl
+encode|sltiu x26,x13,-2|FFE6BD13|sltiu x26,x13,-2|I-Type|sltiu|impl
+decode|0x0039c313|0039C313|xori x6,x19,3|I-Type|xori|impl
+encode|xori x6,x19,3|0039C313|xori x6,x19,3|I-Type|xori|impl
+decode|0x0014e093|0014E093|ori x1,x9,1|I-Type|ori|impl
+encode|ori x1,x9,1|0014E093|ori x1,x9,1|I-Type|ori|impl
+decode|0xc1827413|C1827413|andi x8,x4,-1000|I-Type|andi|impl
+encode|andi x8,x4,-1000|C1827413|andi x8,x4,-1000|I-Type|andi|impl
+decode|0x00f19b93|00F19B93|slli x23,x3,15|I-Type|slli|impl
+encode|slli x23,x3,15|00F19B93|slli x23,x3,15|I-Type|slli|impl
+decode|0x0038dd93|0038DD93|srli x27,x17,3|I-Type|srli|impl
+encode|srli x27,x17,3|0038DD93|srli x27,x17,3|I-Type|srli|impl
+decode|0x401d5a93|401D5A93|srai x21,x26,1|I-Type|srai|impl
+encode|srai x21,x26,1|401D5A93|srai x21,x26,1|I-Type|srai|impl
+
+# ==== I-Type OP-IMM RV64I (OP-IMM-32) (4) â shamt 5-bit ====
+decode|0xFFFB029B|FFFB029B|addiw x5,x22,-1|I-Type|addiw|impl
+encode|addiw x5,x22,-1|FFFB029B|addiw x5,x22,-1|I-Type|addiw|impl
+decode|0x001D981B|001D981B|slliw x16,x27,1|I-Type|slliw|impl
+encode|slliw x16,x27,1|001D981B|slliw x16,x27,1|I-Type|slliw|impl
+decode|0x41F95E1B|41F95E1B|sraiw x28,x18,31|I-Type|sraiw|impl
+encode|sraiw x28,x18,31|41F95E1B|sraiw x28,x18,31|I-Type|sraiw|impl
+decode|0x01F4D99B|01F4D99B|srliw x19,x9,31|I-Type|srliw|impl
+encode|srliw x19,x9,31|01F4D99B|srliw x19,x9,31|I-Type|srliw|impl
+
+# ==== I-Type OP-IMM RV128I (OP-IMM-64) (4) â shamt 6-bit ====
+decode|0x0030815B|0030815B|addid x2,x1,3|I-Type|addid|impl
+encode|addid x2,x1,3|0030815B|addid x2,x1,3|I-Type|addid|impl
+decode|0x01F21F5B|01F21F5B|sllid x30,x4,31|I-Type|sllid|impl
+encode|sllid x30,x4,31|01F21F5B|sllid x30,x4,31|I-Type|sllid|impl
+decode|0x43F2D3DB|43F2D3DB|sraid x7,x5,63|I-Type|sraid|impl
+encode|sraid x7,x5,63|43F2D3DB|sraid x7,x5,63|I-Type|sraid|impl
+decode|0x001E5FDB|001E5FDB|srlid x31,x28,1|I-Type|srlid|impl
+encode|srlid x31,x28,1|001E5FDB|srlid x31,x28,1|I-Type|srlid|impl
+
+# ==== I-Type LOAD (RV32I + RV64I + RV128I + FP) â mem operand 'rd, imm(rs1)' ====
+decode|0x00480d03|00480D03|lb x26,4(x16)|I-Type|lb|impl
+encode|lb x26,4,x16|00480D03|lb x26,4(x16)|I-Type|lb|impl
+encode|lb x26,4(x16)|00480D03|lb x26,4(x16)|I-Type|lb|impl
+decode|0x00219383|00219383|lh x7,2(x3)|I-Type|lh|impl
+encode|lh x7,2,x3|00219383|lh x7,2(x3)|I-Type|lh|impl
+encode|lh x7,2(x3)|00219383|lh x7,2(x3)|I-Type|lh|impl
+decode|0xfffc2b03|FFFC2B03|lw x22,-1(x24)|I-Type|lw|impl
+encode|lw x22,-1,x24|FFFC2B03|lw x22,-1(x24)|I-Type|lw|impl
+encode|lw x22,-1(x24)|FFFC2B03|lw x22,-1(x24)|I-Type|lw|impl
+decode|0xffff4603|FFFF4603|lbu x12,-1(x30)|I-Type|lbu|impl
+encode|lbu x12,-1,x30|FFFF4603|lbu x12,-1(x30)|I-Type|lbu|impl
+encode|lbu x12,-1(x30)|FFFF4603|lbu x12,-1(x30)|I-Type|lbu|impl
+decode|0x80065283|80065283|lhu x5,-2048(x12)|I-Type|lhu|impl
+encode|lhu x5,-2048,x12|80065283|lhu x5,-2048(x12)|I-Type|lhu|impl
+encode|lhu x5,-2048(x12)|80065283|lhu x5,-2048(x12)|I-Type|lhu|impl
+decode|0x14d9ba03|14D9BA03|ld x20,333(x19)|I-Type|ld|impl
+encode|ld x20,333,x19|14D9BA03|ld x20,333(x19)|I-Type|ld|impl
+encode|ld x20,333(x19)|14D9BA03|ld x20,333(x19)|I-Type|ld|impl
+decode|0x14d1ea83|14D1EA83|lwu x21,333(x3)|I-Type|lwu|impl
+encode|lwu x21,333,x3|14D1EA83|lwu x21,333(x3)|I-Type|lwu|impl
+encode|lwu x21,333(x3)|14D1EA83|lwu x21,333(x3)|I-Type|lwu|impl
+decode|0x14d9fc03|14D9FC03|ldu x24,333(x19)|I-Type|ldu|impl
+encode|ldu x24,333,x19|14D9FC03|ldu x24,333(x19)|I-Type|ldu|impl
+encode|ldu x24,333(x19)|14D9FC03|ldu x24,333(x19)|I-Type|ldu|impl
+decode|0x800aad07|800AAD07|flw f26,-2048(x21)|I-Type|flw|impl
+encode|flw f26,-2048,x21|800AAD07|flw f26,-2048(x21)|I-Type|flw|impl
+encode|flw f26,-2048(x21)|800AAD07|flw f26,-2048(x21)|I-Type|flw|impl
+decode|0xf9cab107|F9CAB107|fld f2,-100(x21)|I-Type|fld|impl
+encode|fld f2,-100,x21|F9CAB107|fld f2,-100(x21)|I-Type|fld|impl
+encode|fld f2,-100(x21)|F9CAB107|fld f2,-100(x21)|I-Type|fld|impl
+decode|0x800d4487|800D4487|flq f9,-2048(x26)|I-Type|flq|impl
+encode|flq f9,-2048,x26|800D4487|flq f9,-2048(x26)|I-Type|flq|impl
+encode|flq f9,-2048(x26)|800D4487|flq f9,-2048(x26)|I-Type|flq|impl
+decode|0xfffd2b0f|FFFD2B0F|lq x22,-1(x26)|I-Type|lq|impl
+encode|lq x22,-1,x26|FFFD2B0F|lq x22,-1(x26)|I-Type|lq|impl
+encode|lq x22,-1(x26)|FFFD2B0F|lq x22,-1(x26)|I-Type|lq|impl
+
+# ==== I-Type JALR (1) â mem operand ====
+decode|0x004e0a67|004E0A67|jalr x20,4(x28)|I-Type|jalr|impl
+encode|jalr x20,4,x28|004E0A67|jalr x20,4(x28)|I-Type|jalr|impl
+encode|jalr x20,4(x28)|004E0A67|jalr x20,4(x28)|I-Type|jalr|impl
+
+# ==== I-Type MISC-MEM ====
 decode|0x0ff0000f|0FF0000F|fence iorw,iorw|I-Type|fence|impl
-encode|fence|0FF0000F|fence iorw,iorw|I-Type|fence|impl
-encode|fence iorw, iorw|0FF0000F|fence iorw,iorw|I-Type|fence|impl
+encode|fence iorw,iorw|0FF0000F|fence iorw,iorw|I-Type|fence|impl
 decode|0x0310000f|0310000F|fence rw,w|I-Type|fence|impl
-encode|fence rw, w|0310000F|fence rw,w|I-Type|fence|impl
-
-# =============================================================================
-# Zifencei — Ch.35: FENCE.I only (MISC-MEM, funct3=1)
-# =============================================================================
+encode|fence rw,w|0310000F|fence rw,w|I-Type|fence|impl
 decode|0x0000100f|0000100F|fence.i|I-Type|fence.i|impl
 encode|fence.i|0000100F|fence.i|I-Type|fence.i|impl
+decode|0x8330000f|8330000F|fence.tso|I-Type|fence.tso|impl
+encode|fence.tso|8330000F|fence.tso|I-Type|fence.tso|impl
+decode|0x0100000f|0100000F|pause|I-Type|pause|impl
+encode|pause|0100000F|pause|I-Type|pause|impl
 
-# SYSTEM priv (funct3=0)
+
+# ==== I-Type SYSTEM priv ====
 decode|0x00000073|00000073|ecall|I-Type|ecall|impl
 encode|ecall|00000073|ecall|I-Type|ecall|impl
 decode|0x00100073|00100073|ebreak|I-Type|ebreak|impl
 encode|ebreak|00100073|ebreak|I-Type|ebreak|impl
 
-# =============================================================================
-# Zicsr — Ch.35: CSRRW/CSRRS/CSRRC + immediate forms (SYSTEM, funct3=1..3/5..7)
-# Known G CSRs decode to names (cycle/fflags/…); encode accepts name or 0xNNN.
-# =============================================================================
-decode|0xc00110f3|C00110F3|csrrw x1,cycle,x2|I-Type|csrrw|impl
-encode|csrrw x1, 0xc00, x2|C00110F3|csrrw x1,cycle,x2|I-Type|csrrw|impl
-encode|csrrw x1, cycle, x2|C00110F3|csrrw x1,cycle,x2|I-Type|csrrw|impl
-decode|0xc00120f3|C00120F3|csrrs x1,cycle,x2|I-Type|csrrs|impl
-encode|csrrs x1, cycle, x2|C00120F3|csrrs x1,cycle,x2|I-Type|csrrs|impl
-decode|0xc00130f3|C00130F3|csrrc x1,cycle,x2|I-Type|csrrc|impl
-encode|csrrc x1, cycle, x2|C00130F3|csrrc x1,cycle,x2|I-Type|csrrc|impl
-decode|0xc00150f3|C00150F3|csrrwi x1,cycle,2|I-Type|csrrwi|impl
-encode|csrrwi x1, cycle, 2|C00150F3|csrrwi x1,cycle,2|I-Type|csrrwi|impl
-decode|0xc00160f3|C00160F3|csrrsi x1,cycle,2|I-Type|csrrsi|impl
-encode|csrrsi x1, cycle, 2|C00160F3|csrrsi x1,cycle,2|I-Type|csrrsi|impl
-decode|0xc00170f3|C00170F3|csrrci x1,cycle,2|I-Type|csrrci|impl
-encode|csrrci x1, cycle, 2|C00170F3|csrrci x1,cycle,2|I-Type|csrrci|impl
-decode|0x0012d0f3|0012D0F3|csrrwi x1,fflags,5|I-Type|csrrwi|impl
-encode|csrrwi x1, fflags, 5|0012D0F3|csrrwi x1,fflags,5|I-Type|csrrwi|impl
+# ==== Zicsr (SYSTEM) ====
+decode|0xc0059373|C0059373|csrrw x6,cycle,x11|I-Type|csrrw|impl
+encode|csrrw x6,cycle,x11|C0059373|csrrw x6,cycle,x11|I-Type|csrrw|impl
+decode|0xc006ac73|C006AC73|csrrs x24,cycle,x13|I-Type|csrrs|impl
+encode|csrrs x24,cycle,x13|C006AC73|csrrs x24,cycle,x13|I-Type|csrrs|impl
+decode|0xc00cb3f3|C00CB3F3|csrrc x7,cycle,x25|I-Type|csrrc|impl
+encode|csrrc x7,cycle,x25|C00CB3F3|csrrc x7,cycle,x25|I-Type|csrrc|impl
+decode|0x0012ddf3|0012DDF3|csrrwi x27,fflags,5|I-Type|csrrwi|impl
+encode|csrrwi x27,fflags,5|0012DDF3|csrrwi x27,fflags,5|I-Type|csrrwi|impl
+decode|0x0012e573|0012E573|csrrsi x10,fflags,5|I-Type|csrrsi|impl
+encode|csrrsi x10,fflags,5|0012E573|csrrsi x10,fflags,5|I-Type|csrrsi|impl
+decode|0x0010f173|0010F173|csrrci x2,fflags,1|I-Type|csrrci|impl
+encode|csrrci x2,fflags,1|0010F173|csrrci x2,fflags,1|I-Type|csrrci|impl
 
-# =============================================================================
-# S-Type STORE  (3)  — RV32I only (sd is RV64I, listed below as todo/out-of-scope)
-# =============================================================================
-decode|0x00110223|00110223|sb x1,4(x2)|S-Type|sb|impl
-encode|sb x1, 4, x2|00110223|sb x1,4(x2)|S-Type|sb|impl
-decode|0x00111223|00111223|sh x1,4(x2)|S-Type|sh|impl
-encode|sh x1, 4, x2|00111223|sh x1,4(x2)|S-Type|sh|impl
-decode|0x00112223|00112223|sw x1,4(x2)|S-Type|sw|impl
-encode|sw x1, 4, x2|00112223|sw x1,4(x2)|S-Type|sw|impl
+# ==== S-Type STORE â mem operand 'rs2, imm(rs1)' ====
+decode|0x003a8023|003A8023|sb x3,0(x21)|S-Type|sb|impl
+encode|sb x3,0,x21|003A8023|sb x3,0(x21)|S-Type|sb|impl
+encode|sb x3,0(x21)|003A8023|sb x3,0(x21)|S-Type|sb|impl
+decode|0xfec21fa3|FEC21FA3|sh x12,-1(x4)|S-Type|sh|impl
+encode|sh x12,-1,x4|FEC21FA3|sh x12,-1(x4)|S-Type|sh|impl
+encode|sh x12,-1(x4)|FEC21FA3|sh x12,-1(x4)|S-Type|sh|impl
+decode|0x7e96afa3|7E96AFA3|sw x9,2047(x13)|S-Type|sw|impl
+encode|sw x9,2047,x13|7E96AFA3|sw x9,2047(x13)|S-Type|sw|impl
+encode|sw x9,2047(x13)|7E96AFA3|sw x9,2047(x13)|S-Type|sw|impl
+decode|0x06fbb223|06FBB223|sd x15,100(x23)|S-Type|sd|impl
+encode|sd x15,100,x23|06FBB223|sd x15,100(x23)|S-Type|sd|impl
+encode|sd x15,100(x23)|06FBB223|sd x15,100(x23)|S-Type|sd|impl
+decode|0xf975ce23|F975CE23|sq x23,-100(x11)|S-Type|sq|impl
+encode|sq x23,-100,x11|F975CE23|sq x23,-100(x11)|S-Type|sq|impl
+encode|sq x23,-100(x11)|F975CE23|sq x23,-100(x11)|S-Type|sq|impl
+decode|0xfeb2afa7|FEB2AFA7|fsw f11,-1(x5)|S-Type|fsw|impl
+encode|fsw f11,-1,x5|FEB2AFA7|fsw f11,-1(x5)|S-Type|fsw|impl
+encode|fsw f11,-1(x5)|FEB2AFA7|fsw f11,-1(x5)|S-Type|fsw|impl
+decode|0x00b9b127|00B9B127|fsd f11,2(x19)|S-Type|fsd|impl
+encode|fsd f11,2,x19|00B9B127|fsd f11,2(x19)|S-Type|fsd|impl
+encode|fsd f11,2(x19)|00B9B127|fsd f11,2(x19)|S-Type|fsd|impl
+decode|0x7fe5cfa7|7FE5CFA7|fsq f30,2047(x11)|S-Type|fsq|impl
+encode|fsq f30,2047,x11|7FE5CFA7|fsq f30,2047(x11)|S-Type|fsq|impl
+encode|fsq f30,2047(x11)|7FE5CFA7|fsq f30,2047(x11)|S-Type|fsq|impl
 
-# =============================================================================
-# B-Type BRANCH  (6)
-# =============================================================================
-decode|0x00208463|00208463|beq x1,x2,8|B-Type|beq|impl
-encode|beq x1, x2, 8|00208463|beq x1,x2,8|B-Type|beq|impl
-decode|0x00209463|00209463|bne x1,x2,8|B-Type|bne|impl
-encode|bne x1, x2, 8|00209463|bne x1,x2,8|B-Type|bne|impl
-decode|0x0020c463|0020C463|blt x1,x2,8|B-Type|blt|impl
-encode|blt x1, x2, 8|0020C463|blt x1,x2,8|B-Type|blt|impl
-decode|0x0020d463|0020D463|bge x1,x2,8|B-Type|bge|impl
-encode|bge x1, x2, 8|0020D463|bge x1,x2,8|B-Type|bge|impl
-decode|0x0020e463|0020E463|bltu x1,x2,8|B-Type|bltu|impl
-encode|bltu x1, x2, 8|0020E463|bltu x1,x2,8|B-Type|bltu|impl
-decode|0x0020f463|0020F463|bgeu x1,x2,8|B-Type|bgeu|impl
-encode|bgeu x1, x2, 8|0020F463|bgeu x1,x2,8|B-Type|bgeu|impl
+# ==== B-Type BRANCH (6) â 13-bit even offset ====
+decode|0x00128463|00128463|beq x5,x1,8|B-Type|beq|impl
+encode|beq x5,x1,8|00128463|beq x5,x1,8|B-Type|beq|impl
+decode|0x06a09263|06A09263|bne x1,x10,100|B-Type|bne|impl
+encode|bne x1,x10,100|06A09263|bne x1,x10,100|B-Type|bne|impl
+decode|0xf82c4ee3|F82C4EE3|blt x24,x2,-100|B-Type|blt|impl
+encode|blt x24,x2,-100|F82C4EE3|blt x24,x2,-100|B-Type|blt|impl
+decode|0x06c55263|06C55263|bge x10,x12,100|B-Type|bge|impl
+encode|bge x10,x12,100|06C55263|bge x10,x12,100|B-Type|bge|impl
+decode|0x015d6163|015D6163|bltu x26,x21,2|B-Type|bltu|impl
+encode|bltu x26,x21,2|015D6163|bltu x26,x21,2|B-Type|bltu|impl
+decode|0x009d7463|009D7463|bgeu x26,x9,8|B-Type|bgeu|impl
+encode|bgeu x26,x9,8|009D7463|bgeu x26,x9,8|B-Type|bgeu|impl
 
-# =============================================================================
-# U-Type / J-Type
-# =============================================================================
-decode|0x000010b7|000010B7|lui x1,1|U-Type|lui|impl
-encode|lui x1, 1|000010B7|lui x1,1|U-Type|lui|impl
-decode|0x00001097|00001097|auipc x1,1|U-Type|auipc|impl
-encode|auipc x1, 1|00001097|auipc x1,1|U-Type|auipc|impl
-decode|0x008000ef|008000EF|jal x1,8|J-Type|jal|impl
-encode|jal x1, 8|008000EF|jal x1,8|J-Type|jal|impl
+# ==== U-Type / J-Type â 20-bit U-imm; 21-bit J-imm ====
+decode|0x01000db7|01000DB7|lui x27,4096|U-Type|lui|impl
+encode|lui x27,4096|01000DB7|lui x27,4096|U-Type|lui|impl
+decode|0x00000d17|00000D17|auipc x26,0|U-Type|auipc|impl
+encode|auipc x26,0|00000D17|auipc x26,0|U-Type|auipc|impl
+decode|0x7ffffd6f|7FFFFD6F|jal x26,1048574|J-Type|jal|impl
+encode|jal x26,1048574|7FFFFD6F|jal x26,1048574|J-Type|jal|impl
 
-# =============================================================================
-# RV64I store (present in SType table; not part of RV32I base, but implemented)
-# =============================================================================
-decode|0x00113223|00113223|sd x1,4(x2)|S-Type|sd|impl
-encode|sd x1, 4, x2|00113223|sd x1,4(x2)|S-Type|sd|impl
-
-# =============================================================================
-# C Extension (RVC)
-# =============================================================================
-decode|0x908A|908A|c.add x1,x2|C-Type|c.add|impl
-encode|c.add x1, x2|908A|c.add x1,x2|C-Type|c.add|impl
-decode|0x0085|0085|c.addi x1,1|C-Type|c.addi|impl
-encode|c.addi x1, 1|0085|c.addi x1,1|C-Type|c.addi|impl
-decode|0x6105|6105|c.addi16sp 16|C-Type|c.addi16sp|impl
-encode|c.addi16sp 16|6105|c.addi16sp 16|C-Type|c.addi16sp|impl
-decode|0x0088|0088|c.addi4spn x10,24|C-Type|c.addi4spn|impl
-encode|c.addi4spn x10, 16|0088|c.addi4spn x10,24|C-Type|c.addi4spn|impl
-decode|0x2085|2085|c.addiw x1,1|C-Type|c.addiw|impl
-encode|c.addiw x1, 1|2085|c.addiw x1,1|C-Type|c.addiw|impl
-decode|0x8C25|8C25|c.addw x8,x9|C-Type|c.addw|impl
-encode|c.addw x8, x9|8C25|c.addw x8,x9|C-Type|c.addw|impl
-decode|0x9C65|9C65|c.and x8,x9|C-Type|c.and|impl
-encode|c.and x8, x9|9C65|c.and x8,x9|C-Type|c.and|impl
-decode|0x8805|8805|c.andi x8,1|C-Type|c.andi|impl
-encode|c.andi x8, 1|8805|c.andi x8,1|C-Type|c.andi|impl
-decode|0xC005|C005|c.beqz x8,8|C-Type|c.beqz|impl
-encode|c.beqz x8, 8|C005|c.beqz x8,8|C-Type|c.beqz|impl
-decode|0xE005|E005|c.bnez x8,8|C-Type|c.bnez|impl
-encode|c.bnez x8, 8|E005|c.bnez x8,8|C-Type|c.bnez|impl
+# ==== C Extension (RVC) ====
 decode|0x9002|9002|c.ebreak|C-Type|c.ebreak|impl
 encode|c.ebreak|9002|c.ebreak|C-Type|c.ebreak|impl
-decode|0x2080|2080|c.fld f8,0(x9)|C-Type|c.fld|impl
-encode|c.fld f8, 8, x9|2080|c.fld f8,0(x9)|C-Type|c.fld|impl
-decode|0x2082|2082|c.fldsp f1,0|C-Type|c.fldsp|impl
-encode|c.fldsp f1, 8|2082|c.fldsp f1,0|C-Type|c.fldsp|impl
-encode|c.flw f8, 4, x9|6080|c.flw f8,0(x9)|C-Type|c.flw|impl
-encode|c.flwsp f1, 8|6082|c.flwsp f1,0|C-Type|c.flwsp|impl
-decode|0xA080|A080|c.fsd f8,0(x9)|C-Type|c.fsd|impl
-encode|c.fsd f8, 8, x9|A080|c.fsd f8,0(x9)|C-Type|c.fsd|impl
-decode|0xA086|A086|c.fsdsp f1,520|C-Type|c.fsdsp|impl
-encode|c.fsdsp f1, 8|A086|c.fsdsp f1,520|C-Type|c.fsdsp|impl
-encode|c.fsw f8, 4, x9|E080|c.fsw f8,0(x9)|C-Type|c.fsw|impl
-encode|c.fswsp f1, 8|E106|c.fswsp f1,264|C-Type|c.fswsp|impl
-decode|0xA201|A201|c.j 264|C-Type|c.j|impl
-encode|c.j 8|A201|c.j 264|C-Type|c.j|impl
-encode|c.jal 8|20A1|c.jal 8|C-Type|c.jal|impl
-decode|0x9082|9082|c.jalr x1|C-Type|c.jalr|impl
-encode|c.jalr x1|9082|c.jalr x1|C-Type|c.jalr|impl
-decode|0x8082|8082|c.jr x1|C-Type|c.jr|impl
-encode|c.jr x1|8082|c.jr x1|C-Type|c.jr|impl
-decode|0x6080|6080|c.ld x8,0(x9)|C-Type|c.ld|impl
-encode|c.ld x8, 8, x9|6080|c.ld x8,0(x9)|C-Type|c.ld|impl
-decode|0x6086|6086|c.ldsp x1,16|C-Type|c.ldsp|impl
-encode|c.ldsp x1, 16|6086|c.ldsp x1,16|C-Type|c.ldsp|impl
-decode|0x4085|4085|c.li x1,1|C-Type|c.li|impl
-encode|c.li x1, 1|4085|c.li x1,1|C-Type|c.li|impl
-decode|0x6085|6085|c.lui x1,1|C-Type|c.lui|impl
-encode|c.lui x1, 1|6085|c.lui x1,1|C-Type|c.lui|impl
-decode|0x4080|4080|c.lw x8,0(x9)|C-Type|c.lw|impl
-encode|c.lw x8, 4, x9|4080|c.lw x8,0(x9)|C-Type|c.lw|impl
-decode|0x4082|4082|c.lwsp x1,0|C-Type|c.lwsp|impl
-encode|c.lwsp x1, 8|4082|c.lwsp x1,0|C-Type|c.lwsp|impl
-decode|0x808A|808A|c.mv x1,x2|C-Type|c.mv|impl
-encode|c.mv x1, x2|808A|c.mv x1,x2|C-Type|c.mv|impl
 decode|0x0001|0001|c.nop|C-Type|c.nop|impl
 encode|c.nop|0001|c.nop|C-Type|c.nop|impl
-decode|0x9C45|9C45|c.or x8,x9|C-Type|c.or|impl
-encode|c.or x8, x9|9C45|c.or x8,x9|C-Type|c.or|impl
-decode|0xE080|E080|c.sd x8,0(x9)|C-Type|c.sd|impl
-encode|c.sd x8, 8, x9|E080|c.sd x8,0(x9)|C-Type|c.sd|impl
-decode|0xE106|E106|c.sdsp x1,528|C-Type|c.sdsp|impl
-encode|c.sdsp x1, 16|E106|c.sdsp x1,528|C-Type|c.sdsp|impl
-decode|0x0086|0086|c.slli x1,1|C-Type|c.slli|impl
-encode|c.slli x1, 1|0086|c.slli x1,1|C-Type|c.slli|impl
-decode|0x9005|9005|c.srai x8,33|C-Type|c.srai|impl
-encode|c.srai x8, 1|9005|c.srai x8,33|C-Type|c.srai|impl
+decode|0x8F81|8F81|c.sub x15,x8|C-Type|c.sub|impl
+encode|c.sub x15,x8|8F81|c.sub x15,x8|C-Type|c.sub|impl
+decode|0x8FA1|8FA1|c.xor x15,x8|C-Type|c.xor|impl
+encode|c.xor x15,x8|8FA1|c.xor x15,x8|C-Type|c.xor|impl
+decode|0x8CC9|8CC9|c.or x9,x10|C-Type|c.or|impl
+encode|c.or x9,x10|8CC9|c.or x9,x10|C-Type|c.or|impl
+decode|0x8E75|8E75|c.and x12,x13|C-Type|c.and|impl
+encode|c.and x12,x13|8E75|c.and x12,x13|C-Type|c.and|impl
+decode|0x9C89|9C89|c.subw x9,x10|C-Type|c.subw|impl
+encode|c.subw x9,x10|9C89|c.subw x9,x10|C-Type|c.subw|impl
+decode|0x9CBD|9CBD|c.addw x9,x15|C-Type|c.addw|impl
+encode|c.addw x9,x15|9CBD|c.addw x9,x15|C-Type|c.addw|impl
+decode|0x0B05|0B05|c.addi x22,1|C-Type|c.addi|impl
+encode|c.addi x22,1|0B05|c.addi x22,1|C-Type|c.addi|impl
+decode|0x533D|533D|c.li x6,-17|C-Type|c.li|impl
+encode|c.li x6,-17|533D|c.li x6,-17|C-Type|c.li|impl
+decode|0x2EFD|2EFD|c.jal 1022|C-Type|c.jal|impl
+encode|c.addiw x29,31|2EFD|c.addiw x29,31|C-Type|c.addiw|impl
+decode|0x6141|6141|c.addi16sp 16|C-Type|c.addi16sp|impl
+encode|c.addi16sp 16|6141|c.addi16sp 16|C-Type|c.addi16sp|impl
+decode|0x10C8|10C8|c.addi4spn x10,100|C-Type|c.addi4spn|impl
+encode|c.addi4spn x10,100|10C8|c.addi4spn x10,100|C-Type|c.addi4spn|impl
+decode|0x6F89|6F89|c.lui x31,2|C-Type|c.lui|impl
+encode|c.lui x31,2|6F89|c.lui x31,2|C-Type|c.lui|impl
+decode|0x07C2|07C2|c.slli x15,16|C-Type|c.slli|impl
+encode|c.slli x15,16|07C2|c.slli x15,16|C-Type|c.slli|impl
 decode|0x8005|8005|c.srli x8,1|C-Type|c.srli|impl
-encode|c.srli x8, 1|8005|c.srli x8,1|C-Type|c.srli|impl
-decode|0x9C05|9C05|c.sub x8,x9|C-Type|c.sub|impl
-encode|c.sub x8, x9|9C05|c.sub x8,x9|C-Type|c.sub|impl
-decode|0x8C05|8C05|c.subw x8,x9|C-Type|c.subw|impl
-encode|c.subw x8, x9|8C05|c.subw x8,x9|C-Type|c.subw|impl
-decode|0xC080|C080|c.sw x8,0(x9)|C-Type|c.sw|impl
-encode|c.sw x8, 4, x9|C080|c.sw x8,0(x9)|C-Type|c.sw|impl
-decode|0xC106|C106|c.swsp x1,8|C-Type|c.swsp|impl
-encode|c.swsp x1, 8|C106|c.swsp x1,8|C-Type|c.swsp|impl
-decode|0x9C25|9C25|c.xor x8,x9|C-Type|c.xor|impl
-encode|c.xor x8, x9|9C25|c.xor x8,x9|C-Type|c.xor|impl
+encode|c.srli x8,1|8005|c.srli x8,1|C-Type|c.srli|impl
+decode|0x8785|8785|c.srai x15,1|C-Type|c.srai|impl
+encode|c.srai x15,1|8785|c.srai x15,1|C-Type|c.srai|impl
+decode|0x887D|887D|c.andi x8,31|C-Type|c.andi|impl
+encode|c.andi x8,31|887D|c.andi x8,31|C-Type|c.andi|impl
+decode|0xCDE5|CDE5|c.beqz x11,248|C-Type|c.beqz|impl
+encode|c.beqz x11,248|CDE5|c.beqz x11,248|C-Type|c.beqz|impl
+decode|0xE101|E101|c.bnez x10,0|C-Type|c.bnez|impl
+encode|c.bnez x10,0|E101|c.bnez x10,0|C-Type|c.bnez|impl
+decode|0xbf71|BF71|c.j -100|C-Type|c.j|impl
+encode|c.j -100|BF71|c.j -100|C-Type|c.j|impl
+decode|0x3F71|3F71|c.jal -100|C-Type|c.jal|impl
+encode|c.jal -100|3F71|c.jal -100|C-Type|c.jal|impl
+decode|0x8202|8202|c.jr x4|C-Type|c.jr|impl
+encode|c.jr x4|8202|c.jr x4|C-Type|c.jr|impl
+decode|0x9102|9102|c.jalr x2|C-Type|c.jalr|impl
+encode|c.jalr x2|9102|c.jalr x2|C-Type|c.jalr|impl
+decode|0x854e|854E|c.mv x10,x19|C-Type|c.mv|impl
+encode|c.mv x10,x19|854E|c.mv x10,x19|C-Type|c.mv|impl
+decode|0x9986|9986|c.add x19,x1|C-Type|c.add|impl
+encode|c.add x19,x1|9986|c.add x19,x1|C-Type|c.add|impl
+decode|0x5F64|5F64|c.lw x9,124(x14)|C-Type|c.lw|impl
+encode|c.lw x9,124(x14)|5F64|c.lw x9,124(x14)|C-Type|c.lw|impl
+decode|0x6008|6008|c.flw f10,0(x8)|C-Type|c.flw|impl
+encode|c.ld x10,0,x8|6008|c.ld x10,0(x8)|C-Type|c.ld|impl
+decode|0x6B14|6B14|c.flw f13,16(x14)|C-Type|c.flw|impl
+encode|c.flw f13,16(x14)|6B14|c.flw f13,16(x14)|C-Type|c.flw|impl
+decode|0x3EE8|3EE8|c.fld f10,248(x13)|C-Type|c.fld|impl
+encode|c.fld f10,248(x13)|3EE8|c.fld f10,248(x13)|C-Type|c.fld|impl
+decode|0xC1DC|C1DC|c.sw x15,4(x11)|C-Type|c.sw|impl
+encode|c.sw x15,4,x11|C1DC|c.sw x15,4(x11)|C-Type|c.sw|impl
+decode|0xEB90|EB90|c.fsw f12,16(x15)|C-Type|c.fsw|impl
+encode|c.sd x12,16,x15|EB90|c.sd x12,16(x15)|C-Type|c.sd|impl
+decode|0xEA88|EA88|c.fsw f10,16(x13)|C-Type|c.fsw|impl
+encode|c.fsw f10,16(x13)|EA88|c.fsw f10,16(x13)|C-Type|c.fsw|impl
+decode|0xA698|A698|c.fsd f14,8(x13)|C-Type|c.fsd|impl
+encode|c.fsd f14,8,x13|A698|c.fsd f14,8(x13)|C-Type|c.fsd|impl
+decode|0xC44A|C44A|c.swsp x18,8|C-Type|c.swsp|impl
+encode|c.swsp x18,8|C44A|c.swsp x18,8|C-Type|c.swsp|impl
+decode|0xFD96|FD96|c.fswsp f5,248|C-Type|c.fswsp|impl
+encode|c.sdsp x5,248|FD96|c.sdsp x5,248|C-Type|c.sdsp|impl
+decode|0xFF9E|FF9E|c.fswsp f7,252|C-Type|c.fswsp|impl
+encode|c.fswsp f7,252|FF9E|c.fswsp f7,252|C-Type|c.fswsp|impl
+decode|0xA43A|A43A|c.fsdsp f14,8|C-Type|c.fsdsp|impl
+encode|c.fsdsp f14,8|A43A|c.fsdsp f14,8|C-Type|c.fsdsp|impl
+decode|0x4A42|4A42|c.lwsp x20,16|C-Type|c.lwsp|impl
+encode|c.lwsp x20,16|4A42|c.lwsp x20,16|C-Type|c.lwsp|impl
+decode|0x74EE|74EE|c.flwsp f9,248|C-Type|c.flwsp|impl
+encode|c.ldsp x9,248|74EE|c.ldsp x9,248|C-Type|c.ldsp|impl
+decode|0x61A2|61A2|c.flwsp f3,8|C-Type|c.flwsp|impl
+encode|c.flwsp f3,8|61A2|c.flwsp f3,8|C-Type|c.flwsp|impl
+decode|0x2E22|2E22|c.fldsp f28,8|C-Type|c.fldsp|impl
+encode|c.fldsp f28,8|2E22|c.fldsp f28,8|C-Type|c.fldsp|impl
+
+# ==== TODO: Zfh (RV32/64 half-precision FP) â not in G_INST_TABLE yet ====
+decode|0x00481507|00481507|flh f10,4(x16)|I-Type|flh|todo
+encode|flh f10,4(x16)|00481507|flh f10,4(x16)|I-Type|flh|todo
+encode|flh f10,4,x16|00481507|flh f10,4(x16)|I-Type|flh|todo
+decode|0xFEB29FA7|FEB29FA7|fsh f11,-1(x5)|S-Type|fsh|todo
+encode|fsh f11,-1(x5)|FEB29FA7|fsh f11,-1(x5)|S-Type|fsh|todo
+encode|fsh f11,-1,x5|FEB29FA7|fsh f11,-1(x5)|S-Type|fsh|todo
+decode|0xCDF27943|CDF27943|fmadd.h f18,f4,f31,f25|R4-Type|fmadd.h|todo
+encode|fmadd.h f18,f4,f31,f25|CDF27943|fmadd.h f18,f4,f31,f25|R4-Type|fmadd.h|todo
+decode|0xCDF27947|CDF27947|fmsub.h f18,f4,f31,f25|R4-Type|fmsub.h|todo
+encode|fmsub.h f18,f4,f31,f25|CDF27947|fmsub.h f18,f4,f31,f25|R4-Type|fmsub.h|todo
+decode|0xCDF2794B|CDF2794B|fnmsub.h f18,f4,f31,f25|R4-Type|fnmsub.h|todo
+encode|fnmsub.h f18,f4,f31,f25|CDF2794B|fnmsub.h f18,f4,f31,f25|R4-Type|fnmsub.h|todo
+decode|0xCDF2794F|CDF2794F|fnmadd.h f18,f4,f31,f25|R4-Type|fnmadd.h|todo
+encode|fnmadd.h f18,f4,f31,f25|CDF2794F|fnmadd.h f18,f4,f31,f25|R4-Type|fnmadd.h|todo
+decode|0x05A2FC53|05A2FC53|fadd.h f24,f5,f26|R-Type|fadd.h|todo
+encode|fadd.h f24,f5,f26|05A2FC53|fadd.h f24,f5,f26|R-Type|fadd.h|todo
+decode|0x0DA2FC53|0DA2FC53|fsub.h f24,f5,f26|R-Type|fsub.h|todo
+encode|fsub.h f24,f5,f26|0DA2FC53|fsub.h f24,f5,f26|R-Type|fsub.h|todo
+decode|0x15A2FC53|15A2FC53|fmul.h f24,f5,f26|R-Type|fmul.h|todo
+encode|fmul.h f24,f5,f26|15A2FC53|fmul.h f24,f5,f26|R-Type|fmul.h|todo
+decode|0x1DA2FC53|1DA2FC53|fdiv.h f24,f5,f26|R-Type|fdiv.h|todo
+encode|fdiv.h f24,f5,f26|1DA2FC53|fdiv.h f24,f5,f26|R-Type|fdiv.h|todo
+decode|0x5C03F1D3|5C03F1D3|fsqrt.h f3,f7|R-Type|fsqrt.h|todo
+encode|fsqrt.h f3,f7|5C03F1D3|fsqrt.h f3,f7|R-Type|fsqrt.h|todo
+decode|0x25A88653|25A88653|fsgnj.h f12,f17,f26|R-Type|fsgnj.h|todo
+encode|fsgnj.h f12,f17,f26|25A88653|fsgnj.h f12,f17,f26|R-Type|fsgnj.h|todo
+decode|0x25A89653|25A89653|fsgnjn.h f12,f17,f26|R-Type|fsgnjn.h|todo
+encode|fsgnjn.h f12,f17,f26|25A89653|fsgnjn.h f12,f17,f26|R-Type|fsgnjn.h|todo
+decode|0x25A8A653|25A8A653|fsgnjx.h f12,f17,f26|R-Type|fsgnjx.h|todo
+encode|fsgnjx.h f12,f17,f26|25A8A653|fsgnjx.h f12,f17,f26|R-Type|fsgnjx.h|todo
+decode|0x2D0408D3|2D0408D3|fmin.h f17,f8,f16|R-Type|fmin.h|todo
+encode|fmin.h f17,f8,f16|2D0408D3|fmin.h f17,f8,f16|R-Type|fmin.h|todo
+decode|0x2DD29953|2DD29953|fmax.h f18,f5,f29|R-Type|fmax.h|todo
+encode|fmax.h f18,f5,f29|2DD29953|fmax.h f18,f5,f29|R-Type|fmax.h|todo
+decode|0xA4942553|A4942553|feq.h x10,f8,f9|R-Type|feq.h|todo
+encode|feq.h x10,f8,f9|A4942553|feq.h x10,f8,f9|R-Type|feq.h|todo
+decode|0xA4941553|A4941553|flt.h x10,f8,f9|R-Type|flt.h|todo
+encode|flt.h x10,f8,f9|A4941553|flt.h x10,f8,f9|R-Type|flt.h|todo
+decode|0xA4940553|A4940553|fle.h x10,f8,f9|R-Type|fle.h|todo
+encode|fle.h x10,f8,f9|A4940553|fle.h x10,f8,f9|R-Type|fle.h|todo
+decode|0xE40A17D3|E40A17D3|fclass.h x15,f20|R-Type|fclass.h|todo
+encode|fclass.h x15,f20|E40A17D3|fclass.h x15,f20|R-Type|fclass.h|todo
+decode|0xC40AF1D3|C40AF1D3|fcvt.w.h x3,f21|R-Type|fcvt.w.h|todo
+encode|fcvt.w.h x3,f21|C40AF1D3|fcvt.w.h x3,f21|R-Type|fcvt.w.h|todo
+decode|0xC41675D3|C41675D3|fcvt.wu.h x11,f12|R-Type|fcvt.wu.h|todo
+encode|fcvt.wu.h x11,f12|C41675D3|fcvt.wu.h x11,f12|R-Type|fcvt.wu.h|todo
+decode|0xD406FA53|D406FA53|fcvt.h.w f20,x13|R-Type|fcvt.h.w|todo
+encode|fcvt.h.w f20,x13|D406FA53|fcvt.h.w f20,x13|R-Type|fcvt.h.w|todo
+decode|0xD41A79D3|D41A79D3|fcvt.h.wu f19,x20|R-Type|fcvt.h.wu|todo
+encode|fcvt.h.wu f19,x20|D41A79D3|fcvt.h.wu f19,x20|R-Type|fcvt.h.wu|todo
+decode|0xE40E0553|E40E0553|fmv.x.h x10,f28|R-Type|fmv.x.h|todo
+encode|fmv.x.h x10,f28|E40E0553|fmv.x.h x10,f28|R-Type|fmv.x.h|todo
+decode|0xF40E82D3|F40E82D3|fmv.h.x f5,x29|R-Type|fmv.h.x|todo
+encode|fmv.h.x f5,x29|F40E82D3|fmv.h.x f5,x29|R-Type|fmv.h.x|todo
+decode|0x402A78D3|402A78D3|fcvt.s.h f17,f20|R-Type|fcvt.s.h|todo
+encode|fcvt.s.h f17,f20|402A78D3|fcvt.s.h f17,f20|R-Type|fcvt.s.h|todo
+decode|0x440373D3|440373D3|fcvt.h.s f7,f6|R-Type|fcvt.h.s|todo
+encode|fcvt.h.s f7,f6|440373D3|fcvt.h.s f7,f6|R-Type|fcvt.h.s|todo
+decode|0x422A78D3|422A78D3|fcvt.d.h f17,f20|R-Type|fcvt.d.h|todo
+encode|fcvt.d.h f17,f20|422A78D3|fcvt.d.h f17,f20|R-Type|fcvt.d.h|todo
+decode|0x441373D3|441373D3|fcvt.h.d f7,f6|R-Type|fcvt.h.d|todo
+encode|fcvt.h.d f7,f6|441373D3|fcvt.h.d f7,f6|R-Type|fcvt.h.d|todo
+decode|0x462A78D3|462A78D3|fcvt.q.h f17,f20|R-Type|fcvt.q.h|todo
+encode|fcvt.q.h f17,f20|462A78D3|fcvt.q.h f17,f20|R-Type|fcvt.q.h|todo
+decode|0x443373D3|443373D3|fcvt.h.q f7,f6|R-Type|fcvt.h.q|todo
+encode|fcvt.h.q f7,f6|443373D3|fcvt.h.q f7,f6|R-Type|fcvt.h.q|todo
+decode|0xC42FF6D3|C42FF6D3|fcvt.l.h x13,f31|R-Type|fcvt.l.h|todo
+encode|fcvt.l.h x13,f31|C42FF6D3|fcvt.l.h x13,f31|R-Type|fcvt.l.h|todo
+decode|0xC439F153|C439F153|fcvt.lu.h x2,f19|R-Type|fcvt.lu.h|todo
+encode|fcvt.lu.h x2,f19|C439F153|fcvt.lu.h x2,f19|R-Type|fcvt.lu.h|todo
+decode|0xD4227153|D4227153|fcvt.h.l f2,x4|R-Type|fcvt.h.l|todo
+encode|fcvt.h.l f2,x4|D4227153|fcvt.h.l f2,x4|R-Type|fcvt.h.l|todo
+decode|0xD437F1D3|D437F1D3|fcvt.h.lu f3,x15|R-Type|fcvt.h.lu|todo
+encode|fcvt.h.lu f3,x15|D437F1D3|fcvt.h.lu f3,x15|R-Type|fcvt.h.lu|todo
+
+# ==== TODO: Zawrs ====
+decode|0x00D00073|00D00073|wrs.nto|I-Type|wrs.nto|todo
+encode|wrs.nto|00D00073|wrs.nto|I-Type|wrs.nto|todo
+decode|0x01D00073|01D00073|wrs.sto|I-Type|wrs.sto|todo
+encode|wrs.sto|01D00073|wrs.sto|I-Type|wrs.sto|todo
+
+# ==== TODO: Zihintntl (HINT aliases of ADD / C.ADD) ====
+decode|0x00200033|00200033|ntl.p1|R-Type|ntl.p1|todo
+encode|ntl.p1|00200033|ntl.p1|R-Type|ntl.p1|todo
+decode|0x00300033|00300033|ntl.pall|R-Type|ntl.pall|todo
+encode|ntl.pall|00300033|ntl.pall|R-Type|ntl.pall|todo
+decode|0x00400033|00400033|ntl.s1|R-Type|ntl.s1|todo
+encode|ntl.s1|00400033|ntl.s1|R-Type|ntl.s1|todo
+decode|0x00500033|00500033|ntl.all|R-Type|ntl.all|todo
+encode|ntl.all|00500033|ntl.all|R-Type|ntl.all|todo
+decode|0x900A|900A|c.ntl.p1|C-Type|c.ntl.p1|todo
+encode|c.ntl.p1|900A|c.ntl.p1|C-Type|c.ntl.p1|todo
+decode|0x900E|900E|c.ntl.pall|C-Type|c.ntl.pall|todo
+encode|c.ntl.pall|900E|c.ntl.pall|C-Type|c.ntl.pall|todo
+decode|0x9012|9012|c.ntl.s1|C-Type|c.ntl.s1|todo
+encode|c.ntl.s1|9012|c.ntl.s1|C-Type|c.ntl.s1|todo
+decode|0x9016|9016|c.ntl.all|C-Type|c.ntl.all|todo
+encode|c.ntl.all|9016|c.ntl.all|C-Type|c.ntl.all|todo

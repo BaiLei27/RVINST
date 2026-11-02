@@ -124,7 +124,7 @@ void IType::mnemonicHelper()
             if(InstAssembly_.size() > 1) InstAssembly_.resize(1);
             return;
         }
-        // Zicsr: csrr* rd, csr, rs1/uimm â€?known G CSRs by name, else 0xNNN
+        // Zicsr: csrr* rd, csr, rs1/uimm ï¿½?known G CSRs by name, else 0xNNN
         auto rd                  = isa::LookupRegName(Layout_.I.rd, HasSetABI_);
         const uint16_t CSRN      = Layout_.I.imm0tB & 0xFFF;
         const std::string CSR_STR= [&] {
@@ -132,10 +132,10 @@ void IType::mnemonicHelper()
             return std::format("0x{:x}", CSRN);
         }();
         if(Layout_.I.fct3 >= 5) {
-            appendOperands({ " ", rd, ",", CSR_STR, ",", std::to_string(Layout_.I.rs1 & 0x1F) });
+            appendOperands({ rd, ",", CSR_STR, ",", std::to_string(Layout_.I.rs1 & 0x1F) });
         } else {
             auto rs1= isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
-            appendOperands({ " ", rd, ",", CSR_STR, ",", rs1 });
+            appendOperands({ rd, ",", CSR_STR, ",", rs1 });
         }
         return;
     }
@@ -147,14 +147,13 @@ void IType::mnemonicHelper()
         }
         const auto PRED= formatFenceSet(Layout_.I.imm0tB >> 4 & 0xF);
         const auto SUCC= formatFenceSet(Layout_.I.imm0tB & 0xF);
-        appendOperands({ " ", PRED, ",", SUCC });
+        appendOperands({ PRED, ",", SUCC });
         return;
     }
 
-    const bool FP_LOAD= OpcMap::LOAD_FP == OPC;
-    auto rd           = FP_LOAD ? isa::LookupFregName(Layout_.I.rd, HasSetABI_)
-                                : isa::LookupRegName(Layout_.I.rd, HasSetABI_);
-    auto rs1          = isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
+    auto rd = OpcMap::LOAD_FP == OPC ? isa::LookupFregName(Layout_.I.rd, HasSetABI_)
+                                     : isa::LookupRegName(Layout_.I.rd, HasSetABI_);
+    auto rs1= isa::LookupRegName(Layout_.I.rs1, HasSetABI_);
     std::string immStr;
     if(IImmShape::SHIFT == SHAPE) {
         uint32_t shamtMask= 0x1FU;
@@ -167,7 +166,13 @@ void IType::mnemonicHelper()
     } else {
         immStr= std::to_string(decodeIImm12(Layout_.I.imm0tB));
     }
-    appendOperands({ " ", rd, ",", rs1, ",", immStr });
+
+    if(IImmShape::LOAD == SHAPE) {
+        appendOperands({ rd, ",", immStr, "(", rs1, ")" });
+        return;
+    }
+
+    appendOperands({ rd, ",", rs1, ",", immStr });
 }
 
 util::Expected_u<const InstLayout *> IType::Assembly()
@@ -220,7 +225,7 @@ util::Expected_u<const InstLayout *> IType::Assembly()
             return &Layout_;
         }
 
-        // f3=2 â†?RV128I lq (I-imm load); f3=0/1 â†?fence*
+        // f3=2 ï¿½?RV128I lq (I-imm load); f3=0/1 ï¿½?fence*
         if(PAYLOAD <= 1) {
             Layout_.I.rd  = 0;
             Layout_.I.rs1 = 0;
@@ -278,21 +283,32 @@ util::Expected_u<const InstLayout *> IType::Assembly()
         return &Layout_;
     }
 
-    // LOAD / LOAD_FP / JALR / LQ (MISC_MEM f3=2)
+    // LOAD / LOAD_FP / JALR / LQ (MISC_MEM f3=2): `rd, imm(rs1)` or `rd, imm, rs1`
     Layout_.I.fct3  = PAYLOAD;
     Layout_.I.imm0tB= 0;
 
-    if(InstAssembly_.size() >= 4) {
+    auto setRd= [&](std::string_view tok) {
         if(OpcMap::LOAD_FP == OPC) {
-            if(auto rd= isa::LookupFregIdx(InstAssembly_.at(1))) Layout_.I.rd= *rd;
-        } else if(auto rd= isa::LookupRegIdx(InstAssembly_.at(1))) {
+            if(auto rd= isa::LookupFregIdx(tok)) Layout_.I.rd= *rd;
+        } else if(auto rd= isa::LookupRegIdx(tok)) {
             Layout_.I.rd= *rd;
         }
-        if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(2))) Layout_.I.rs1= *rs1;
+    };
 
+    if(InstAssembly_.size() >= 4) {
+        // `lb x1, 4, x2` ï¿½ imm then base (matches store / test corpus)
+        setRd(InstAssembly_.at(1));
         int32_t imm {};
-        if(util::ParseInt(InstAssembly_.at(3), imm)) {
+        if(util::ParseInt(InstAssembly_.at(2), imm)) Layout_.I.imm0tB= imm & 0xFFF;
+        if(auto rs1= isa::LookupRegIdx(InstAssembly_.at(3))) Layout_.I.rs1= *rs1;
+    } else if(InstAssembly_.size() >= 3) {
+        // `lb x1, 4(x2)`
+        setRd(InstAssembly_.at(1));
+        int32_t imm {};
+        std::string baseReg;
+        if(util::ParseMemOperand(InstAssembly_.at(2), imm, baseReg)) {
             Layout_.I.imm0tB= imm & 0xFFF;
+            if(auto rs1= isa::LookupRegIdx(baseReg)) Layout_.I.rs1= *rs1;
         }
     }
 
@@ -306,7 +322,7 @@ auto IType::calculateKeyID() -> KeyT
     case OpcMap::OP_IMM:
     case OpcMap::OP_IMM_32:
     case OpcMap::OP_IMM_64: {
-        // imm[10] only â€?wider shamts must not disturb the key
+        // imm[10] only ï¿½?wider shamts must not disturb the key
         const uint8_t FUNCT=
             IImmShape::SHIFT == DetectIImmShape(Layout_.I.opc, Layout_.I.fct3)
                 ? (Layout_.I.imm0tB >> 10 & 1 ? 0x20 : 0) // NOLINT
@@ -321,7 +337,7 @@ auto IType::calculateKeyID() -> KeyT
         }
         break;
     case OpcMap::SYSTEM:
-        // f3=0 â†?ecall/ebreak keyed by imm12; else Zicsr keyed by f3<<8
+        // f3=0 ï¿½?ecall/ebreak keyed by imm12; else Zicsr keyed by f3<<8
         Key_= 0 == Layout_.I.fct3 ? SYSTEM_K(Layout_.I.imm0tB, Layout_.I.opc)
                                   : SYSTEM_K(Layout_.I.fct3 << 8, Layout_.I.opc);
         break;

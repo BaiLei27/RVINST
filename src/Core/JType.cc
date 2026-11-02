@@ -61,7 +61,7 @@ void JType::mnemonicHelper()
 {
     auto rd           = isa::LookupRegName(Layout_.J.rd, HasSetABI_);
     std::string immStr= std::to_string(decodeJImm(Layout_));
-    appendOperands({ " ", rd, ",", immStr });
+    appendOperands({ rd, ",", immStr });
 }
 
 util::Expected_u<const InstLayout *> JType::Assembly()

@@ -40,7 +40,7 @@ void R4Type::mnemonicHelper()
     auto rs1= isa::LookupFregName(Layout_.R4.rs1, HasSetABI_);
     auto rs2= isa::LookupFregName(Layout_.R4.rs2, HasSetABI_);
     auto rs3= isa::LookupFregName(Layout_.R4.rs3, HasSetABI_);
-    appendOperands({ " ", rd, ",", rs1, ",", rs2, ",", rs3 });
+    appendOperands({ rd, ",", rs1, ",", rs2, ",", rs3 });
 }
 
 util::Expected_u<const InstLayout *> R4Type::Assembly()

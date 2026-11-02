@@ -268,12 +268,13 @@ constexpr std::array<std::span<const InstField>, 8> G_FMT_FIELDS {
     std::span<const InstField>(G_R4_FIELDS),
 };
 
-// Indexed by ItypeImmShape (IMM12=0, SHIFT=1, FENCE=2, CSR=3).
-constexpr std::array<std::span<const InstField>, 4> G_I_SHAPE_FIELDS {
-    std::span<const InstField>(G_I_FIELDS),
-    std::span<const InstField>(G_I_SHIFT_FIELDS),
-    std::span<const InstField>(G_I_FENCE_FIELDS),
-    std::span<const InstField>(G_I_CSR_FIELDS),
+// Indexed by IImmShape (LOAD=0, IMM12=1, SHIFT=2, FENCE=3, CSR=4).
+constexpr std::array<std::span<const InstField>, 5> G_I_SHAPE_FIELDS {
+    std::span<const InstField>(G_I_FIELDS),       // LOAD — same bit layout as IMM12
+    std::span<const InstField>(G_I_FIELDS),       // IMM12
+    std::span<const InstField>(G_I_SHIFT_FIELDS), // SHIFT
+    std::span<const InstField>(G_I_FENCE_FIELDS), // FENCE
+    std::span<const InstField>(G_I_CSR_FIELDS),   // CSR
 };
 
 } // namespace
@@ -332,6 +333,12 @@ IImmShape DetectIImmShape(uint32_t opc, uint32_t f3) noexcept
        && (1 == f3 || 5 == f3)) {
         return IImmShape::SHIFT;
     }
+    // Loads / jalr / lq use `rd, imm(rs1)` assembly shape.
+    if(OpcMap::LOAD == opc || OpcMap::LOAD_FP == opc || OpcMap::JALR == opc) {
+        return IImmShape::LOAD;
+    }
+    if(OpcMap::MISC_MEM == opc && 2 == f3) return IImmShape::LOAD; // RV128I lq
+
     return IImmShape::IMM12;
 }
 

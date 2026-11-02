@@ -58,6 +58,7 @@ enum OpcMap : uint8_t { // RISC-V base opcode map, inst[1:0] === 0b11
     RESERVE_5= 0x7F, // 11_111_11
 };
 enum class IImmShape : uint8_t {
+    LOAD,
     IMM12,
     SHIFT,
     FENCE,

@@ -1,18 +1,16 @@
 #include <algorithm>
 #include <cctype>
-#include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <iomanip>
+#include <iostream>
+#include <fstream>
 #include <print>
-#include <ranges>
 #include <sstream>
-#include <string>
 #include <string_view>
 #include <vector>
 
+namespace fs= std::filesystem;
 #ifdef _WIN32
     #ifndef NOMINMAX
         #define NOMINMAX
@@ -68,7 +66,7 @@ std::string QuoteArg(std::string_view s)
 
 #ifdef _WIN32
 
-std::string RunProcess(const std::filesystem::path &exe,
+std::string RunProcess(const fs::path &exe,
                        std::string_view kind,
                        std::string_view input)
 {
@@ -131,7 +129,7 @@ std::string RunProcess(const std::filesystem::path &exe,
 
 #else
 
-std::string runProcess(const std::filesystem::path &exe,
+std::string RunProcess(const fs::path &exe,
                        std::string_view kind,
                        std::string_view input)
 {
@@ -155,14 +153,14 @@ std::string runProcess(const std::filesystem::path &exe,
 /** Drive RVINST_cli against vector cases and report pass/fail. */
 class InstTester {
 public:
-    InstTester(std::filesystem::path cliPath, std::filesystem::path casesPath)
+    InstTester(fs::path cliPath, fs::path casesPath)
         : CliPath_(std::move(cliPath)),
           CasesPath_(std::move(casesPath)) { }
 
     int Run()
     {
-        if(!std::filesystem::exists(CliPath_)) {
-            std::println(stderr, "CLI not found: {}", CliPath_.string());
+        if(!fs::exists(CliPath_)) {
+            std::println(std::clog, "CLI not found: {}", CliPath_.string());
             return 2;
         }
         if(!loadCases()) return 2;
@@ -183,7 +181,7 @@ public:
                      Failed_,
                      Cases_.size());
         if(Failed_ > 0) {
-            std::println(stderr, "Failed cases: {}", FailedLabels_);
+            std::println(std::clog, "Failed cases: {}", FailedLabels_);
             return 1;
         }
         if(Todo_ > 0) {
@@ -194,8 +192,8 @@ public:
     }
 
 private:
-    std::filesystem::path CliPath_;
-    std::filesystem::path CasesPath_;
+    fs::path CliPath_;
+    fs::path CasesPath_;
     std::vector<tst::InstCase> Cases_;
     size_t Passed_ {};
     size_t Todo_ {};
@@ -206,7 +204,7 @@ private:
     {
         std::ifstream in(CasesPath_);
         if(!in) {
-            std::println(stderr, "Cannot open cases file: {}", CasesPath_.string());
+            std::println(std::clog, "Cannot open cases file: {}", CasesPath_.string());
             return false;
         }
 
@@ -223,7 +221,7 @@ private:
                || !std::getline(ss, c.expectHex_, '|') || !std::getline(ss, c.expectAsm_, '|')
                || !std::getline(ss, c.expectFormat_, '|')
                || !std::getline(ss, c.expectManualTail_, '|')) {
-                std::println(stderr, "SKIP  bad line: {}", line);
+                std::println(std::clog, "SKIP  bad line: {}", line);
                 continue;
             }
             if(!std::getline(ss, c.status_) || c.status_.empty()) c.status_= "impl";
@@ -232,7 +230,7 @@ private:
         }
 
         if(Cases_.empty()) {
-            std::println(stderr, "No cases loaded from {}", CasesPath_.string());
+            std::println(std::clog, "No cases loaded from {}", CasesPath_.string());
             return false;
         }
         return true;
@@ -291,7 +289,7 @@ private:
 int main(int argc, char *argv[])
 {
     if(argc < 3) {
-        std::println(stderr, "Usage: {} <RVINST_cli> <inst_sets.txt>", argv[0]);
+        std::println(std::clog, "Usage: {} <RVINST_cli> <inst_sets.txt>", argv[0]);
         return 2;
     }
 

@@ -196,11 +196,10 @@ void RISCVInstWindow::onInsButtonParseClicked()
         return;
     }
 
-    const bool ABI= pSettings_->GetAbiOn();
-    if(PARSED->kind_ == util::InputKind::ASSEMBLY) {
-        inst_= std::make_unique<Instruction>(inputStr, ABI);
+    if(bool hasSetABI= pSettings_->GetAbiOn(); PARSED->kind_ == util::InputKind::ASSEMBLY) {
+        inst_= std::make_unique<Instruction>(inputStr, hasSetABI);
     } else {
-        inst_= std::make_unique<Instruction>(PARSED->word_, ABI);
+        inst_= std::make_unique<Instruction>(PARSED->word_, hasSetABI);
     }
 
     if(const auto DECODED= inst_->Decode(); !DECODED) {
@@ -390,8 +389,8 @@ void RISCVInstWindow::pushInputHistory(std::string_view text)
     // File log accumulates the deduped set (first-seen order), unbounded;
     // the in-memory ring stays capped for the popover. Only append on first
     // occurrence so repeats do not inflate the file.
-    const bool FIRST_SEEN= std::none_of(history_.GetEntries().begin(), history_.GetEntries().end(),
-                                        [&](const std::string &e) { return e == text; });
+    const bool FIRST_SEEN= std::ranges::none_of(history_.GetEntries(),
+                                                [&](const std::string &e) { return e == text; });
     history_.Push(text);
     if(FIRST_SEEN && pSettings_ && pSettings_->GetSaveHistOn()) {
         if(auto saved= fileMgr_.AppendHistory(text); !saved) {
