@@ -13,7 +13,7 @@ std::string_view InputHistoryMgr::At(size_t index) const noexcept
     return index >= Entries_.size() ? std::string_view {} : Entries_[index];
 }
 
-const std::deque<std::string> &InputHistoryMgr::GetEntries() const noexcept
+const std::deque<std::string> &InputHistoryMgr::Entries() const noexcept
 {
     return Entries_;
 }

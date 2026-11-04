@@ -30,7 +30,7 @@ void UType::Parse()
     setBitsField({ Layout_.U.opc, Layout_.U.rd, Layout_.U.immCt1F });
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nrd: {}\nimm[31:12]: {}",
-                 GetInstOpcode(),
+                 InstOpcode(),
                  Layout_.entity_,
                  +Layout_.U.rd,
                  +Layout_.U.immCt1F); //+s.x <==> static_cast<int>(s.x)

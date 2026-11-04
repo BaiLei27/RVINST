@@ -41,7 +41,7 @@ public:
                         const util::FileIo &fileIo,
                         std::function<bool()> abiOnFn);
 
-    [[nodiscard]] Gtk::Button *GetButton() const noexcept;
+    [[nodiscard]] Gtk::Button *Button() const noexcept;
     void SetOnInstruction(std::function<void(std::unique_ptr<Instruction>)> cb);
 
 private:

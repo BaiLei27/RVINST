@@ -208,7 +208,7 @@ void InstFormatUI::setupAssemblyDisplay()
     pAsmValues_->set_valign(Gtk::Align::CENTER);
     pAsmValues_->add_css_class("assembly-values");
     rebuildAssemblyDisplay(*pView_);
-    appendResultRow("Assembly", *pAsmValues_, &InstFormatUI::GetAssemblyContent);
+    appendResultRow("Assembly", *pAsmValues_, &InstFormatUI::AssemblyContent);
 }
 
 void InstFormatUI::setupBinaryTextDisplay()
@@ -218,7 +218,7 @@ void InstFormatUI::setupBinaryTextDisplay()
     pBinaryLabel_->set_xalign(0.0F);
     pBinaryLabel_->add_css_class("binary-value");
     pBinaryLabel_->add_css_class("value-chip");
-    appendResultRow("Binary", *pBinaryLabel_, &InstFormatUI::GetBinaryContent);
+    appendResultRow("Binary", *pBinaryLabel_, &InstFormatUI::BinaryContent);
 }
 
 void InstFormatUI::setupHexDisplay()
@@ -227,7 +227,7 @@ void InstFormatUI::setupHexDisplay()
     pHexLabel_->set_xalign(0.0F);
     pHexLabel_->add_css_class("hex-value");
     pHexLabel_->add_css_class("value-chip");
-    appendResultRow("Hexadecimal", *pHexLabel_, &InstFormatUI::GetHexContent, true);
+    appendResultRow("Hexadecimal", *pHexLabel_, &InstFormatUI::HexContent, true);
 }
 
 void InstFormatUI::setupBitDiagram()
@@ -269,12 +269,12 @@ void InstFormatUI::rebuildBitDiagram(const util::InstFormatView &view)
     for(const auto &field: view.fields_) {
         const auto TONE= util::BINARY_FIELD_TONE(field.name_, view.keyFields_, view.fields_);
         auto pBits     = std::make_unique<BinaryFieldWidget>(field, TONE);
-        if(auto *pRoot= pBits->GetRoot()) {
+        if(auto *pRoot= pBits->Root()) {
             pRoot->set_hexpand(true);
             pRoot->set_halign(Gtk::Align::FILL);
         }
         binaryFieldWidgets_.emplace(std::string(field.name_), pBits.get());
-        pBitsRow_->append(*pBits->GetRoot());
+        pBitsRow_->append(*pBits->Root());
         binaryOwned_.emplace_back(std::move(pBits));
     }
 }
@@ -322,14 +322,14 @@ void InstFormatUI::SetHexImm(bool on) noexcept { hasHexImm_= on; }
 
 void InstFormatUI::UpdateDisplay(const Instruction &inst)
 {
-    const auto *pType= inst.GetTypePtr();
+    const auto *pType= inst.TypePtr();
     if(!pType) return;
 
-    const auto FMT    = pType->GetInstFormat();
+    const auto FMT    = pType->Format();
     auto iShape       = IImmShape::IMM12;
     auto rShape       = RShape::BASE;
     auto cShape       = CShape::CI;
-    const auto &layout= pType->GetInstLayout();
+    const auto &layout= pType->Layout();
 
     if(InstFormat::I == FMT) {
         iShape= DetectIImmShape(layout.I.opc, layout.I.fct3);
@@ -366,20 +366,20 @@ void InstFormatUI::UpdateDisplay(const Instruction &inst)
 void InstFormatUI::updateHeader(const Instruction &inst)
 {
     if(pFormatBadge_) {
-        pFormatBadge_->set_text(Glib::ustring(inst.GetFormat().data(), inst.GetFormat().size()));
+        pFormatBadge_->set_text(Glib::ustring(inst.Format().data(), inst.Format().size()));
     }
     if(pIsaBadge_) {
-        pIsaBadge_->set_text(Glib::ustring(inst.GetXLEN().data(), inst.GetXLEN().size()));
+        pIsaBadge_->set_text(Glib::ustring(inst.XLEN().data(), inst.XLEN().size()));
     }
     if(pOpcodeBadge_) {
-        const auto *pType= inst.GetTypePtr();
+        const auto *pType= inst.TypePtr();
         if(pType) {
-            pOpcodeBadge_->set_text(std::format("opcode: 0x{:02x}", pType->GetInstOpcode()));
+            pOpcodeBadge_->set_text(std::format("opcode: 0x{:02x}", pType->InstOpcode()));
         }
     }
     if(pManualLink_) {
-        const auto MANUAL= inst.GetManual();
-        const auto NAME  = inst.GetName();
+        const auto MANUAL= inst.Manual();
+        const auto NAME  = inst.Name();
         const Glib::ustring HREF(MANUAL.data(), MANUAL.size());
         const Glib::ustring DISP=
             NAME.empty() ? Glib::ustring("—") : Glib::ustring(NAME.data(), NAME.size());
@@ -400,14 +400,14 @@ void InstFormatUI::updateHeader(const Instruction &inst)
 
 void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
 {
-    const auto *pType= inst.GetTypePtr();
+    const auto *pType= inst.TypePtr();
     if(!pType) return;
 
     for(auto &[NAME, pAsm]: asmFieldWidgets_) {
-        if(pAsm && pAsm->GetLabel() && NAME != "mnemonic") pAsm->GetLabel()->set_text("");
+        if(pAsm && pAsm->Label() && NAME != "mnemonic") pAsm->Label()->set_text("");
     }
 
-    const auto &parts= pType->GetInstAssembly();
+    const auto &parts= pType->InstAssembly();
     size_t j         = 0;
 
     for(const auto &token: pView_->asmTokens_) {
@@ -421,21 +421,21 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
         }
 
         auto it= asmFieldWidgets_.find(token);
-        if(it != asmFieldWidgets_.end() && it->second->GetLabel() && j < parts.size()) { // NOLINT
+        if(it != asmFieldWidgets_.end() && it->second->Label() && j < parts.size()) { // NOLINT
             const auto &part= parts[j++];
-            it->second->GetLabel()->set_text(isImmAsmToken(token) ? formatAsmImm(part, hasHexImm_) : part);
+            it->second->Label()->set_text(isImmAsmToken(token) ? formatAsmImm(part, hasHexImm_) : part);
         }
     }
 
     // C-Type view only exposes a mnemonic chip — fold the full operand list into it.
     if(1 == pView_->asmTokens_.size() && pView_->asmTokens_.front() == "mnemonic") {
         auto it= asmFieldWidgets_.find(std::string_view { "mnemonic" });
-        if(it != asmFieldWidgets_.end() && it->second->GetLabel()) { // NOLINT
+        if(it != asmFieldWidgets_.end() && it->second->Label()) { // NOLINT
             std::string full;
             for(const auto &p: parts) {
                 full+= p;
             }
-            it->second->GetLabel()->set_text(full);
+            it->second->Label()->set_text(full);
         }
     }
 
@@ -448,7 +448,7 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
         return t != "," && t != "(" && t != ")";
     };
     auto hasText= [&](size_t i) {
-        auto *pLbl= asmOwned_[i] ? asmOwned_[i]->GetLabel() : nullptr;
+        auto *pLbl= asmOwned_[i] ? asmOwned_[i]->Label() : nullptr;
         return pLbl && !pLbl->get_text().empty();
     };
     for(size_t i= 0; i < N; ++i) {
@@ -490,16 +490,16 @@ void InstFormatUI::updateAssemblyDisplay(const Instruction &inst)
             }
             visible[i]= keep;
         }
-        if(asmOwned_[i] && asmOwned_[i]->GetRoot()) asmOwned_[i]->GetRoot()->set_visible(visible[i]);
+        if(asmOwned_[i] && asmOwned_[i]->Root()) asmOwned_[i]->Root()->set_visible(visible[i]);
     }
 }
 
 void InstFormatUI::updateBinaryDisplay(const Instruction &inst)
 {
-    const auto *pType= inst.GetTypePtr();
+    const auto *pType= inst.TypePtr();
     if(!pType) return;
 
-    const auto &bits= pType->GetInstBitsField();
+    const auto &bits= pType->InstBitsField();
     const auto N    = binaryOwned_.size();
     const auto M    = bits.size();
 
@@ -508,23 +508,23 @@ void InstFormatUI::updateBinaryDisplay(const Instruction &inst)
     }
 
     if(pBinaryLabel_) {
-        pBinaryLabel_->set_text(GetBinaryContent());
+        pBinaryLabel_->set_text(BinaryContent());
     }
 }
 
 void InstFormatUI::updateHexDisplay(const Instruction &inst)
 {
     if(pHexLabel_) {
-        pHexLabel_->set_text("0x" + inst.GetHexStr());
+        pHexLabel_->set_text("0x" + inst.HexStr());
     }
 }
 
-std::string InstFormatUI::GetAssemblyContent() const
+std::string InstFormatUI::AssemblyContent() const
 {
     std::string result;
     for(size_t i= 0; i < pView_->asmTokens_.size() && i < asmOwned_.size(); ++i) {
         const auto &token= pView_->asmTokens_[i];
-        if(asmOwned_[i] && asmOwned_[i]->GetRoot() && !asmOwned_[i]->GetRoot()->get_visible()) continue;
+        if(asmOwned_[i] && asmOwned_[i]->Root() && !asmOwned_[i]->Root()->get_visible()) continue;
 
         if(token == ",") {
             result+= ", ";
@@ -536,28 +536,28 @@ std::string InstFormatUI::GetAssemblyContent() const
         }
 
         auto it= asmFieldWidgets_.find(token);
-        if(it == asmFieldWidgets_.end() || !it->second->GetLabel()) continue; // NOLINT
+        if(it == asmFieldWidgets_.end() || !it->second->Label()) continue; // NOLINT
 
-        result+= it->second->GetLabel()->get_text().raw();
+        result+= it->second->Label()->get_text().raw();
         if(token == "mnemonic") result+= ' ';
     }
     return result;
 }
 
-std::string InstFormatUI::GetBinaryContent() const
+std::string InstFormatUI::BinaryContent() const
 {
     std::string result;
     result.reserve(32);
 
     for(const auto &pField: binaryOwned_) {
-        for(auto *pLabel: pField->GetLabels()) {
+        for(auto *pLabel: pField->Labels()) {
             if(pLabel) result+= pLabel->get_text().raw();
         }
     }
     return result;
 }
 
-std::string InstFormatUI::GetHexContent() const
+std::string InstFormatUI::HexContent() const
 {
     return pHexLabel_ ? std::string(pHexLabel_->get_text().raw()) : std::string {};
 }
@@ -568,7 +568,7 @@ bool InstFormatUI::FitToContent()
 
     // Temporarily unexpand fields to measure intrinsic bit-diagram width.
     for(auto &pField: binaryOwned_) {
-        if(pField && pField->GetRoot()) pField->GetRoot()->set_hexpand(false);
+        if(pField && pField->Root()) pField->Root()->set_hexpand(false);
     }
     pBitsRow_->set_hexpand(false);
     return true;
@@ -588,7 +588,7 @@ void InstFormatUI::RestoreHexPand()
     if(!pBitsRow_) return;
 
     for(auto &pField: binaryOwned_) {
-        if(pField && pField->GetRoot()) pField->GetRoot()->set_hexpand(true);
+        if(pField && pField->Root()) pField->Root()->set_hexpand(true);
     }
     pBitsRow_->set_hexpand(true);
     pBitsRow_->queue_resize();

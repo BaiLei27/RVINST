@@ -12,17 +12,17 @@ IBaseInstType::IBaseInstType(InstFormat format,
       Format_(format),
       HasSetABI_(hasSetABI) { }
 
-const InstLayout &IBaseInstType::GetInstLayout() const noexcept { return Layout_; }
+const InstLayout &IBaseInstType::Layout() const noexcept { return Layout_; }
 
-const std::vector<std::string> &IBaseInstType::GetInstAssembly() const noexcept { return InstAssembly_; }
+const std::vector<std::string> &IBaseInstType::InstAssembly() const noexcept { return InstAssembly_; }
 
-const std::vector<uint32_t> &IBaseInstType::GetInstBitsField() const noexcept { return InstBitsField_; }
+const std::vector<uint32_t> &IBaseInstType::InstBitsField() const noexcept { return InstBitsField_; }
 
-uint8_t IBaseInstType::GetInstOpcode() const noexcept { return Layout_.entity_ & 0x7FU; }
+uint8_t IBaseInstType::InstOpcode() const noexcept { return Layout_.entity_ & 0x7FU; }
 
-IBaseInstType::KeyT IBaseInstType::GetKey() const noexcept { return Key_; }
+IBaseInstType::KeyT IBaseInstType::Key() const noexcept { return Key_; }
 
-InstFormat IBaseInstType::GetInstFormat() const noexcept { return Format_; }
+InstFormat IBaseInstType::Format() const noexcept { return Format_; }
 
 // std::string_view IBaseInstType::GetInstDisassembly() const { return InstDisassembly_; }
 void IBaseInstType::SetInstAssembly(std::vector<std::string> instAssembly)
@@ -63,7 +63,7 @@ BiLookupTable<IBaseInstType::KeyT>::IndexInfo IBaseInstType::LookupIdxAndInfo() 
     return { .manual_= "Not available",
              .XLEN_  = "UNDEF",
              .keyID_ = Key_,
-             .opcode_= GetInstOpcode() };
+             .opcode_= InstOpcode() };
 }
 
 const std::vector<std::string> &IBaseInstType::Disassembly()

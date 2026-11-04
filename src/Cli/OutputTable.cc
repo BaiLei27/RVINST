@@ -42,13 +42,13 @@ namespace {
     // bits_ views Instruction storage; meta_ views static format tables.
     ResolvedFields resolveFields(const Instruction &inst)
     {
-        const auto *pType= inst.GetTypePtr();
+        const auto *pType= inst.TypePtr();
         if(!pType) return {};
 
-        const auto FMT= pType->GetInstFormat();
+        const auto FMT= pType->Format();
 
         std::span<const InstField> meta= GetInstFields(FMT);
-        const auto &l                  = pType->GetInstLayout();
+        const auto &l                  = pType->Layout();
         if(InstFormat::I == FMT) {
             meta= GetIInstFields(DetectIImmShape(l.I.opc, l.I.fct3));
         } else if(InstFormat::R == FMT) {
@@ -57,7 +57,7 @@ namespace {
         } else if(InstFormat::C == FMT) {
             meta= GetCInstFields(DetectCShape(l.entity_));
         }
-        return { .bits_= std::span<const uint32_t>(pType->GetInstBitsField()), .meta_= meta };
+        return { .bits_= std::span<const uint32_t>(pType->InstBitsField()), .meta_= meta };
     }
 
     uint32_t fieldValue(std::span<const uint32_t> bits, size_t total, size_t index)
@@ -88,7 +88,7 @@ OutputMode DetectOutputMode(bool forceJson)
 
 OutputFormatter::OutputFormatter(OutputMode mode): Mode_(mode) { }
 
-OutputMode OutputFormatter::GetMode() const noexcept { return Mode_; }
+OutputMode OutputFormatter::Mode() const noexcept { return Mode_; }
 
 std::string OutputFormatter::paint(std::string_view text, std::string_view code) const
 {
@@ -124,12 +124,12 @@ void OutputFormatter::PrintInstruction(const Instruction &inst, std::string_view
     };
 
     kv("Input", input);
-    kv("Binary", inst.GetBinStr());
+    kv("Binary", inst.BinStr());
     kv("Assembly", std::string(inst));
-    kv("Hex", std::string("0x") + inst.GetHexStr());
-    kv("Format", inst.GetFormat());
-    kv("ISA", inst.GetXLEN());
-    kv("Manual", inst.GetManual());
+    kv("Hex", std::string("0x") + inst.HexStr());
+    kv("Format", inst.Format());
+    kv("ISA", inst.XLEN());
+    kv("Manual", inst.Manual());
 
     std::print("{}", buf);
     printFieldTable(inst);
@@ -435,22 +435,22 @@ void OutputFormatter::printInstructionJSON(const Instruction &inst, std::string_
                    jsonEscape(input));
     std::format_to(out, R"(  "binary": "{}",)"
                         "\n",
-                   inst.GetBinStr());
+                   inst.BinStr());
     std::format_to(out, R"(  "assembly": "{}",)"
                         "\n",
                    jsonEscape(std::string(inst)));
     std::format_to(out, R"(  "hex": "{}",)"
                         "\n",
-                   inst.GetHexStr());
+                   inst.HexStr());
     std::format_to(out, R"(  "format": "{}",)"
                         "\n",
-                   inst.GetFormat());
+                   inst.Format());
     std::format_to(out, R"(  "xlen": "{}",)"
                         "\n",
-                   inst.GetXLEN());
+                   inst.XLEN());
     std::format_to(out, R"(  "manual": "{}",)"
                         "\n",
-                   jsonEscape(std::string(inst.GetManual())));
+                   jsonEscape(std::string(inst.Manual())));
     std::format_to(out, R"(  "fields": [)"
                         "\n");
 

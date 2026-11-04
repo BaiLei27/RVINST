@@ -9,7 +9,7 @@ namespace util {
 
 FileIo::FileIo(fs::path dataDir): DataDir_(std::move(dataDir)) { }
 
-const fs::path &FileIo::GetDataDir() const noexcept { return DataDir_; }
+const fs::path &FileIo::DataDir() const noexcept { return DataDir_; }
 
 fs::path FileIo::HistoryLogPath(std::string_view name) const
 {
@@ -83,7 +83,7 @@ Expected_u<void> FileIo::SaveHistory(const InputHistoryMgr &hist) const
             Error::InvalidArg(std::format("cannot open history log: {}", LOG.generic_string())));
     }
 
-    for(const auto &entry: hist.GetEntries()) {
+    for(const auto &entry: hist.Entries()) {
         out << entry << '\n';
     }
     return {};

@@ -131,7 +131,7 @@ void RType::Parse()
     }
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nfunct7: {}\nrs1: {}\nrs2: {}\nrd: {}",
-                 GetInstOpcode(),
+                 InstOpcode(),
                  Layout_.entity_,
                  +Layout_.R.fct3,
                  +Layout_.R.fct7,

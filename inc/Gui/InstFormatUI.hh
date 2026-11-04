@@ -45,9 +45,9 @@ public:
 
     [[nodiscard]] bool FitToContent();
     [[nodiscard]] int MeasureWidth() const;
-    [[nodiscard]] std::string GetAssemblyContent() const;
-    [[nodiscard]] std::string GetBinaryContent() const;
-    [[nodiscard]] std::string GetHexContent() const;
+    [[nodiscard]] std::string AssemblyContent() const;
+    [[nodiscard]] std::string BinaryContent() const;
+    [[nodiscard]] std::string HexContent() const;
 
 private:
     void setupResultCard();

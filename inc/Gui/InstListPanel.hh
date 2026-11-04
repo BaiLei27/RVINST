@@ -28,7 +28,7 @@ public:
     explicit InstListPanel(Gtk::Window &parent);
 
 public:
-    [[nodiscard]] Gtk::ToggleButton *GetButton() const noexcept;
+    [[nodiscard]] Gtk::ToggleButton *Button() const noexcept;
 
     /// label: mnemonic for the entry; word: default encoding to decode
     sigc::signal<void(std::string_view label, uint32_t word)> signalInstruction_;

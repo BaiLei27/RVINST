@@ -1,0 +1,81 @@
+# ==============================================================================
+# Git Attributes
+# Only files that are actually tracked matter here.
+# Build artifacts, temp files, and local configs are already excluded by
+# .gitignore, so they do not need binary/eol declarations.
+# See: https://git-scm.com/docs/gitattributes
+# ==============================================================================
+
+# Default: auto-detect text, force LF in repo and working tree on all platforms.
+* text=auto eol=lf
+
+# ------------------------------------------------------------------------------
+# Windows-only text files (CRLF required by their tools)
+# ------------------------------------------------------------------------------
+*.bat             text eol=crlf
+*.cmd             text eol=crlf
+*.ps1             text eol=crlf
+*.psm1            text eol=crlf
+*.psd1            text eol=crlf
+*.sln             text eol=crlf
+*.vcproj          text eol=crlf
+*.vcxproj         text eol=crlf
+*.vcxproj.filters text eol=crlf
+
+# ------------------------------------------------------------------------------
+# Binary resources that MAY be tracked
+# Keep only if your repo actually contains such files.
+# Note: one pattern per line. Multiple patterns on one line are invalid.
+# ------------------------------------------------------------------------------
+# Images
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.bmp    binary
+*.tiff   binary
+*.tif    binary
+*.ico    binary
+*.webp   binary
+
+# Documents
+*.pdf    binary
+*.doc    binary
+*.docx   binary
+*.xls    binary
+*.xlsx   binary
+*.ppt    binary
+*.pptx   binary
+
+# Archives
+*.zip    binary
+*.tar    binary
+*.gz     binary
+*.bz2    binary
+*.xz     binary
+*.7z     binary
+*.rar    binary
+
+# Fonts
+*.ttf    binary
+*.otf    binary
+*.woff   binary
+*.woff2  binary
+*.eot    binary
+
+# Media
+*.mp3    binary
+*.mp4    binary
+*.avi    binary
+*.mov    binary
+*.mkv    binary
+
+# ------------------------------------------------------------------------------
+# Archive export (git archive)
+# ------------------------------------------------------------------------------
+.gitattributes export-ignore
+.gitignore     export-ignore
+.github/       export-ignore
+.gitlab/       export-ignore
+tests/         export-ignore
+docs/          export-ignore

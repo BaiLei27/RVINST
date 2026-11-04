@@ -105,7 +105,7 @@ void IType::Parse()
     }
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nrs1: {}\nrd: {}\nimm: {}",
-                 GetInstOpcode(),
+                 InstOpcode(),
                  Layout_.entity_,
                  +Layout_.I.fct3,
                  +Layout_.I.rs1,

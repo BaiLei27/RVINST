@@ -29,15 +29,15 @@ public:
     SettingsPanel(bool abiOn, bool hexImmOn, bool saveHistOn, bool compactOn);
 
 public:
-    [[nodiscard]] Gtk::MenuButton *GetMenuButton() const noexcept;
+    [[nodiscard]] Gtk::MenuButton *MenuButton() const noexcept;
 
-    [[nodiscard]] bool GetAbiOn() const noexcept;
+    [[nodiscard]] bool AbiOn() const noexcept;
 
-    [[nodiscard]] bool GetHexImmOn() const noexcept;
+    [[nodiscard]] bool HexImmOn() const noexcept;
 
-    [[nodiscard]] bool GetSaveHistOn() const noexcept;
+    [[nodiscard]] bool SaveHistOn() const noexcept;
 
-    [[nodiscard]] bool GetCompactOn() const noexcept;
+    [[nodiscard]] bool CompactOn() const noexcept;
 
 private:
     static void addToggle(Gtk::Box &box,

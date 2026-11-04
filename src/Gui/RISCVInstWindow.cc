@@ -81,14 +81,14 @@ RISCVInstWindow::RISCVInstWindow()
     });
 
     // File open — batch decode owned by FileLoader; window takes Instruction ownership.
-    pFileLoader_= std::make_unique<FileLoader>(*this, fileMgr_, [this] { return pSettings_->GetAbiOn(); });
+    pFileLoader_= std::make_unique<FileLoader>(*this, fileMgr_, [this] { return pSettings_->AbiOn(); });
     pFileLoader_->signalInput_.connect([this](std::string_view text) { pushInputHistory(text); });
     pFileLoader_->SetOnInstruction([this](std::unique_ptr<Instruction> inst) {
         inst_= std::move(inst);
         showInsResult(*inst_);
     });
     pFileLoader_->signalError_.connect([this](const std::string &msg) { showError(msg); });
-    pEntryRow_->append(*pFileLoader_->GetButton());
+    pEntryRow_->append(*pFileLoader_->Button());
 
     // Instruction list (between open-file and settings): non-modal child window.
     pInstList_= std::make_unique<InstListPanel>(*this);
@@ -97,7 +97,7 @@ RISCVInstWindow::RISCVInstWindow()
         insEntry_->set_text(gui::ToGlibUstring(HEX));
         insEntry_->set_tooltip_text(gui::ToGlibUstring(name));
 
-        inst_= std::make_unique<Instruction>(word, pSettings_->GetAbiOn());
+        inst_= std::make_unique<Instruction>(word, pSettings_->AbiOn());
         if(const auto DECODED= inst_->Decode(); !DECODED) {
             showError(std::format("decode failed: {}", DECODED.error().Msg()));
             return;
@@ -106,8 +106,8 @@ RISCVInstWindow::RISCVInstWindow()
         showInsResult(*inst_);
         // Do not grab_focus here: keep keyboard in the list for multi-pick.
     });
-    pEntryRow_->append(*pInstList_->GetButton());
-    pEntryRow_->append(*pSettings_->GetMenuButton());
+    pEntryRow_->append(*pInstList_->Button());
+    pEntryRow_->append(*pSettings_->MenuButton());
 
     insButtonParse_->add_css_class("parse-button");
     insButtonParse_->set_halign(Gtk::Align::CENTER);
@@ -196,7 +196,7 @@ void RISCVInstWindow::onInsButtonParseClicked()
         return;
     }
 
-    if(bool hasSetABI= pSettings_->GetAbiOn(); PARSED->kind_ == util::InputKind::ASSEMBLY) {
+    if(bool hasSetABI= pSettings_->AbiOn(); PARSED->kind_ == util::InputKind::ASSEMBLY) {
         inst_= std::make_unique<Instruction>(inputStr, hasSetABI);
     } else {
         inst_= std::make_unique<Instruction>(PARSED->word_, hasSetABI);
@@ -215,13 +215,13 @@ void RISCVInstWindow::onInsButtonParseClicked()
 
 void RISCVInstWindow::showInsResult(Instruction &inst)
 {
-    const auto *pType= inst.GetTypePtr();
+    const auto *pType= inst.TypePtr();
     if(!pType || !pFormatUi_ || !pFormatStack_) {
         showError("invalid input: unsupported instruction format");
         return;
     }
 
-    if(pType->GetInstFormat() == InstFormat::UNKNOWN) {
+    if(pType->Format() == InstFormat::UNKNOWN) {
         showError("invalid input: unsupported instruction format");
         return;
     }
@@ -230,7 +230,7 @@ void RISCVInstWindow::showInsResult(Instruction &inst)
     pFormatUi_->remove_css_class("format-placeholder");
     pFormatUi_->set_sensitive(true);
     pFormatStack_->set_visible_child(*pFormatUi_);
-    pFormatUi_->SetHexImm(pSettings_->GetHexImmOn());
+    pFormatUi_->SetHexImm(pSettings_->HexImmOn());
     pFormatUi_->UpdateDisplay(inst);
     fitWindowToContent(false);
 }
@@ -283,7 +283,7 @@ void RISCVInstWindow::refreshAssemblyDisplay()
     if(!inst_) return;
 
     const auto VAL= static_cast<uint32_t>(*inst_);
-    inst_         = std::make_unique<Instruction>(VAL, pSettings_->GetAbiOn());
+    inst_         = std::make_unique<Instruction>(VAL, pSettings_->AbiOn());
     if(const auto DECODED= inst_->Decode(); DECODED) {
         showInsResult(*inst_);
     } else {
@@ -389,10 +389,10 @@ void RISCVInstWindow::pushInputHistory(std::string_view text)
     // File log accumulates the deduped set (first-seen order), unbounded;
     // the in-memory ring stays capped for the popover. Only append on first
     // occurrence so repeats do not inflate the file.
-    const bool FIRST_SEEN= std::ranges::none_of(history_.GetEntries(),
+    const bool FIRST_SEEN= std::ranges::none_of(history_.Entries(),
                                                 [&](const std::string &e) { return e == text; });
     history_.Push(text);
-    if(FIRST_SEEN && pSettings_ && pSettings_->GetSaveHistOn()) {
+    if(FIRST_SEEN && pSettings_ && pSettings_->SaveHistOn()) {
         if(auto saved= fileMgr_.AppendHistory(text); !saved) {
             std::println("history append failed: {}", saved.error().Msg());
         }
@@ -405,7 +405,7 @@ void RISCVInstWindow::rebuildHistoryList()
     if(!pHistoryList_) return;
 
     int i= 0;
-    for(const auto &item: history_.GetEntries()) {
+    for(const auto &item: history_.Entries()) {
         auto *pRow= pHistoryList_->get_row_at_index(i);
         if(!pRow) {
             pRow= Gtk::make_managed<Gtk::ListBoxRow>();

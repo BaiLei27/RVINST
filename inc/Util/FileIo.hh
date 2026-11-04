@@ -35,7 +35,7 @@ public:
     explicit FileIo(fs::path dataDir);
 
 public:
-    [[nodiscard]] const fs::path &GetDataDir() const noexcept;
+    [[nodiscard]] const fs::path &DataDir() const noexcept;
     fs::path HistoryLogPath(std::string_view name= "inputHist.log"sv) const;
 
     // Stream each line; onLine must not retain the view past the call.

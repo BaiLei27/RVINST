@@ -46,7 +46,7 @@ void BType::Parse()
                    Layout_.B.immC });
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nrs1: {}\nrs2: {}\nimm: {}",
-                 GetInstOpcode(),
+                 InstOpcode(),
                  Layout_.entity_,
                  +Layout_.B.fct3,
                  +Layout_.B.rs1,

@@ -42,7 +42,7 @@ void SType::Parse()
                    Layout_.S.imm5tB });
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nfunct3: {}\nrs1: {}\nrs2: {}\nimm: {}",
-                 GetInstOpcode(),
+                 InstOpcode(),
                  Layout_.entity_,
                  +Layout_.S.fct3,
                  +Layout_.S.rs1,

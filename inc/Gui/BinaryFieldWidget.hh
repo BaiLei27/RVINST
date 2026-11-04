@@ -18,9 +18,9 @@ public:
     BinaryFieldWidget(const InstField &field, util::FieldTone tone);
 
 public:
-    [[nodiscard]] const std::vector<Gtk::Label *> &GetLabels() const noexcept { return controlLabels_; }
+    [[nodiscard]] const std::vector<Gtk::Label *> &Labels() const noexcept { return controlLabels_; }
 
-    [[nodiscard]] util::FieldTone GetTone() const noexcept { return tone_; }
+    [[nodiscard]] util::FieldTone Tone() const noexcept { return tone_; }
 
     void SetupHover(std::string_view name,
                     const util::InstFormatView &view,

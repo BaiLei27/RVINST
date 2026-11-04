@@ -174,7 +174,7 @@ InstListPanel::InstListPanel(Gtk::Window &parent)
     PBtn_->signal_toggled().connect(sigc::mem_fun(*this, &InstListPanel::onToggled));
 }
 
-Gtk::ToggleButton *InstListPanel::GetButton() const noexcept { return PBtn_; }
+Gtk::ToggleButton *InstListPanel::Button() const noexcept { return PBtn_; }
 
 void InstListPanel::setButtonActive(bool active)
 {

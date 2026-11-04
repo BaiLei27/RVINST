@@ -19,7 +19,7 @@ FileLoader::FileLoader(Gtk::Window &owner,
     PBtn_->signal_clicked().connect(sigc::mem_fun(*this, &FileLoader::onOpenClicked));
 }
 
-Gtk::Button *FileLoader::GetButton() const noexcept { return PBtn_; }
+Gtk::Button *FileLoader::Button() const noexcept { return PBtn_; }
 
 void FileLoader::SetOnInstruction(std::function<void(std::unique_ptr<Instruction>)> cb)
 {

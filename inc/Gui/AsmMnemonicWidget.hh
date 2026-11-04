@@ -15,7 +15,7 @@ public:
     AsmMnemonicWidget(std::string_view token, Gtk::Box *pParentAsmBox);
 
 public:
-    [[nodiscard]] Gtk::Label *GetLabel() const noexcept;
+    [[nodiscard]] Gtk::Label *Label() const noexcept;
 
     void SetupHover(std::string_view name,
                     const util::InstFormatView &view,

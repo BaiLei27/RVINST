@@ -122,7 +122,7 @@ Key TerminalKeySource::Peek()
     }
 }
 
-char TerminalKeySource::GetKeyChar() const noexcept { return KeyChar_; }
+char TerminalKeySource::KeyChar() const noexcept { return KeyChar_; }
 
 std::optional<Key> TerminalKeySource::readKeyOnce()
 {
@@ -192,7 +192,7 @@ std::optional<std::string> LineEditor::ReadLine(util::InputHistoryMgr &history)
             Src_.LeaveRawMode();
             return std::nullopt;
         }
-        case Key::PRINTABLE: insert(Src_.GetKeyChar()); break;
+        case Key::PRINTABLE: insert(Src_.KeyChar()); break;
         case Key::BACKSPACE: eraseBefore(); break;
         case Key::UP:        browseHistory(history, +1); break;
         case Key::DOWN:      browseHistory(history, -1); break;

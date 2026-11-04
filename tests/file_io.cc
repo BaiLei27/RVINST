@@ -59,7 +59,7 @@ int main()
     CHECK(!missing, "ForEachLine of missing file should fail");
 
     // 3. DataDir is configurable and roots the history log only
-    CHECK(mgr.GetDataDir() == DATA_ROOT, "injected data dir should stick");
+    CHECK(mgr.DataDir() == DATA_ROOT, "injected data dir should stick");
 
     // 4. History round-trip: SaveHistory then LoadHistory
     util::InputHistoryMgr hist(32);

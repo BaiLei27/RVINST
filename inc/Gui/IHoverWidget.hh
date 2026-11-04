@@ -21,7 +21,7 @@ public:
     void Highlight();
     void Unhighlight();
 
-    [[nodiscard]] Gtk::Widget *GetRoot() const noexcept;
+    [[nodiscard]] Gtk::Widget *Root() const noexcept;
 
     static void SetCSSClass(Gtk::Widget *pWidget, const char *pCls, bool on) noexcept;
     static void SetHighlighted(IHoverWidget *pWidget, bool on) noexcept;

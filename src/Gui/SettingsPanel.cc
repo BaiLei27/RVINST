@@ -1,14 +1,14 @@
 #include "Gui/SettingsPanel.hh"
 
-Gtk::MenuButton *SettingsPanel::GetMenuButton() const noexcept { return PMenuBtn_; }
+Gtk::MenuButton *SettingsPanel::MenuButton() const noexcept { return PMenuBtn_; }
 
-bool SettingsPanel::GetAbiOn() const noexcept { return AbiOn_; }
+bool SettingsPanel::AbiOn() const noexcept { return AbiOn_; }
 
-bool SettingsPanel::GetHexImmOn() const noexcept { return HexImmOn_; }
+bool SettingsPanel::HexImmOn() const noexcept { return HexImmOn_; }
 
-bool SettingsPanel::GetSaveHistOn() const noexcept { return SaveHistOn_; }
+bool SettingsPanel::SaveHistOn() const noexcept { return SaveHistOn_; }
 
-bool SettingsPanel::GetCompactOn() const noexcept { return CompactOn_; }
+bool SettingsPanel::CompactOn() const noexcept { return CompactOn_; }
 
 SettingsPanel::SettingsPanel(bool abiOn, bool hexImmOn, bool saveHistOn, bool compactOn)
     : PMenuBtn_(Gtk::make_managed<Gtk::MenuButton>()),

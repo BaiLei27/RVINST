@@ -12,7 +12,7 @@ Instruction::Instruction(uint32_t inst, bool hasSetABI)
         XLEN_           = info.XLEN_;
         Manual_         = info.manual_;
         Name_           = info.name_;
-        Format_         = GetFormat();
+        Format_         = Format();
     }
 }
 
@@ -33,9 +33,9 @@ Instruction::Instruction(std::string_view assembly, bool hasSetABI)
         const auto INFO= Type_->LookupIdxAndInfo();
         XLEN_          = INFO.XLEN_;
         Manual_        = INFO.manual_;
-        Format_        = GetFormat();
+        Format_        = Format();
 
-        const auto &asms= Type_->GetInstAssembly();
+        const auto &asms= Type_->InstAssembly();
         if(!asms.empty()) Name_= asms.front();
     }
 }
@@ -80,29 +80,29 @@ Instruction::operator std::string() const { return Disassembly_.str(); }
 
 Instruction::operator uint32_t() const { return BitField_.to_ulong(); }
 
-const IBaseInstType *Instruction::GetTypePtr() const { return Type_.get(); }
+const IBaseInstType *Instruction::TypePtr() const { return Type_.get(); }
 
-const IBaseInstType &Instruction::GetType() const { return *Type_; }
+const IBaseInstType &Instruction::Type() const { return *Type_; }
 
-const std::bitset<32> &Instruction::GetBitField() const { return BitField_; }
+const std::bitset<32> &Instruction::BitField() const { return BitField_; }
 
-std::string Instruction::GetHexStr() const
+std::string Instruction::HexStr() const
 {
     const uint32_t W= BitField_.to_ulong();
     return 3 != (W & 0x3) ? std::format("{:04X}", W & 0xFFFF) : std::format("{:08X}", W);
 }
 
-std::string Instruction::GetBinStr() const { return BitField_.to_string(); }
+std::string Instruction::BinStr() const { return BitField_.to_string(); }
 
-std::string_view Instruction::GetXLEN() const { return XLEN_; }
+std::string_view Instruction::XLEN() const { return XLEN_; }
 
-std::string_view Instruction::GetManual() const { return Manual_; }
+std::string_view Instruction::Manual() const { return Manual_; }
 
-std::string_view Instruction::GetName() const { return Name_; }
+std::string_view Instruction::Name() const { return Name_; }
 
-std::string_view Instruction::GetFormat() const noexcept
+std::string_view Instruction::Format() const noexcept
 {
-    return !Type_ ? "UNKNOW" : InstFormatName(Type_->GetInstFormat());
+    return !Type_ ? "UNKNOW" : InstFormatName(Type_->Format());
 }
 
 util::Expected_u<void> Instruction::Decode()
@@ -114,7 +114,7 @@ util::Expected_u<void> Instruction::Decode()
 
     // Word-decode of all-zero (e.g. C sample 0x0000) must not take the Assembly
     // path — that path requires InstAssembly_ tokens and would throw on .at(0).
-    if(BitField_.none() && !Type_->GetInstAssembly().empty()) {
+    if(BitField_.none() && !Type_->InstAssembly().empty()) {
         const auto LAYOUT= Type_->Assembly();
         if(!LAYOUT) return util::Unexpected(LAYOUT.error());
 
@@ -125,7 +125,7 @@ util::Expected_u<void> Instruction::Decode()
     }
     Type_->Parse();
 
-    const auto &v= Type_->GetInstAssembly();
+    const auto &v= Type_->InstAssembly();
     for(const auto &e: v) {
         Disassembly_ << e;
     }

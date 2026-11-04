@@ -16,7 +16,7 @@
 namespace cli {
 
 enum class Key : uint8_t {
-    PRINTABLE,   // displayable char, in GetKeyChar()
+    PRINTABLE,   // displayable char, in KeyChar()
     ENTER,       // accept the line
     BACKSPACE,   // delete char before caret
     UP,          // history backward
@@ -32,12 +32,12 @@ public:
     virtual ~IKeySource()= default;
 
 public:
-    [[nodiscard]] virtual Key Peek()                      = 0; // skips noise, returns a valid Key
-    [[nodiscard]] virtual char GetKeyChar() const noexcept= 0; // valid when Peek() == PRINTABLE
-    [[nodiscard]] virtual bool IsInteractive() const      = 0;
-    virtual void WriteString(std::string_view s)          = 0; // paint / move caret
-    virtual void EnterRawMode()                           = 0;
-    virtual void LeaveRawMode()                           = 0;
+    [[nodiscard]] virtual Key Peek()                   = 0; // skips noise, returns a valid Key
+    [[nodiscard]] virtual char KeyChar() const noexcept= 0; // valid when Peek() == PRINTABLE
+    [[nodiscard]] virtual bool IsInteractive() const   = 0;
+    virtual void WriteString(std::string_view s)       = 0; // paint / move caret
+    virtual void EnterRawMode()                        = 0;
+    virtual void LeaveRawMode()                        = 0;
 };
 
 /// Production backend. Platform state is hidden behind pimpl so the header
@@ -59,7 +59,7 @@ public:
 
     [[nodiscard]] bool IsInteractive() const override;
     [[nodiscard]] Key Peek() override;
-    [[nodiscard]] char GetKeyChar() const noexcept override;
+    [[nodiscard]] char KeyChar() const noexcept override;
     void EnterRawMode() override;
     void LeaveRawMode() override;
     void WriteString(std::string_view s) override;

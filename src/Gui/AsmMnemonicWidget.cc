@@ -25,7 +25,7 @@ void AsmMnemonicWidget::onHoverChanged(bool on)
     IHoverWidget::SetHighlightedAll(relatedBinary_, on);
 }
 
-Gtk::Label *AsmMnemonicWidget::GetLabel() const noexcept { return pLabel_; }
+Gtk::Label *AsmMnemonicWidget::Label() const noexcept { return pLabel_; }
 
 void AsmMnemonicWidget::SetupHover(std::string_view name,
                                    const util::InstFormatView &view,

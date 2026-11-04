@@ -122,7 +122,7 @@ Expected_u<std::unique_ptr<Instruction>>
         inst= std::make_unique<Instruction>(parsed.word_, hasSetABI);
     }
 
-    if(!inst->GetTypePtr()) {
+    if(!inst->TypePtr()) {
         return Unexpected(Error::Unsupported(std::format("unsupported instruction: {}", trimmed)));
     }
 

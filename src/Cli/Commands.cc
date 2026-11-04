@@ -25,7 +25,7 @@ util::Expected_u<void> Commands::processInstruction(InstInput auto input)
         }
     }();
 
-    if(!inst.GetTypePtr()) {
+    if(!inst.TypePtr()) {
         return util::Unexpected(util::Error::Unsupported(std::format("unsupported instruction: {}", label)));
     }
 
@@ -132,7 +132,7 @@ void Commands::replHistory()
     }
     std::println("  Input history ({} entries, most recent first):", History_.Size());
 
-    for(size_t idx= 0; const auto &entry: History_.GetEntries()) {
+    for(size_t idx= 0; const auto &entry: History_.Entries()) {
         std::println("    {:>3}: {}", idx++, entry);
     }
 }

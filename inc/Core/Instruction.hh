@@ -27,16 +27,16 @@ public:
     explicit operator uint32_t() const;
 
 public:
-    const IBaseInstType *GetTypePtr() const;
-    const IBaseInstType &GetType() const;
-    const std::bitset<32> &GetBitField() const;
+    [[nodiscard]] const IBaseInstType *TypePtr() const;
+    [[nodiscard]] const IBaseInstType &Type() const;
+    [[nodiscard]] const std::bitset<32> &BitField() const;
 
-    [[nodiscard]] std::string GetHexStr() const;
-    [[nodiscard]] std::string GetBinStr() const;
-    [[nodiscard]] std::string_view GetXLEN() const;
-    [[nodiscard]] std::string_view GetManual() const;
-    [[nodiscard]] std::string_view GetName() const;
-    [[nodiscard]] std::string_view GetFormat() const noexcept;
+    [[nodiscard]] std::string HexStr() const;
+    [[nodiscard]] std::string BinStr() const;
+    [[nodiscard]] std::string_view XLEN() const;
+    [[nodiscard]] std::string_view Manual() const;
+    [[nodiscard]] std::string_view Name() const;
+    [[nodiscard]] std::string_view Format() const noexcept;
 
     [[nodiscard]] util::Expected_u<void> Decode();
     void ShowInfo() const;

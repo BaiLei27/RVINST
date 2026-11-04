@@ -51,16 +51,16 @@ public:
     virtual ~IBaseInstType()= default;
 
 public:
-    const InstLayout &GetInstLayout() const noexcept;
-    const std::vector<std::string> &GetInstAssembly() const noexcept;
-    const std::vector<uint32_t> &GetInstBitsField() const noexcept;
+    [[nodiscard]] const InstLayout &Layout() const noexcept;
+    [[nodiscard]] const std::vector<std::string> &InstAssembly() const noexcept;
+    [[nodiscard]] const std::vector<uint32_t> &InstBitsField() const noexcept;
 
     void SetInstAssembly(std::vector<std::string> assembly);
     void SetFormat(InstFormat format) noexcept;
 
-    [[nodiscard]] uint8_t GetInstOpcode() const noexcept;
-    [[nodiscard]] KeyT GetKey() const noexcept;
-    [[nodiscard]] InstFormat GetInstFormat() const noexcept;
+    [[nodiscard]] uint8_t InstOpcode() const noexcept;
+    [[nodiscard]] KeyT Key() const noexcept;
+    [[nodiscard]] InstFormat Format() const noexcept;
     [[nodiscard]] const BiLookupTable<KeyT>::NameInfo &LookupNameAndInfo() const;
     [[nodiscard]] BiLookupTable<KeyT>::IndexInfo LookupIdxAndInfo() const;
     [[nodiscard]] const std::vector<std::string> &Disassembly();

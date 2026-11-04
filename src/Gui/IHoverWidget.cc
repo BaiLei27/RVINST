@@ -24,7 +24,7 @@ void IHoverWidget::Unhighlight()
     SetCSSClass(PRoot_, "highlighted", false);
 }
 
-Gtk::Widget *IHoverWidget::GetRoot() const noexcept
+Gtk::Widget *IHoverWidget::Root() const noexcept
 {
     return PRoot_;
 }

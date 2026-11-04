@@ -29,7 +29,7 @@ public:
     bool IsEmpty() const noexcept;
     size_t Size() const noexcept;
     std::string_view At(size_t index) const noexcept;
-    const std::deque<std::string> &GetEntries() const noexcept;
+    [[nodiscard]] const std::deque<std::string> &Entries() const noexcept;
 
     void Push(std::string_view text); // dedupe + move-to-front, cap at MaxEntries_
     void Clear();                     // reset entries and browse state

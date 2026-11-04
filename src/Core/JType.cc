@@ -50,7 +50,7 @@ void JType::Parse()
                    Layout_.J.imm14 });
 #ifdef DEBUG_
     std::println("opcode: 0x{:x}\nHexadecimal: 0x{:x}\nrd: {}\nimm: {}",
-                 GetInstOpcode(),
+                 InstOpcode(),
                  Layout_.entity_,
                  +Layout_.J.rd,
                  decodeJImm(Layout_));
