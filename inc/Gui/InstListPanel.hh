@@ -16,11 +16,10 @@
  * G_INST_TABLE / GetAllInstructions.
  */
 class InstListPanel {
-
 private:
+    std::unique_ptr<Gtk::Window> PWindow_;
     Gtk::Window *PParent_ {}; // non-owning
     Gtk::ToggleButton *PBtn_ {};
-    std::unique_ptr<Gtk::Window> PWindow_;
     Gtk::Box *PPanel_ {};
     Gtk::ScrolledWindow *PScroll_ {};
     bool SyncingBtn_ {};

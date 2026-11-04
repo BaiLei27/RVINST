@@ -31,6 +31,9 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${projectIncDir}/Cli/Commands.hh
     ${projectScrDir}/Commands.cc
 
+    ${projectIncDir}/Cli/LineEditor.hh
+    ${projectScrDir}/LineEditor.cc
+
     ${projectIncDir}/Cli/OutputTable.hh
     ${projectScrDir}/OutputTable.cc
 )

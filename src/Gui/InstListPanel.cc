@@ -257,7 +257,7 @@ void InstListPanel::build()
         const auto &entries= byModule[i];
 
         auto *pExpander= Gtk::make_managed<Gtk::Expander>(std::string { G_MODULE_ORDER[i] });
-        pExpander->set_expanded("RV32I" == G_MODULE_ORDER[i]);
+        // pExpander->set_expanded("RV32I" == G_MODULE_ORDER[i]);
         pExpander->add_css_class("inst-list-module");
         if(entries.empty()) pExpander->add_css_class("inst-list-module-empty");
 

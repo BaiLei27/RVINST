@@ -1,24 +1,9 @@
 
-#include <cstdio>
-#include <iostream>
-
-// MSYS2 clang64/ucrt64/mingw and MSVC are native Win32 (no termios).
-// Only the MSYS/Cygwin runtime and Linux/macOS expose POSIX tty APIs.
-#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__MSYS__)
-    #define RVINST_NATIVE_WIN 1
-#endif
-
-#ifdef RVINST_NATIVE_WIN
-    #include <io.h>      // _isatty / _fileno
-    #include <windows.h> // console input events
-#else
-    #include <termios.h> // POSIX raw mode (also available under MSYS2/Cygwin)
-    #include <unistd.h>  // isatty
-#endif
 
 #include "ISA/Regs.hh"
 #include "Util/InputParse.hh"
 #include "Cli/Commands.hh"
+#include "Cli/LineEditor.hh"
 
 namespace cli {
 
@@ -173,176 +158,11 @@ util::Expected_u<void> Commands::ProcessFile(std::string_view path)
     });
 }
 
-namespace {
-
-    void redrawPromptLine(std::string_view line)
-    {
-        std::print("\r\x1b[2K");
-        std::print("rvinst> {}", line);
-        fflush(stdout);
-    }
-
-    void applyHistoryStep(std::string &line, util::InputHistoryMgr &history, int delta)
-    {
-        if(0 < delta && !history.IsBrowsing()) history.SetDraft(line);
-        if(auto next= history.Step(delta); next) {
-            line= *next;
-            redrawPromptLine(line);
-        }
-    }
-
-    void eraseLastChar(std::string &line)
-    {
-        if(line.empty()) return;
-        line.pop_back();
-        std::print("\b \b");
-    }
-
-    void appendChar(std::string &line, util::InputHistoryMgr &history, char ch)
-    {
-        if(history.IsBrowsing()) history.CancelBrowse();
-        line.push_back(ch);
-        std::putchar(ch);
-        fflush(stdout);
-    }
-
-#ifdef RVINST_NATIVE_WIN
-    // Native Win32 (MSVC / MSYS2 clang64|ucrt64|mingw): arrows are VK_* events.
-    class ScopedRawMode {
-    public:
-        ScopedRawMode(): HIn_(GetStdHandle(STD_INPUT_HANDLE))
-        {
-            if(INVALID_HANDLE_VALUE == HIn_) return;
-            if(0 == GetConsoleMode(HIn_, &Saved_)) return;
-            SetConsoleMode(HIn_, Saved_ & ~static_cast<DWORD>(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT));
-            Active_= true;
-        }
-
-        ~ScopedRawMode()
-        {
-            if(Active_) SetConsoleMode(HIn_, Saved_);
-        }
-
-        ScopedRawMode(const ScopedRawMode &)            = delete;
-        ScopedRawMode &operator= (const ScopedRawMode &)= delete;
-
-    private:
-        HANDLE HIn_ { INVALID_HANDLE_VALUE };
-        DWORD Saved_ { 0 };
-        bool Active_ { false };
-    };
-
-    bool readLinePlatform(std::string &line, util::InputHistoryMgr &history)
-    {
-        line.clear();
-        while(true) {
-            INPUT_RECORD rec {};
-            DWORD n= 0;
-            if(!ReadConsoleInputW(GetStdHandle(STD_INPUT_HANDLE), &rec, 1, &n)) return false; // NOLINT
-            if(KEY_EVENT != rec.EventType || !rec.Event.KeyEvent.bKeyDown) continue;          // NOLINT
-            const auto &key= rec.Event.KeyEvent;
-            if(VK_RETURN == key.wVirtualKeyCode) {
-                std::println();
-                return true;
-            }
-            if(VK_BACK == key.wVirtualKeyCode) {
-                eraseLastChar(line);
-                continue;
-            }
-            if(VK_UP == key.wVirtualKeyCode) {
-                applyHistoryStep(line, history, +1);
-                continue;
-            }
-            if(VK_DOWN == key.wVirtualKeyCode) {
-                applyHistoryStep(line, history, -1);
-                continue;
-            }
-            if(VK_LEFT == key.wVirtualKeyCode || VK_RIGHT == key.wVirtualKeyCode) continue;
-            const wchar_t WC= key.uChar.UnicodeChar;
-            if(0 == WC) continue;
-            appendChar(line, history, static_cast<char>(WC)); // ASCII instruction input
-        }
-    }
-
-    bool isStdInTty() { return 0 != _isatty(_fileno(stdin)); }
-#else
-    // POSIX tty (Linux / macOS / MSYS|Cygwin runtime): arrows as ESC [ A / B.
-    class ScopedRawMode {
-    public:
-        ScopedRawMode()
-        {
-            if(0 != tcgetattr(STDIN_FILENO, &Saved_)) return;
-            termios raw= Saved_;
-            raw.c_lflag&= ~static_cast<tcflag_t>(ICANON | ECHO);
-            tcsetattr(STDIN_FILENO, TCSANOW, &raw);
-            Active_= true;
-        }
-
-        ~ScopedRawMode()
-        {
-            if(Active_) tcsetattr(STDIN_FILENO, TCSANOW, &Saved_);
-        }
-
-        ScopedRawMode(const ScopedRawMode &)            = delete;
-        ScopedRawMode &operator= (const ScopedRawMode &)= delete;
-
-    private:
-        termios Saved_ {};
-        bool Active_ { false };
-    };
-
-    bool readLinePlatform(std::string &line, util::InputHistoryMgr &history)
-    {
-        line.clear();
-        while(true) {
-            const int CH= std::getchar();
-            if(EOF == CH || '\x04' == CH) {
-                std::println();
-                return false;
-            }
-            if('\n' == CH || '\r' == CH) {
-                std::println();
-                return true;
-            }
-            if('\x7f' == CH || '\b' == CH) {
-                eraseLastChar(line);
-                continue;
-            }
-            if('\x1b' == CH) {
-                if('[' == std::getchar()) {
-                    switch(const int CODE= std::getchar()) {
-                    case 'A': applyHistoryStep(line, history, +1); continue;
-                    case 'B': applyHistoryStep(line, history, -1); continue;
-                    default:  continue;
-                    }
-                }
-                continue;
-            }
-            appendChar(line, history, static_cast<char>(CH));
-        }
-    }
-
-    bool isStdInTty() { return 0 != isatty(STDIN_FILENO); }
-#endif
-
-    // Read one line with arrow-key history navigation when stdin is an
-    // interactive terminal; falls back to plain getline for piped input.
-    // Returns false on EOF (empty output means EOF was hit).
-    // Shares the same Step semantics as the GUI browseHistory() handler:
-    // Up steps forward into older entries, Down steps back toward the draft.
-    bool readLineInteractive(std::string &line, util::InputHistoryMgr &history)
-    {
-        if(!isStdInTty()) return static_cast<bool>(std::getline(std::cin, line));
-
-        ScopedRawMode raw;
-        return readLinePlatform(line, history);
-    }
-
-} // namespace
-
 int Commands::replLoop()
 {
-    std::string line;
+    auto source= std::make_unique<TerminalKeySource>(); // platform backend lives in LineEditor.cc
+    cli::LineEditor editor(*source);
+
     auto ifQuitRepl= [](std::string_view trimmed) {
         if(trimmed == "q"
            || trimmed == "quit"
@@ -354,14 +174,12 @@ int Commands::replLoop()
         return false;
     };
     while(true) {
-        std::print("rvinst> ");
-        fflush(stdout);
-
-        if(!readLineInteractive(line, History_)) {
+        auto line= editor.ReadLine(History_);
+        if(!line) {
             break;
         }
 
-        const auto TRIMMED= util::TrimAsciiWs(line);
+        const auto TRIMMED= util::TrimAsciiWs(*line);
         if(TRIMMED.empty()) continue;
 
         History_.Push(TRIMMED); // remember the command for Up/Down keys
